@@ -1,0 +1,9 @@
+# VulcaTrack -- base Apache rules (Phase 1 scaffold)
+
+Options -Indexes
+DirectoryIndex index.php index.html
+
+# Block source / data file types from being served directly
+<FilesMatch "\.(md|sql|dbml|example|dist|ini|log|lock)$">
+    Require all denied
+</FilesMatch>

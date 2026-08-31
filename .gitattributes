@@ -1,0 +1,21 @@
+# Normalize line endings: store text as LF in the repo, check out native on Windows
+* text=auto
+
+*.php   text
+*.md    text
+*.dbml  text
+*.css   text
+*.js    text
+*.html  text
+*.json  text
+*.svg   text
+.htaccess text
+.gitkeep  text
+
+# Binary assets — never touch
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary

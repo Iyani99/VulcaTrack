@@ -1,0 +1,9 @@
+# VulcaTrack -- ignore machine-specific and generated files
+
+/config/config.php
+/vendor/
+/storage/logs/*
+!/storage/logs/.gitkeep
+*.log
+Thumbs.db
+.DS_Store

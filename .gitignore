@@ -1,0 +1,23 @@
+# VulcaTrack — repository-root ignore rules
+# Application-specific ignores live in vulcatrack/.gitignore
+
+# Machine-specific / local configuration
+vulcatrack/config/config.php
+
+# Dependencies
+vendor/
+node_modules/
+
+# Logs & generated files
+*.log
+vulcatrack/storage/logs/*
+!vulcatrack/storage/logs/.gitkeep
+
+# OS / editor cruft
+Thumbs.db
+Desktop.ini
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~

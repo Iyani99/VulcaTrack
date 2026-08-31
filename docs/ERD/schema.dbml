@@ -1,0 +1,153 @@
+// =============================================================================
+// VulcaTrack: Sales and Inventory with On-the-Go Services
+// Text-based database schema — MAINTAINABLE SOURCE OF TRUTH (Decision 38).
+//
+// Authoritative decisions:  docs/decisions/project-decisions.md
+// Field-by-field rationale:  docs/VulcaTrack-Database-Notes_1.md
+// Visual aid (now behind this file):  docs/ERD/VulcaTrack-ERD_1.png
+//
+// Notation: DBML (https://dbml.dbdiagram.io). This is a DESIGN artifact, not an
+// executable migration. Column TYPES below are INDICATIVE MySQL types for the
+// eventual implementation and are not themselves locked decisions; table/column
+// existence, keys, foreign keys, nullability, and defaults ARE per the decision
+// record.
+//
+// Last revised: 2026-08-31 (Decision Review & Documentation Update).
+// v1 scope reminder — NOT modeled: online/gateway payment, payment-transaction
+// tables, GPS telemetry / route polylines, Tireman authentication, technician
+// scheduling / ratings / payroll, status-history / audit tables.
+// =============================================================================
+
+Project VulcaTrack {
+  database_type: 'MySQL'
+  Note: 'v1 schema for a student vulcanizing-shop system. See docs/decisions/project-decisions.md.'
+}
+
+// -----------------------------------------------------------------------------
+// Accounts
+// -----------------------------------------------------------------------------
+
+Table customers {
+  customer_id     int           [pk, increment]
+  full_name       varchar(150)  [not null]
+  email           varchar(190)  [not null, unique, note: 'login identifier; unique within customers only']
+  contact_number  varchar(30)   [not null, note: 'MANDATORY — direct phone contact for OTG coordination']
+  password_hash   varchar(255)  [not null, note: 'bcrypt / password_hash() — never plain text']
+  created_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
+
+  Note: 'Public self-registration allowed. Separate from admins — no shared user table.'
+}
+
+Table admins {
+  admin_id        int           [pk, increment]
+  full_name       varchar(150)  [not null]
+  email           varchar(190)  [not null, unique, note: 'login identifier; unique within admins only']
+  password_hash   varchar(255)  [not null]
+  created_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
+
+  Note: 'Internally provisioned only (seeded row or protected internal page). No public admin sign-up.'
+}
+
+Table tiremen {
+  tireman_id      int           [pk, increment]
+  name            varchar(150)  [not null, note: 'shown to the customer on an assigned OTG request']
+  contact_number  varchar(30)   [not null, note: 'shown to the customer on an assigned OTG request']
+  is_active       tinyint(1)    [not null, default: 1, note: '0 = deactivated: cannot be newly assigned; still shown on requests already assigned']
+  created_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
+
+  Note: 'Identity / contact / assignment ONLY. No login, no dashboard, no GPS, no scheduling / ratings / payroll (Decisions 22-26).'
+}
+
+// -----------------------------------------------------------------------------
+// Customer vehicles
+// -----------------------------------------------------------------------------
+
+Table vehicles {
+  vehicle_id      int           [pk, increment]
+  customer_id     int           [not null, ref: > customers.customer_id]
+  plate_number    varchar(20)   [not null]
+  vehicle_type    varchar(40)   [note: 'e.g. motorcycle, car']
+  make            varchar(60)
+  model           varchar(60)
+  is_active       tinyint(1)    [not null, default: 1, note: '0 = hidden from active vehicle selection; still shown on historical service_requests']
+  created_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+// -----------------------------------------------------------------------------
+// Unified inventory: products AND services (Decision 15)
+// -----------------------------------------------------------------------------
+
+Table items {
+  item_id         int           [pk, increment]
+  item_name       varchar(150)  [not null]
+  item_type       varchar(10)   [not null, note: "'product' or 'service'"]
+  category        varchar(60)   [null, note: 'plain grouping label; no category table in v1']
+  price           decimal(10,2) [not null, note: 'current unit price']
+  stock_quantity  int           [null, note: 'products only; NULL / ignored for services']
+  reorder_level   int           [null, note: 'low-stock threshold; products only']
+  is_active       tinyint(1)    [not null, default: 1, note: '0 = hidden from POS + active-inventory list; still shown on historical sale_items']
+  created_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+// -----------------------------------------------------------------------------
+// In-shop sales (recorded by an admin; walk-in supported)
+// -----------------------------------------------------------------------------
+
+Table sales {
+  sale_id         int           [pk, increment]
+  customer_id     int           [null, ref: > customers.customer_id, note: 'NULL for walk-in sales (Decision 14)']
+  admin_id        int           [not null, ref: > admins.admin_id, note: 'recording admin — always required']
+  sale_date       datetime      [not null, note: 'actual-sale timestamp; system-controlled, not manually editable in v1; reporting date (Decision 35)']
+  total_amount    decimal(10,2) [not null, note: 'equals SUM(sale_items.subtotal); ONLY monetary value persisted — no amount-tendered / change (Decision 30)']
+  created_at      datetime      [not null, default: `CURRENT_TIMESTAMP`, note: 'DB record-creation timestamp']
+}
+
+Table sale_items {
+  sale_item_id    int           [pk, increment]
+  sale_id         int           [not null, ref: > sales.sale_id]
+  item_id         int           [not null, ref: > items.item_id]
+  quantity        int           [not null]
+  unit_price      decimal(10,2) [not null, note: 'FROZEN at time of sale — independent of items.price (Decision 17)']
+  subtotal        decimal(10,2) [not null, note: 'quantity * unit_price']
+
+  Note: 'A sale mixes product and service lines. Product lines decrease items.stock_quantity; service lines do not (Decision 16).'
+}
+
+// -----------------------------------------------------------------------------
+// On-the-Go (OTG) service requests
+// -----------------------------------------------------------------------------
+
+Table service_requests {
+  request_id          int           [pk, increment]
+  customer_id         int           [not null, ref: > customers.customer_id, note: 'authenticated requester — required (Decision 39)']
+  vehicle_id          int           [not null, ref: > vehicles.vehicle_id, note: 'which of the customer vehicles needs help']
+  admin_id            int           [null, ref: > admins.admin_id, note: 'admin handling the request, once assigned']
+  tireman_id          int           [null, ref: > tiremen.tireman_id, note: 'assigned Tireman; set by admin on/after accept; NULL while pending/rejected/unassigned (Decision 25)']
+  problem_description text          [not null]
+  latitude            decimal(10,7) [null, note: 'captured once at submission via browser geolocation; stays NULL until a successful capture']
+  longitude           decimal(10,7) [null]
+  eta_minutes         int           [null, note: 'FROZEN snapshot computed once at submission; never recomputed / updated for display (Decision 32)']
+  status              varchar(10)   [not null, note: "'pending' | 'accepted' | 'rejected' | 'completed' (Decision 10)"]
+  requested_at        datetime      [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at          datetime      [not null, default: `CURRENT_TIMESTAMP`]
+
+  Note: 'No per-status timestamps and no status-history table in v1 (Decision 34). No route geometry / polyline persisted (Decision 33). Shop endpoint for route/ETA comes from config/shop.php (Decision 37).'
+}
+
+// -----------------------------------------------------------------------------
+// Relationship cardinality summary (see Database Notes §3)
+//   customers 1 : 0..N vehicles
+//   customers 1 : 0..N sales                (customer_id nullable — walk-in)
+//   customers 1 : 0..N service_requests     (customer_id NOT NULL)
+//   admins    1 : 1..N sales
+//   admins    1 : 0..N service_requests     (admin_id nullable)
+//   tiremen   1 : 0..N service_requests     (tireman_id nullable)
+//   vehicles  1 : 0..N service_requests
+//   sales     1 : 1..N sale_items
+//   items     1 : 0..N sale_items
+// -----------------------------------------------------------------------------
