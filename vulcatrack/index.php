@@ -26,11 +26,11 @@ $admin = current_admin();
 <body>
   <h1>VulcaTrack</h1>
   <p class="muted">Sales and Inventory with On-the-Go Services</p>
-  <p>Phase 3 scaffold: authentication and authorization are in place. Feature modules are later phases.</p>
+  <p>Customer accounts, vehicles and On-the-Go rescue requests are available. POS, inventory and admin rescue management are later phases.</p>
 
   <?php if ($customer !== null): ?>
     <p>Signed in as <strong><?= e($customer['name']) ?></strong> (customer) &mdash;
-      <a href="account.php">account</a>
+      <a href="customer/dashboard.php">dashboard</a>
       <form method="post" action="logout.php">
         <?= \VulcaTrack\Auth\Csrf::field() ?>
         <button type="submit">Log out</button>

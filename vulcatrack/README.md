@@ -5,13 +5,15 @@ Local development runs on XAMPP (Apache + PHP + MariaDB).
 
 ## Status
 
-**Phase 3 complete -- authentication and authorization.**
-Implemented: customer registration/login/logout, admin login/logout, CLI admin
-provisioning, session handling, and the customer / admin authorization guards.
+**Phase 4 complete -- customer-side functionality.**
+Implemented on top of the Phase 3 auth system: customer dashboard, profile
+(name / contact number / password), saved vehicles (add / edit / soft-delete /
+restore), On-the-Go rescue-request submission with a one-time route + frozen ETA,
+and the customer request history + status views.
 
-Not yet implemented (later phases): customer dashboard, vehicles, POS, inventory,
-OTG requests, maps, Tireman assignment, payments, receipts. Do not add these
-until the relevant phase is explicitly approved.
+Not yet implemented (later phases): admin OTG request handling (accept / reject /
+assign a Tireman / complete), POS, inventory, reports, admin dashboard. Do not add
+these until the relevant phase is explicitly approved.
 
 ## Design / decision documents
 
@@ -65,23 +67,53 @@ password. **Do not commit real admin credentials.**
 **Not in scope (by decision):** Remember Me / persistent tokens, password reset,
 email verification, 2FA, CAPTCHA, account lockout / rate limiting, Tireman/Staff login.
 
+## Customer functionality (Phase 4)
+
+| Page | Notes |
+|---|---|
+| `customer/dashboard.php` | Home: vehicle count, open-request count, latest request, "Book a Rescue" CTA |
+| `customer/profile.php` | Edit full name + contact number (mandatory); change password (current + new). Email is the login id and is read-only in v1. |
+| `customer/vehicles.php` | List active vehicles; **soft-delete** (`is_active = 0`) and restore. Removed vehicles stay on past requests. |
+| `customer/vehicle-edit.php` | Add (`?id` absent) / edit (`?id=N`, ownership-checked). `plate_number` required; type/make/model optional. |
+| `customer/rescue.php` | OTG submission: pick an active vehicle, describe the problem, share location (browser geolocation / map pin / manual coords). ETA is computed **once** here and stored frozen. Request is always created `status = 'pending'`. |
+| `customer/bookings.php` | Request history (read-only list, newest first). |
+| `customer/booking.php?id=N` | Customer-facing status: frozen ETA, straight-line route map, and -- once an admin assigns one -- the Tireman's name + contact ("Tireman is on the way"). `?new=1` shows the submission confirmation. |
+
+**On-the-Go rules honoured:** account required; contact number mandatory;
+location captured once via geolocation and stored as `latitude`/`longitude`; **no
+live tracking**; ETA is a frozen snapshot (`Geo::etaMinutes()` = straight-line
+distance / `otg.average_speed_kmph`, floored at `otg.min_eta_minutes`) written
+once and never recomputed; **no route polyline persisted** (the map line is
+redrawn client-side from the two stored endpoints); statuses stay exactly
+`pending / accepted / rejected / completed`.
+
+The map uses **Leaflet** (vendored at `assets/lib/leaflet/`, no build step) with
+OpenStreetMap tiles. It degrades gracefully: if Leaflet or the tiles fail to
+load, geolocation + manual coordinate entry still work and the status page shows
+the coordinates with an "open map" link.
+
+**Shop location:** `config/shop.php` currently holds **sample** coordinates.
+Replace `latitude` / `longitude` / `address` with the real shop location before a
+real deployment or the graded demo -- no code change needed.
+
 ## Structure
 
 | Path | Purpose |
 |---|---|
 | `index.php` | Landing page + auth-status strip |
 | `register.php`, `login.php`, `logout.php` | Customer auth entry points |
+| `account.php` | Redirects to `customer/dashboard.php` (back-compat) |
+| `customer/` | Signed-in customer pages (guarded by `require_customer()`) |
 | `admin/login.php`, `admin/logout.php`, `admin/index.php` | Admin auth entry points + guarded placeholder |
-| `account.php` | Guarded customer placeholder (dashboard is a later phase) |
 | `health.php` | Environment + DB connectivity check |
 | `config/` | Local configuration -- **not web-accessible** (`config.php` git-ignored) |
-| `config/shop.php` | Fixed shop location (Decision 37) -- placeholder values |
+| `config/shop.php` | Fixed shop location (Decision 37) -- sample values, replace before deploy |
 | `includes/` | `bootstrap.php`, `db.php`, `auth.php` -- **not web-accessible** |
 | `src/Auth/` | `Auth.php` (session/actor lifecycle), `Password.php`, `Csrf.php` |
-| `src/Repository/` | `CustomerRepository.php`, `AdminRepository.php` |
-| `src/Support/` | `Validator.php` |
-| `src/Views/` | Auth form templates + shared partials |
-| `assets/` | `css/app.css`, `js/`, `img/` |
+| `src/Repository/` | `CustomerRepository`, `AdminRepository`, `VehicleRepository`, `ServiceRequestRepository` -- prepared statements, customer-scoped |
+| `src/Support/` | `Validator.php`, `Geo.php` (haversine + frozen ETA), `OtgStatus.php` (status→label mapping) |
+| `src/Views/` | Form templates + shared partials (`partials/customer_top.php` app shell) |
+| `assets/` | `css/app.css`, `js/otg-map.js`, `lib/leaflet/` (vendored), `img/` |
 | `database/` | `schema.sql`, `seed_admin.php` -- **not web-accessible** |
 | `storage/` | Logs / generated files -- **not web-accessible** |
 

@@ -11,7 +11,7 @@ require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/auth.php';
 
 if (current_customer() !== null) {
-    header('Location: ' . vulcatrack_url('/account.php'));
+    header('Location: ' . vulcatrack_url('/customer/dashboard.php'));
     exit;
 }
 
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $repo->updatePasswordHash((int) $row['customer_id'], Password::hash($password));
             }
             vulcatrack_auth()->login('customer', (int) $row['customer_id'], (string) $row['full_name']);
-            header('Location: ' . vulcatrack_url('/account.php'));
+            header('Location: ' . vulcatrack_url('/customer/dashboard.php'));
             exit;
         }
     }

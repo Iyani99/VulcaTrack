@@ -36,4 +36,12 @@ return [
     'security' => [
         'password_min_length' => 8,
     ],
+
+    'otg' => [
+        // On-the-Go ETA is a one-time snapshot: straight-line distance
+        // (customer -> shop, from config/shop.php) / this speed, rounded up,
+        // with a floor. Not a live/continuous calculation (Decisions 5/6/32).
+        'average_speed_kmph' => 25,
+        'min_eta_minutes'    => 5,
+    ],
 ];

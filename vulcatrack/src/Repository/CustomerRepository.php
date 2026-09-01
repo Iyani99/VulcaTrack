@@ -26,6 +26,33 @@ final class CustomerRepository
         return $row === false ? null : $row;
     }
 
+    /** @return array{customer_id:int,full_name:string,email:string,contact_number:string,password_hash:string,created_at:string}|null */
+    public function findById(int $customerId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT customer_id, full_name, email, contact_number, password_hash, created_at
+             FROM customers WHERE customer_id = ? LIMIT 1'
+        );
+        $stmt->execute([$customerId]);
+        $row = $stmt->fetch();
+
+        return $row === false ? null : $row;
+    }
+
+    public function updateProfile(int $customerId, string $fullName, string $contactNumber): void
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE customers
+             SET full_name = :full_name, contact_number = :contact_number, updated_at = CURRENT_TIMESTAMP
+             WHERE customer_id = :id'
+        );
+        $stmt->execute([
+            ':full_name'      => $fullName,
+            ':contact_number' => $contactNumber,
+            ':id'             => $customerId,
+        ]);
+    }
+
     public function emailExists(string $email): bool
     {
         $stmt = $this->pdo->prepare('SELECT 1 FROM customers WHERE email = ? LIMIT 1');
@@ -54,7 +81,7 @@ final class CustomerRepository
     public function updatePasswordHash(int $customerId, string $passwordHash): void
     {
         $stmt = $this->pdo->prepare(
-            'UPDATE customers SET password_hash = ? WHERE customer_id = ?'
+            'UPDATE customers SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE customer_id = ?'
         );
         $stmt->execute([$passwordHash, $customerId]);
     }

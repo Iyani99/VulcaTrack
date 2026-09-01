@@ -55,6 +55,38 @@ final class Validator
         return $clean;
     }
 
+    /**
+     * Optional trimmed text (may be empty). Returns the clean value, or null
+     * when blank. Only records an error when a non-empty value is too long.
+     */
+    public function optionalText(string $field, $value, string $label, int $max): ?string
+    {
+        if ($value === null || (is_string($value) && trim($value) === '')) {
+            return null;
+        }
+        if (!is_string($value)) {
+            $this->add($field, "{$label} is invalid.");
+            return null;
+        }
+        $clean = trim($value);
+        if (mb_strlen($clean) > $max) {
+            $this->add($field, "{$label} is too long.");
+            return null;
+        }
+        return $clean;
+    }
+
+    /** A required latitude/longitude pair. Returns [lat, lng] as floats, or null. */
+    public function coordinates(string $field, $lat, $lng): ?array
+    {
+        if (!\VulcaTrack\Support\Geo::isValidLatitude($lat)
+            || !\VulcaTrack\Support\Geo::isValidLongitude($lng)) {
+            $this->add($field, 'Share your location before submitting.');
+            return null;
+        }
+        return [(float) $lat, (float) $lng];
+    }
+
     /** Required, valid email address. Returns the clean value or null. */
     public function email(string $field, $value, int $max = 190): ?string
     {

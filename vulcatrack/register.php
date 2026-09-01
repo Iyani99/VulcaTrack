@@ -13,7 +13,7 @@ require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/auth.php';
 
 if (current_customer() !== null) {
-    header('Location: ' . vulcatrack_url('/account.php'));
+    header('Location: ' . vulcatrack_url('/customer/dashboard.php'));
     exit;
 }
 

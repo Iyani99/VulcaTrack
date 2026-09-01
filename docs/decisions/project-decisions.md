@@ -2,7 +2,7 @@
 
 **Status:** Authoritative record of CONFIRMED project decisions.
 **Last updated:** 2026-09-01
-**Last revised:** 2026-09-01 — Phase 3 (Authentication & Authorization) decisions 41–47
+**Last revised:** 2026-09-01 — Phase 4 (Customer-Side Functionality); Decision 48
 (see [Revision History](#revision-history)).
 **Purpose:** This file exists so that a completely new session (human or Claude Code) can
 understand the project's confirmed decisions, scope boundaries, and change-control rules
@@ -287,6 +287,39 @@ open questions. **No schema change** — the 8-table design is untouched.
 
 ---
 
+## Confirmed Project Decisions — 2026-09-01 (Phase 4: Customer-Side Functionality)
+
+Phase 4 is implementation of already-approved scope (dashboard, profile, saved
+vehicles, OTG submission, request history + status). One implementation-level
+decision was needed and is recorded here; it changes no scope and no schema.
+
+48. **OTG ETA computation method (implementation-level, reversible).** The
+    one-time ETA (Decisions 5/6/32) is computed as the **straight-line
+    (haversine) distance** between the customer's captured location and the fixed
+    shop location (`config/shop.php`), divided by an assumed average speed
+    (`config/config.php` → `otg.average_speed_kmph`, default 25), rounded up, and
+    floored at `otg.min_eta_minutes` (default 5). It is written once to
+    `service_requests.eta_minutes` and never recomputed. **No external routing /
+    directions API** is used (avoids an API key, billing, and a runtime
+    dependency). Swapping in a routing service later is a config/code change with
+    no schema impact. The map is drawn with **Leaflet** vendored at
+    `vulcatrack/assets/lib/leaflet/` (OpenStreetMap tiles, graceful degradation);
+    the route line is a client-side straight line between the two stored
+    endpoints — **no polyline is persisted** (Decision 33).
+
+    Phase 4 also, without needing owner decisions:
+    - shows email read-only on the profile page (changing the login email is
+      deferred; `CustomerRepository::emailExists()` already exists for when it is
+      added);
+    - requires a captured location to submit an OTG request (the feature is
+      "come to my location"); denied-geolocation fallback = retry + map pin-drop
+      + manual lat/long entry (exact UX still open — Known Open Questions);
+    - sets `config/shop.php` to **sample** coordinates (was `0.0 / 0.0`) so the
+      feature is demonstrable — replace with the real shop location before a
+      real deployment / graded demo.
+
+---
+
 ## Canonical OTG Request Flow (v1)
 
 The intended end-to-end flow, as the text reference until flowcharts 2 & 5 are regenerated
@@ -470,16 +503,19 @@ Do not turn these into confirmed requirements without approval.
 
 ## Current Project Status
 
-- **Phases 1–3 complete (2026-09-01):** Application Foundation, Database Schema,
-  Authentication & Authorization. Phase 4 (customer-side functionality) is next
-  and begins only when explicitly instructed.
+- **Phases 1–4 complete (2026-09-01):** Application Foundation, Database Schema,
+  Authentication & Authorization, Customer-Side Functionality. Phase 5 (POS &
+  inventory) is next and begins only when explicitly instructed.
 - Repo initialised on `main` at `C:\IPT102`; app at `C:\IPT102\vulcatrack\`
   served via a Windows junction from `C:\xampp\htdocs\vulcatrack`.
 - Database: the 8 tables from `docs/ERD/schema.dbml` are built
   (`vulcatrack/database/schema.sql`); **0 application rows**.
-- Auth implemented: customer register/login/logout, admin login/logout, CLI
-  `vulcatrack/database/seed_admin.php`, hardened sessions, `require_customer()` /
-  `require_admin()` guards. See Decisions 41–47.
+- Auth (Decisions 41–47): customer + admin login/logout, CLI
+  `vulcatrack/database/seed_admin.php`, hardened sessions, guards.
+- Customer side (Decision 48): `vulcatrack/customer/*` — dashboard, profile,
+  saved vehicles (soft-delete), OTG rescue submission with a frozen-snapshot
+  ETA, request history + customer-facing status. No schema change; OTG requests
+  are always created `status = 'pending'`.
 - ERD exists (PNG + text schema `docs/ERD/schema.dbml`).
 - Use-case diagram exists (PNG; changes pending — see Required Diagram Changes).
 - Six flowcharts exist.
@@ -567,6 +603,24 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-01 — Phase 4 (Customer-Side Functionality)
+
+- Implemented the customer side on top of Phase 3 auth: dashboard, profile
+  (name / contact number / password change), saved vehicles (add / edit /
+  `is_active` soft-delete / restore), On-the-Go rescue submission, request
+  history, and the customer-facing status view ("Tireman is on the way" +
+  Tireman name/contact shown once an admin assigns one).
+- Added **Decision 48** — OTG ETA computation method (haversine ÷ configured
+  average speed, floored; frozen snapshot; no routing API) and the small
+  implementation choices that went with it (email read-only on profile;
+  location required to submit; `config/shop.php` set to sample coordinates;
+  Leaflet vendored for the map).
+- Annotated three Known Open Questions as pragmatically addressed but still
+  open for exact-UX / Figma refinement: denied-geolocation fallback,
+  saved-vehicle management UI, Figma cross-check.
+- **No schema change** — still exactly 8 tables, still exactly four OTG status
+  values, no new columns. No change to any earlier decision (1–47).
 
 ### 2026-09-01 — Phase 3 (Authentication & Authorization) decisions
 
