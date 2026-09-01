@@ -5,8 +5,6 @@
  * Copy this file to `config.php` in the same folder and adjust the values for
  * your machine. `config.php` is git-ignored so machine-specific credentials are
  * never committed.
- *
- * Phase 1 scaffold -- contains no application logic.
  */
 
 return [
@@ -25,5 +23,17 @@ return [
         'user'    => 'root',
         'pass'    => '',           // XAMPP default: empty root password
         'charset' => 'utf8mb4',
+    ],
+
+    'session' => [
+        'name'            => 'VULCATRACKSESSID',
+        'cookie_path'     => '/vulcatrack/', // must match the app's URL path
+        'cookie_secure'   => false,          // set true only when served over HTTPS
+        'cookie_samesite' => 'Lax',
+        'idle_timeout'    => 1800,           // seconds of inactivity before a login is invalidated (30 min)
+    ],
+
+    'security' => [
+        'password_min_length' => 8,
     ],
 ];

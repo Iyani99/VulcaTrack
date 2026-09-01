@@ -1,9 +1,13 @@
 <?php
 /**
- * VulcaTrack -- placeholder landing page (Phase 1 scaffold).
- * No application features. See health.php for the environment check.
+ * VulcaTrack -- placeholder landing page.
+ * Phase 3 adds an authentication-status strip. Feature pages come later.
  */
 require __DIR__ . '/includes/bootstrap.php';
+require __DIR__ . '/includes/auth.php';
+
+$customer = current_customer();
+$admin = current_admin();
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -15,12 +19,39 @@ require __DIR__ . '/includes/bootstrap.php';
   h1{margin-bottom:.2rem}
   .muted{color:#666}
   a{color:#0a58ca}
+  form{display:inline}
+  button{font:inherit;padding:.15rem .5rem;cursor:pointer}
 </style>
 </head>
 <body>
   <h1>VulcaTrack</h1>
   <p class="muted">Sales and Inventory with On-the-Go Services</p>
-  <p>Phase 1 scaffold is in place. No application features are implemented yet.</p>
+  <p>Phase 3 scaffold: authentication and authorization are in place. Feature modules are later phases.</p>
+
+  <?php if ($customer !== null): ?>
+    <p>Signed in as <strong><?= e($customer['name']) ?></strong> (customer) &mdash;
+      <a href="account.php">account</a>
+      <form method="post" action="logout.php">
+        <?= \VulcaTrack\Auth\Csrf::field() ?>
+        <button type="submit">Log out</button>
+      </form>
+    </p>
+  <?php elseif ($admin !== null): ?>
+    <p>Signed in as <strong><?= e($admin['name']) ?></strong> (admin) &mdash;
+      <a href="admin/index.php">admin area</a>
+      <form method="post" action="admin/logout.php">
+        <?= \VulcaTrack\Auth\Csrf::field() ?>
+        <button type="submit">Log out</button>
+      </form>
+    </p>
+  <?php else: ?>
+    <p>
+      <a href="login.php">Customer login</a> &middot;
+      <a href="register.php">Register</a> &middot;
+      <a href="admin/login.php">Admin login</a>
+    </p>
+  <?php endif; ?>
+
   <ul>
     <li>Environment &amp; database check: <a href="health.php">health.php</a></li>
   </ul>

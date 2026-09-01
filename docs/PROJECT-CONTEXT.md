@@ -4,8 +4,8 @@
 |---|---|
 | **Project title (LOCKED)** | **VulcaTrack: Sales and Inventory with On-the-Go Services** |
 | **Document purpose** | Single authoritative context/handoff file so a brand-new Claude (or developer) conversation can understand the project without any prior conversation memory. |
-| **Current project phase** | **Phase 1 — Application Foundation: COMPLETE (2026-09-01).** Phase 2 (database schema) is the next approved phase. |
-| **Generated / last updated** | 2026-09-01 (rev. 3 — Phase 1 status reconciled; no decisions changed) |
+| **Current project phase** | **Phases 1–3 COMPLETE (2026-09-01):** Application Foundation, Database Schema, Authentication & Authorization. Phase 4 (customer-side functionality) is the next approved phase. |
+| **Generated / last updated** | 2026-09-01 (rev. 4 — Phase 3 auth decisions A–I recorded; §17 auth items resolved) |
 | **Status** | **Living document.** Update it whenever a decision changes. If it conflicts with `docs/decisions/project-decisions.md`, the decision record wins and this file must be corrected. |
 
 ---
@@ -84,8 +84,8 @@ It is a student project: prioritise **maintainability, modularity, clear separat
 | XAMPP install | `C:\xampp\` — Apache, PHP 8.0.30, MariaDB 10.4.32, phpMyAdmin, htdocs all present and working |
 | Apache | Starts, serves port 80, config `Syntax OK`, `mod_rewrite` on, `.htaccess` honored |
 | MySQL/MariaDB | Starts; user `root`, **no password** (XAMPP default) |
-| `vulcatrack` database | **Exists but EMPTY (0 tables)** — created only to prove the PHP→DB link. Schema build is Phase 2. |
-| Application skeleton | **Moved into the monorepo at `C:\IPT102\vulcatrack\`** (config/, includes/, index.php, health.php, empty feature folders) — **no features**. |
+| `vulcatrack` database | **8 tables built** from `vulcatrack/database/schema.sql` (Phase 2). **0 application rows** — no seed data; create an admin with `php vulcatrack/database/seed_admin.php`. |
+| Application code | At `C:\IPT102\vulcatrack\`. **Phase 3 auth implemented:** customer register/login/logout, admin login/logout, CLI admin seeding, hardened sessions, `require_customer()` / `require_admin()` guards. No feature modules yet (dashboard, vehicles, POS, inventory, OTG — later phases). |
 | Apache junction | **Created:** `C:\xampp\htdocs\vulcatrack` → `C:\IPT102\vulcatrack` (Windows directory junction). App reachable at `http://localhost/vulcatrack/`. |
 | PHP → Apache → MariaDB health check | **Passing** — `http://localhost/vulcatrack/health.php` reports all checks PASS (verified 2026-09-01). |
 | Git | **Initialised** in `C:\IPT102` on branch `main`; initial commit made. Remote `origin` → `https://github.com/Iyani99/IPT102.git` configured (nothing pushed yet). Root `.gitignore` + `.gitattributes` in place. Git 2.55; identity `Lian` / `jokerjesterjay@gmail.com`. |
@@ -383,19 +383,17 @@ The earlier handoff-draft wording ("Tireman is not a DB entity", 7 tables) is **
 If a task needs one of these answered, **stop and ask the owner**:
 
 1. Exact scope of **"Manage Customer Accounts"** (admin) — is it in scope at all?
-2. **Remember-me / persistent-login** mechanism (likely needs its own hashed, expiring token table — not in the schema).
-3. **Email uniqueness** — global across customers+admins, or per-table (current: per-table).
-4. Exact **denied-geolocation** fallback UX.
-5. Whether **`service_requests.admin_id`** becomes mandatory once a request is accepted (current: nullable throughout).
-6. Whether **shop location** ever becomes admin-editable (would move from `config/shop.php` to a `shop_settings` table). v1 = config value.
-7. Exact **saved-vehicle management UI**.
-8. **`items.category`** — stay a plain field, or become its own table? (current: plain nullable field).
-9. Whether **Admin can manually create customer accounts**.
-10. Final **receipt requirements** beyond "printable HTML view, no receipt table".
-11. Any Figma details not yet confirmed against the decisions.
-12. Whether **`sale_date`** should ever be manually adjustable at creation (v1 = system-controlled, no backdating — Decision 35).
+2. Exact **denied-geolocation** fallback UX.
+3. Whether **`service_requests.admin_id`** becomes mandatory once a request is accepted (current: nullable throughout).
+4. Whether **shop location** ever becomes admin-editable (would move from `config/shop.php` to a `shop_settings` table). v1 = config value.
+5. Exact **saved-vehicle management UI**.
+6. **`items.category`** — stay a plain field, or become its own table? (current: plain nullable field).
+7. Whether **Admin can manually create customer accounts**.
+8. Final **receipt requirements** beyond "printable HTML view, no receipt table".
+9. Any Figma details not yet confirmed against the decisions.
+10. Whether **`sale_date`** should ever be manually adjustable at creation (v1 = system-controlled, no backdating — Decision 35).
 
-*(The "is Tireman a database entity?" question was resolved on 2026-08-31 — option (a), keep it — see §16.1.)*
+*(Resolved: "is Tireman a database entity?" — 2026-08-31, option (a), keep it, see §16.1. **Phase 3 auth questions — 2026-09-01, owner decisions A–I:** email-only identifier; email uniqueness stays per-table; **Remember-me deferred entirely** — no token table, session auth only; 8-char minimum password; 30-min sliding idle timeout; admins provisioned via CLI `seed_admin.php`. Recorded in `docs/decisions/project-decisions.md` Decisions 41–47.)*
 
 ---
 
@@ -407,9 +405,9 @@ Incremental. **Do one phase at a time. Do not auto-start the next phase.**
 |---|---|
 | **Phase 0** | Environment & repository preparation. *(Complete — folded into Phase 1 by owner on 2026-09-01.)* |
 | **Phase 1** | Application foundation. *(Complete 2026-09-01: scaffold moved to `C:\IPT102\vulcatrack\`; Apache junction `C:\xampp\htdocs\vulcatrack` → `C:\IPT102\vulcatrack` created; Git initialised on `main` with root `.gitignore`/`.gitattributes` and `origin` remote; PHP→Apache→MariaDB health check passing.)* |
-| **Phase 2** | Database / MySQL foundation — create the 8-table schema from `schema.dbml` (`customers`, `admins`, `tiremen`, `vehicles`, `items`, `sales`, `sale_items`, `service_requests`). *(Next approved phase.)* |
-| **Phase 3** | Authentication & authorization — customer auth + separate admin auth; no public admin registration. |
-| **Phase 4** | Customer-side functionality — dashboard, profile, saved vehicles, OTG request submission + status/history. |
+| **Phase 2** | Database / MySQL foundation — 8-table schema from `schema.dbml`. *(Complete 2026-09-01: `vulcatrack/database/schema.sql` built and verified against MariaDB 10.4.32.)* |
+| **Phase 3** | Authentication & authorization — customer auth + separate admin auth; no public admin registration. *(Complete 2026-09-01: register/login/logout for customers, login/logout for admins, CLI `seed_admin.php`, hardened sessions, `require_customer()` / `require_admin()` guards. Owner decisions A–I → Decisions 41–47.)* |
+| **Phase 4** | Customer-side functionality — dashboard, profile, saved vehicles, OTG request submission + status/history. *(Next approved phase.)* |
 | **Phase 5** | POS & inventory — unified `items`, one inventory module, POS with walk-in support and stock deduction. |
 | **Phase 6** | OTG / On-the-Go service — admin request handling (accept/reject/complete), map/route/ETA display, status screen. |
 | **Phase 7** | Integration, testing, bug fixing, presentation readiness. |
@@ -442,3 +440,4 @@ Because of the presentation deadline, prefer a **working vertical slice** over p
 | 2026-08-31 | Initial creation. Consolidated from `docs/decisions/project-decisions.md` (Decisions 1–40 + open questions + conflict log), `docs/ERD/schema.dbml`, `docs/VulcaTrack-Database-Notes_1.md`, the six flowcharts, the use-case diagram, the verified XAMPP environment state, and owner instructions from the setup conversation. Flagged the **`tiremen` entity conflict** (§16.1) as unresolved. |
 | 2026-08-31 (rev. 2) | Owner resolved §16.1 — **option (a): keep `tiremen` + `service_requests.tireman_id`.** Updated §0, §1, §5, §6, §8, §9, §14, §15, §16.1, §17, §18 to present the **8-table** design as approved and the three-actor model (Customer / Admin / Tireman) explicitly. No other decisions changed; title unchanged; no new tables or features. |
 | 2026-09-01 (rev. 3) | **Status-only correction.** Phase 0 folded into Phase 1 by owner; recorded **Phase 1 — Application Foundation as COMPLETE** (repo initialised on `main`, scaffold at `C:\IPT102\vulcatrack\`, Apache junction created, health check passing). Updated the header phase line, §3 "Current environment state", and the §18 phase table. **No requirements, decisions, architecture, or schema changed.** |
+| 2026-09-01 (rev. 4) | Recorded **Phase 2 (database schema) and Phase 3 (authentication & authorization) COMPLETE.** Phase 3 owner decisions A–I captured as **Decisions 41–47** in the decision record: email-only login identifier; email uniqueness stays per-table; **Remember-me deferred entirely (no token table)**; 8-char minimum password; 30-minute sliding idle timeout; CLI-only admin provisioning (`database/seed_admin.php`). Updated the header phase line, §3, §17 (removed the two now-resolved auth questions), and §18. **Schema unchanged — still exactly 8 tables.** |

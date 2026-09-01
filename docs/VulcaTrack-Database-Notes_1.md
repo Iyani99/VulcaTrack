@@ -211,7 +211,8 @@ An on-the-go request submitted by a logged-in customer.
 ## 6. Authentication & Security Considerations
 
 - Passwords are never stored in plain text, in the database or anywhere else (cookies, local storage). Only `password_hash` (e.g. via `password_hash()` / bcrypt in PHP) is stored.
-- The spec calls for a persistent "remember me" login so customers don't need to log in on every visit. **This is flagged as an unresolved decision**: a secure implementation typically needs its own token table (e.g. a hashed, expiring remember-token per customer) rather than reusing the session or storing anything reusable in a cookie directly. Whether that becomes an actual table is left for the team to decide during development, since the spec says the exact mechanism can be finalized later.
+- **"Remember me" / persistent login is deferred entirely for v1** (decision record Decision 43, 2026-09-01). No remember-token table, no persistent-login cookie. Authentication (Phase 3) uses normal PHP sessions only, with a 30-minute sliding idle timeout (Decision 45). Revisiting persistent login later would require a new decision and a new table.
+- Login identifier is `email` only (Decision 41); `email` uniqueness stays per-table (Decision 42).
 
 ## 7. Inventory Rules
 
@@ -269,13 +270,15 @@ Resolved on 2026-08-31 (see decision record Decisions 22–39):
 - **Per-status timestamps / status-history table** — confirmed not added in v1.
 - **`sale_date` editability** — confirmed system-controlled, no backdating in v1.
 
+Resolved on 2026-09-01 (Phase 3 — see decision record Decisions 41–47):
+- **Customer identifier** — confirmed `email` only; no username (Decision 41).
+- **Email uniqueness scope** — confirmed per-table, independent (Decision 42).
+- **Remember-me / persistent login table** — confirmed deferred entirely; no table in v1 (Decision 43).
+
 Still open / not yet confirmed:
 - **`category` as a plain field vs. its own table** — currently a plain nullable field.
-- **Whether customers are identified by email, username, or both** — schema assumes email only.
 - **Whether Admin can manually create customer accounts** — not modeled as a separate flow.
 - **"Manage Customer Accounts" (Admin)** — flagged proposed in the use-case diagram, pending confirmation it is in scope.
 - **Whether `service_requests.admin_id` must become mandatory once accepted** — currently nullable throughout.
-- **Remember-me / persistent login table** — a development-time decision; not in the schema.
 - **Whether shop location should later become admin-editable** (move from `config/shop.php` to a `shop_settings` table) — a future consideration only.
-- **Email uniqueness scope** — currently per-table (a customer and an admin could share an email).
 - **Denied-geolocation handling** beyond retry/fallback.

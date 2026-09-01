@@ -1,8 +1,8 @@
 # VulcaTrack — Project Decision Record
 
 **Status:** Authoritative record of CONFIRMED project decisions.
-**Last updated:** 2026-08-31
-**Last revised:** 2026-08-31 — Decision Review & Documentation Update
+**Last updated:** 2026-09-01
+**Last revised:** 2026-09-01 — Phase 3 (Authentication & Authorization) decisions 41–47
 (see [Revision History](#revision-history)).
 **Purpose:** This file exists so that a completely new session (human or Claude Code) can
 understand the project's confirmed decisions, scope boundaries, and change-control rules
@@ -247,6 +247,46 @@ Added during the Decision Review & Documentation Update. These are settled.
 
 ---
 
+## Confirmed Project Decisions — 2026-09-01 (Phase 3: Authentication & Authorization)
+
+Owner decisions made when approving Phase 3. These resolve the corresponding
+open questions. **No schema change** — the 8-table design is untouched.
+
+41. **Customer login identifier is `email` only.** No username column, no
+    username login. (Resolves the "email / username / both" open question.)
+42. **Email uniqueness stays per-table.** `customers.email` is unique within
+    `customers`; `admins.email` is unique within `admins`; the two are checked
+    independently. One person *may* technically be both a customer and an admin
+    with the same address. (Resolves the email-uniqueness-scope open question.)
+43. **"Remember Me" / persistent login is deferred entirely.** No remember-token
+    table, no persistent-login cookie. Authentication uses normal PHP sessions
+    only. (Resolves the remember-me open question for v1; revisiting it later
+    would be a new decision + a new table.)
+44. **Password policy: minimum 8 characters, no composition rules.** Registration
+    requires a confirmation field. Hashing/verification use `password_hash()` /
+    `password_verify()` (`PASSWORD_DEFAULT`) only; `password_needs_rehash()` is
+    applied opportunistically on login. Plain-text passwords are never stored.
+45. **Session idle timeout: 30 minutes, sliding.** The last-activity timestamp
+    is stored in the session and refreshed on authenticated activity; the
+    session is invalidated after 30 minutes of inactivity. There is **no**
+    absolute session lifetime. The value is configurable
+    (`config.php` → `session.idle_timeout`, seconds).
+46. **First-admin provisioning is a CLI-only script:** `vulcatrack/database/seed_admin.php`.
+    It refuses web execution, prompts for full name / email / password, enforces
+    Decision 44, hashes the password, and inserts one `admins` row. It never
+    prints or logs the password. No public admin registration page exists
+    (reaffirms Decisions 18/40).
+47. **Two independent session actors — customer and admin — never cross.** One
+    actor per browser session. `require_customer()` and `require_admin()` guard
+    their own actor type only; a customer session never satisfies the admin
+    guard and vice-versa. No generic role/RBAC system. Session stores only:
+    actor type, actor id, display name, login timestamp, last-activity timestamp.
+    Auth POST forms (register, login, logout) are CSRF-protected; logout is
+    POST-only. Login failures use a generic message and a dummy
+    `password_verify()` on the no-such-account path (anti-enumeration).
+
+---
+
 ## Canonical OTG Request Flow (v1)
 
 The intended end-to-end flow, as the text reference until flowcharts 2 & 5 are regenerated
@@ -297,6 +337,10 @@ Unless explicitly approved later, do **not** introduce:
 - In-app customer/technician messaging
 - Anything beyond identity / contact / assignment for the `tiremen` table
   (the minimal `tiremen` table itself **is** in scope — see Decisions 22–26)
+- "Remember Me" / persistent-login tokens or a remember-token table (deferred — Decision 43)
+- Password reset / "forgot password", email verification, 2FA, CAPTCHA,
+  account lockout / login rate-limiting (not in Phase 3 scope; none decided)
+- Public admin registration page (Decisions 18/40/46)
 
 ---
 
@@ -340,8 +384,9 @@ Key rules (from the Database Notes / schema / decisions):
   change due are UI-only and not stored (Decision 30).
 - `service_requests.eta_minutes` is a frozen snapshot; no route geometry is stored
   (Decisions 32–33).
-- `email` is unique within `customers` and within `admins`, checked independently (see
-  open questions).
+- `email` is unique within `customers` and within `admins`, checked independently — a
+  customer and an admin may share an address (Decision 42). Login identifier is
+  `email` only (Decision 41).
 
 **Do not alter the database structure merely because of a UI element.**
 
@@ -383,12 +428,6 @@ The following are **NOT** confirmed decisions and must not be silently resolved:
 
 - Whether **"Manage Customer Accounts"** (admin capability) is officially in scope. It
   appears in the use-case diagram but is flagged there as proposed.
-- The exact **remember-me / persistent-login** implementation (the spec wants it; a secure
-  version likely needs its own hashed, expiring token table — deferred to development, not
-  in the schema).
-- Whether **email uniqueness** should be globally shared across `customers` and `admins`,
-  or remain enforced only within each table (currently: within each table, independently —
-  a customer and an admin could share an email).
 - Exact handling of **denied geolocation** beyond the documented retry/fallback behavior
   (`latitude`/`longitude` simply stay unset until a successful capture).
 - Whether **`service_requests.admin_id`** should remain nullable throughout the workflow or
@@ -399,8 +438,6 @@ The following are **NOT** confirmed decisions and must not be silently resolved:
 - Exact **UI treatment of saved-vehicle management**.
 - **`category`** as a plain field on `items` vs. its own table (currently: plain nullable
   field).
-- Whether customers are identified by **email only, username, or both** (schema assumes
-  email only).
 - Whether **Admin can manually create customer accounts** (not modeled as a separate flow).
 - Whether a finalized **requirements / SRS document** will be produced, and its contents.
   Not started; when created it belongs under `docs/requirements/`.
@@ -421,11 +458,28 @@ Do not turn these into confirmed requirements without approval.
 | `sale_date` manually editable / backdating? | **No, system-controlled** — Decision 35. |
 | "Manage Inventory" vs "Manage Products" as separate modules? | **One module** — Decision 36. |
 
+### Resolved on 2026-09-01 (Phase 3 — moved out of this list)
+
+| Former open question | Resolution |
+|---|---|
+| Customers identified by email / username / both? | **Email only** — Decision 41. |
+| Email uniqueness — global across `customers`+`admins`, or per-table? | **Per-table, independent** — Decision 42. |
+| Remember-me / persistent-login token table? | **Deferred entirely for v1; no table** — Decision 43. Session auth only. |
+
 ---
 
 ## Current Project Status
 
-- Project is in the **documentation / design stage**.
+- **Phases 1–3 complete (2026-09-01):** Application Foundation, Database Schema,
+  Authentication & Authorization. Phase 4 (customer-side functionality) is next
+  and begins only when explicitly instructed.
+- Repo initialised on `main` at `C:\IPT102`; app at `C:\IPT102\vulcatrack\`
+  served via a Windows junction from `C:\xampp\htdocs\vulcatrack`.
+- Database: the 8 tables from `docs/ERD/schema.dbml` are built
+  (`vulcatrack/database/schema.sql`); **0 application rows**.
+- Auth implemented: customer register/login/logout, admin login/logout, CLI
+  `vulcatrack/database/seed_admin.php`, hardened sessions, `require_customer()` /
+  `require_admin()` guards. See Decisions 41–47.
 - ERD exists (PNG + text schema `docs/ERD/schema.dbml`).
 - Use-case diagram exists (PNG; changes pending — see Required Diagram Changes).
 - Six flowcharts exist.
@@ -434,11 +488,9 @@ Do not turn these into confirmed requirements without approval.
 - **No finalized requirements / SRS document exists.** There is no `docs/requirements/`
   folder yet; when a finalized requirements/SRS is created it should be placed under
   `docs/requirements/`.
-- **Source / application code has not started** (`source/source.txt` is empty).
-- **Development has NOT started.**
 
-The next development phase begins only when explicitly instructed. For now, the task is
-documentation / context preservation only.
+The next development phase begins only when explicitly instructed. Work proceeds one
+phase at a time; the next phase is never auto-started.
 
 ---
 
@@ -515,6 +567,37 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-01 — Phase 3 (Authentication & Authorization) decisions
+
+- Added **Decisions 41–47** from the owner's Phase 3 approval: email-only login
+  identifier; email uniqueness stays per-table; **Remember Me deferred entirely
+  (no token table)**; 8-character minimum password with confirmation; 30-minute
+  sliding session idle timeout (configurable); CLI-only admin provisioning
+  (`vulcatrack/database/seed_admin.php`); two non-crossing session actors
+  (customer / admin) with CSRF-protected POST auth forms and generic,
+  enumeration-resistant login failures.
+- Moved three items out of **Known Open / Unresolved Questions** (customer
+  identifier, email-uniqueness scope, remember-me) into a new "Resolved on
+  2026-09-01" table.
+- Added remember-me tokens, password reset, email verification, 2FA, CAPTCHA,
+  lockout/rate-limiting, and a public admin registration page to
+  **Currently Out of Scope / Do Not Invent**.
+- Updated **Current Project Status** (Phases 1–3 complete).
+- **No schema change** — the database is still exactly the approved 8 tables.
+  No change to any earlier decision (1–40).
+
+### 2026-09-01 — Phases 1 & 2 (implementation, no decision changes)
+
+- **Phase 1 (Application Foundation):** the scaffold was moved into the monorepo
+  at `C:\IPT102\vulcatrack\`; Apache serves it via a Windows junction; Git was
+  initialised on `main`. Documentation status lines in `docs/PROJECT-CONTEXT.md`
+  were reconciled (its rev. 3). No decisions changed.
+- **Phase 2 (Database Schema):** `vulcatrack/database/schema.sql` was created
+  from `docs/ERD/schema.dbml` and verified against MariaDB 10.4.32 (8 tables,
+  keys, FKs, nullability, `CHECK` constraints for `service_requests.status` and
+  `items.item_type`). Column types follow the indicative DBML types. No decision
+  or schema-design change.
 
 ### 2026-08-31 — §16.1 reconciliation: `tiremen` entity reaffirmed
 
