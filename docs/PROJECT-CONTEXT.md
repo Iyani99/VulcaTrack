@@ -4,8 +4,8 @@
 |---|---|
 | **Project title (LOCKED)** | **VulcaTrack: Sales and Inventory with On-the-Go Services** |
 | **Document purpose** | Single authoritative context/handoff file so a brand-new Claude (or developer) conversation can understand the project without any prior conversation memory. |
-| **Current project phase** | **Phase 0 — environment & repository preparation (in progress).** No application development has started. |
-| **Generated / last updated** | 2026-08-31 (rev. 2 — §16.1 reconciled: `tiremen` entity approved) |
+| **Current project phase** | **Phase 1 — Application Foundation: COMPLETE (2026-09-01).** Phase 2 (database schema) is the next approved phase. |
+| **Generated / last updated** | 2026-09-01 (rev. 3 — Phase 1 status reconciled; no decisions changed) |
 | **Status** | **Living document.** Update it whenever a decision changes. If it conflicts with `docs/decisions/project-decisions.md`, the decision record wins and this file must be corrected. |
 
 ---
@@ -77,16 +77,18 @@ It is a student project: prioritise **maintainability, modularity, clear separat
 - **Never** keep two independent copies. **Never** make `C:\xampp\htdocs` the repo root. **Never** create a second `.git` inside `vulcatrack\`.
 - Default branch: **`main`**.
 
-### Current environment state (verified 2026-08-31)
+### Current environment state (verified 2026-09-01)
 
 | Item | State |
 |---|---|
 | XAMPP install | `C:\xampp\` — Apache, PHP 8.0.30, MariaDB 10.4.32, phpMyAdmin, htdocs all present and working |
 | Apache | Starts, serves port 80, config `Syntax OK`, `mod_rewrite` on, `.htaccess` honored |
 | MySQL/MariaDB | Starts; user `root`, **no password** (XAMPP default) |
-| `vulcatrack` database | **Exists but EMPTY (0 tables)** — created only to prove the PHP→DB link |
-| Application skeleton | Exists at `C:\xampp\htdocs\vulcatrack\` (config/, includes/, index.php, health.php, empty feature folders) — **no features**. Not yet moved into the monorepo; junction not yet created. |
-| Git | **Not initialised** in `C:\IPT102`. No remote configured. Git 2.55 installed; identity set (`Lian` / `jokerjesterjay@gmail.com`). |
+| `vulcatrack` database | **Exists but EMPTY (0 tables)** — created only to prove the PHP→DB link. Schema build is Phase 2. |
+| Application skeleton | **Moved into the monorepo at `C:\IPT102\vulcatrack\`** (config/, includes/, index.php, health.php, empty feature folders) — **no features**. |
+| Apache junction | **Created:** `C:\xampp\htdocs\vulcatrack` → `C:\IPT102\vulcatrack` (Windows directory junction). App reachable at `http://localhost/vulcatrack/`. |
+| PHP → Apache → MariaDB health check | **Passing** — `http://localhost/vulcatrack/health.php` reports all checks PASS (verified 2026-09-01). |
+| Git | **Initialised** in `C:\IPT102` on branch `main`; initial commit made. Remote `origin` → `https://github.com/Iyani99/IPT102.git` configured (nothing pushed yet). Root `.gitignore` + `.gitattributes` in place. Git 2.55; identity `Lian` / `jokerjesterjay@gmail.com`. |
 | GitHub auth | Not configured in this environment — owner must set up a PAT / `gh auth login` before any push. |
 
 **Apache and MySQL must be started manually from the XAMPP Control Panel** (they are not Windows services).
@@ -403,9 +405,9 @@ Incremental. **Do one phase at a time. Do not auto-start the next phase.**
 
 | Phase | Scope |
 |---|---|
-| **Phase 0** | Environment & repository preparation. *(In progress: env verified; monorepo move + junction + `git init` pending owner approval.)* |
-| **Phase 1** | Application foundation / project skeleton and a basic working PHP→Apache→MySQL environment. *(A skeleton already exists at `C:\xampp\htdocs\vulcatrack\`; it must be moved into `C:\IPT102\vulcatrack\` per §3.)* |
-| **Phase 2** | Database / MySQL foundation — create the 8-table schema from `schema.dbml` (`customers`, `admins`, `tiremen`, `vehicles`, `items`, `sales`, `sale_items`, `service_requests`). |
+| **Phase 0** | Environment & repository preparation. *(Complete — folded into Phase 1 by owner on 2026-09-01.)* |
+| **Phase 1** | Application foundation. *(Complete 2026-09-01: scaffold moved to `C:\IPT102\vulcatrack\`; Apache junction `C:\xampp\htdocs\vulcatrack` → `C:\IPT102\vulcatrack` created; Git initialised on `main` with root `.gitignore`/`.gitattributes` and `origin` remote; PHP→Apache→MariaDB health check passing.)* |
+| **Phase 2** | Database / MySQL foundation — create the 8-table schema from `schema.dbml` (`customers`, `admins`, `tiremen`, `vehicles`, `items`, `sales`, `sale_items`, `service_requests`). *(Next approved phase.)* |
 | **Phase 3** | Authentication & authorization — customer auth + separate admin auth; no public admin registration. |
 | **Phase 4** | Customer-side functionality — dashboard, profile, saved vehicles, OTG request submission + status/history. |
 | **Phase 5** | POS & inventory — unified `items`, one inventory module, POS with walk-in support and stock deduction. |
@@ -439,3 +441,4 @@ Because of the presentation deadline, prefer a **working vertical slice** over p
 |---|---|
 | 2026-08-31 | Initial creation. Consolidated from `docs/decisions/project-decisions.md` (Decisions 1–40 + open questions + conflict log), `docs/ERD/schema.dbml`, `docs/VulcaTrack-Database-Notes_1.md`, the six flowcharts, the use-case diagram, the verified XAMPP environment state, and owner instructions from the setup conversation. Flagged the **`tiremen` entity conflict** (§16.1) as unresolved. |
 | 2026-08-31 (rev. 2) | Owner resolved §16.1 — **option (a): keep `tiremen` + `service_requests.tireman_id`.** Updated §0, §1, §5, §6, §8, §9, §14, §15, §16.1, §17, §18 to present the **8-table** design as approved and the three-actor model (Customer / Admin / Tireman) explicitly. No other decisions changed; title unchanged; no new tables or features. |
+| 2026-09-01 (rev. 3) | **Status-only correction.** Phase 0 folded into Phase 1 by owner; recorded **Phase 1 — Application Foundation as COMPLETE** (repo initialised on `main`, scaffold at `C:\IPT102\vulcatrack\`, Apache junction created, health check passing). Updated the header phase line, §3 "Current environment state", and the §18 phase table. **No requirements, decisions, architecture, or schema changed.** |
