@@ -6,16 +6,11 @@
  * configuration, NOT a database table (no `shop_settings` in v1). This file is
  * the single source of truth for the shop coordinates used by the OTG
  * route / ETA calculation. All such code must read from here.
- *
- * The values below are SAMPLE values (a generic Cebu City point) so the OTG
- * feature is demonstrable. **Replace `latitude` / `longitude` / `address` with
- * the real shop location before a real deployment or the graded demo.**
- * Changing them here is all that is required -- no code or database change.
  */
 
 return [
-    'name'      => 'VulcaTrack Vulcanizing Shop',
-    'address'   => 'Sample address -- replace with the real shop address',
-    'latitude'  => 10.3157,   // SAMPLE -- replace with the real shop latitude
-    'longitude' => 123.8854,  // SAMPLE -- replace with the real shop longitude
+    'name'      => 'Gerald Tabayag Vulcanizing Shop',
+    'address'   => '504 San Jose St. Baliwag, Bulacan',
+    'latitude'  => 14.946654430279454,   
+    'longitude' => 120.89290174619997, 
 ];
