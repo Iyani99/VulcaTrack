@@ -1,8 +1,8 @@
 # VulcaTrack
 
-**VulcaTrack: Sales and Inventory with On-the-Go Services**
+**VulcaTrack :Sales and Inventory with On-the-Go Services**
 
-VulcaTrack is a web-based management system developed for **Gerald Tabayag Vulcanizing Shop**. The system combines customer-facing services, customer and vehicle management, in-shop sales and inventory, and On-the-Go (OTG) roadside vulcanizing service requests into one system.
+It is a web-based management system developed for **Gerald Tabayag Vulcanizing Shop**. The system combines customer-facing services, customer and vehicle management, in-shop sales and inventory, and On-the-Go (OTG) roadside vulcanizing service requests into one system.
 
 The project is developed as a **BSIT student project**, with emphasis on maintainability, modularity, separation of concerns, understandable code, and a reasonable project scope.
 
