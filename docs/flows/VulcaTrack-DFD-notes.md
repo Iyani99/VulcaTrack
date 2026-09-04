@@ -17,7 +17,22 @@ in the course reference:
 
 The `.svg` files are the editable source (plain text; open in a browser, Figma,
 draw.io, or Inkscape). The `.png` files are high-resolution (context 3800 px,
-Level 1 5500 px wide) for pasting into the Word document.
+Level 1 5000 px wide) for pasting into the Word document, rendered from the `.svg`
+at 2.5×.
+
+The 2026-09-04 revision is a **visual-clarity pass only** — layout, routing and
+labelling. No process, external entity, data store or data flow was added or
+removed and no project decision changed. Specific layout fixes: a bilateral
+zoned layout (Customer processes left, Admin processes right, shared stores
+`D1` / `D6` / `D7` down the centre); the Admin login flow shortened and routed
+orthogonally over the top instead of spanning the whole width; the process-4 /
+Admin area de-crowded into two non-overlapping flows; the POS / inventory block
+stacked `P6 → D4 → P5`; `D5` given the display label **"Sales & Line Items"**;
+verb-ish flow labels changed to nouns (e.g. *Item Activation*, *Request
+Completion*). One consistency change on Level 0: the standalone *"Sales Records"*
+output to Admin was dropped — no Level 1 process produces an admin sales report
+(reporting is a deferred later-phase read over `D5`), so the two levels now
+balance without it. Admin still receives the per-sale *Printable Receipt*.
 
 ## Sources of truth used
 
@@ -65,7 +80,7 @@ is handed over **through data store D6**, which is correct DFD practice.
 | D2 admins | `admins` |
 | D3 vehicles | `vehicles` |
 | D4 items | `items` (unified products + services) |
-| D5 sales | `sales` + `sale_items` (master/detail — one store) |
+| D5 Sales & Line Items | `sales` + `sale_items` (master/detail — one store) |
 | D6 service_requests | `service_requests` |
 | D7 tiremen | `tiremen` |
 
