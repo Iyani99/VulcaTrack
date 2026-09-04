@@ -117,6 +117,7 @@ When information conflicts, use this order:
 | `docs/VulcaTrack-Database-Notes_1.md` | Field-by-field DB rationale; has a 2026-08-31 revision note at the top. |
 | `docs/VulcaTrack-Use-Case-Diagram_1.png` | Actors + use cases; changes pending. |
 | `docs/flows/VulcaTrack-1..6-*.png` | Overall, Customer, Admin, POS, OTG, Inventory workflows. Flows 2 & 5 are pending updates. |
+| `docs/flows/VulcaTrack-DFD-0-Context.*` / `VulcaTrack-DFD-1-Level1.*` | **Data Flow Diagrams** (Chapter 3) — context (Level 0) and Level 1, academic notation. Regenerated 2026-09-04 from the approved scope + 8-table schema; consistent with Decision 48 (ETA computed internally — no external routing entity). Editable `.svg` + high-res `.png`. See `VulcaTrack-DFD-notes.md`. |
 | `docs/requirements/` | Empty. Reserved for a finalized requirements/SRS **if one is ever produced**. Do not invent requirements to fill it. |
 
 ---
