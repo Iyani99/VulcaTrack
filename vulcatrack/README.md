@@ -11,6 +11,10 @@ Implemented on top of the Phase 3 auth system: customer dashboard, profile
 restore), On-the-Go rescue-request submission with a one-time route + frozen ETA,
 and the customer request history + status views.
 
+A **Phase 4.5 stabilization pass** (2026-09-06) then added a committed test
+harness (`tests/`) and fixed documentation drift -- no feature code, no schema
+change.
+
 Not yet implemented (later phases): admin OTG request handling (accept / reject /
 assign a Tireman / complete), POS, inventory, reports, admin dashboard. Do not add
 these until the relevant phase is explicitly approved.
@@ -92,9 +96,10 @@ OpenStreetMap tiles. It degrades gracefully: if Leaflet or the tiles fail to
 load, geolocation + manual coordinate entry still work and the status page shows
 the coordinates with an "open map" link.
 
-**Shop location:** `config/shop.php` currently holds **sample** coordinates.
-Replace `latitude` / `longitude` / `address` with the real shop location before a
-real deployment or the graded demo -- no code change needed.
+**Shop location:** `config/shop.php` holds the **real shop location** -- Gerald
+Tabayag Vulcanizing Shop, 504 San Jose St. Baliwag, Bulacan
+(`14.946654430279454` / `120.89290174619997`). It is a config value only, not a
+database table (Decision 37); route/ETA code reads from here.
 
 ## Structure
 
@@ -107,7 +112,7 @@ real deployment or the graded demo -- no code change needed.
 | `admin/login.php`, `admin/logout.php`, `admin/index.php` | Admin auth entry points + guarded placeholder |
 | `health.php` | Environment + DB connectivity check |
 | `config/` | Local configuration -- **not web-accessible** (`config.php` git-ignored) |
-| `config/shop.php` | Fixed shop location (Decision 37) -- sample values, replace before deploy |
+| `config/shop.php` | Fixed shop location (Decision 37) -- the real Baliwag shop coordinates |
 | `includes/` | `bootstrap.php`, `db.php`, `auth.php` -- **not web-accessible** |
 | `src/Auth/` | `Auth.php` (session/actor lifecycle), `Password.php`, `Csrf.php` |
 | `src/Repository/` | `CustomerRepository`, `AdminRepository`, `VehicleRepository`, `ServiceRequestRepository` -- prepared statements, customer-scoped |
@@ -116,6 +121,19 @@ real deployment or the graded demo -- no code change needed.
 | `assets/` | `css/app.css`, `js/otg-map.js`, `lib/leaflet/` (vendored), `img/` |
 | `database/` | `schema.sql`, `seed_admin.php` -- **not web-accessible** |
 | `storage/` | Logs / generated files -- **not web-accessible** |
+| `tests/` | Dependency-free regression harness -- **not web-accessible** |
+
+## Tests
+
+```
+C:\xampp\php\php.exe vulcatrack/tests/run.php            # all suites
+C:\xampp\php\php.exe vulcatrack/tests/run.php unit       # unit only (no DB needed)
+```
+
+No Composer, no PHPUnit. `run.php` discovers `tests/*/*Test.php`, runs each case
+isolated, promotes PHP warnings/notices to failures, and exits non-zero on any
+failure. The `integration` and `http` suites need MariaDB running and the schema
+built; every DB test rolls back its writes. See `tests/README.md`.
 
 ## Verified environment
 

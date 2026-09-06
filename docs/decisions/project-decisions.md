@@ -1,8 +1,8 @@
 # VulcaTrack — Project Decision Record
 
 **Status:** Authoritative record of CONFIRMED project decisions.
-**Last updated:** 2026-09-01
-**Last revised:** 2026-09-01 — Phase 4 (Customer-Side Functionality); Decision 48
+**Last updated:** 2026-09-06
+**Last revised:** 2026-09-06 — Phase 4.5 stabilization; Phase 5 pre-decisions 49–57
 (see [Revision History](#revision-history)).
 **Purpose:** This file exists so that a completely new session (human or Claude Code) can
 understand the project's confirmed decisions, scope boundaries, and change-control rules
@@ -40,12 +40,19 @@ Nothing beyond these four areas is in scope unless explicitly approved later.
 
 | Layer | Choice |
 |---|---|
-| Backend | PHP |
-| Database | MySQL |
-| Frontend | HTML, CSS, JavaScript |
+| Backend | PHP 8.0 (local: PHP 8.0.30, XAMPP) |
+| Database | MySQL-compatible — local is **MariaDB 10.4.32** (XAMPP) |
+| Web server | Apache 2.4 (XAMPP) |
+| Frontend | HTML5, CSS3, JavaScript; **Vue** only where component behaviour genuinely benefits (not a full SPA) |
+| Maps | Leaflet + OpenStreetMap (vendored, no build step) |
+
+Locked: do **not** introduce Laravel, React, a Node.js runtime, Firebase, or
+PostgreSQL without explicit owner approval.
 
 **Figma** is the team's primary reference for UI/UX and visual/interface behavior. The
-Figma prototype lives **outside** `C:\IPT102` and is provided/accessed separately.
+Figma prototype lives **outside** the repo application and is provided/accessed separately.
+*(The local folder is `C:\IPT102`; the GitHub remote is
+`https://github.com/Iyani99/VulcaTrack.git`.)*
 
 ---
 
@@ -314,9 +321,86 @@ decision was needed and is recorded here; it changes no scope and no schema.
     - requires a captured location to submit an OTG request (the feature is
       "come to my location"); denied-geolocation fallback = retry + map pin-drop
       + manual lat/long entry (exact UX still open — Known Open Questions);
-    - sets `config/shop.php` to **sample** coordinates (was `0.0 / 0.0`) so the
-      feature is demonstrable — replace with the real shop location before a
-      real deployment / graded demo.
+    - sets `config/shop.php` away from `0.0 / 0.0` so the feature is
+      demonstrable. *(Superseded 2026-09-04, commit `f2043d5`: `config/shop.php`
+      now holds the **real** shop location — Gerald Tabayag Vulcanizing Shop,
+      504 San Jose St. Baliwag, Bulacan, lat `14.946654430279454` / lng
+      `120.89290174619997`. Still a config value only; no `shop_settings`
+      table — Decision 37.)*
+
+---
+
+## Confirmed Project Decisions — 2026-09-06 (Phase 4.5: Phase 5 pre-decisions)
+
+Settled by the owner ahead of Phase 5 implementation so these questions are not
+reopened. They set direction only — **no code and no schema change** was made
+when recording them. The Phase 2 schema is still exactly the approved 8 tables.
+
+49. **Sales reporting / history UI is NOT part of Phase 5.** Phase 5 delivers the
+    POS, inventory, the printable receipt and a minimal admin shell only. Any
+    reporting or sales-history screen is deferred to **Phase 6**. Phase 5's
+    `SaleRepository` *may* include receipt-read / lookup methods it needs
+    internally, but no reporting page is built.
+
+50. **Receipt = printable HTML only.** Rendered from the saved `sales` +
+    `sale_items` rows (plus `config/shop.php` and the recording admin). Contents:
+    - shop name; shop address;
+    - `sale_id` used as the sale / receipt number;
+    - sale date/time (`sales.sale_date`);
+    - cashier / Admin name;
+    - linked customer name if the sale has one, otherwise the literal **"Walk-in"**;
+    - per line: item/service name, quantity, frozen unit price, line subtotal;
+    - total;
+    - a print button and print styling.
+    **Not** added: a receipt table, TIN / BIR / tax fields, any tax subsystem,
+    GCash / online payment / a payment table, or any "official receipt" claim.
+    Reaffirms Decisions 12/30/31.
+
+51. **Customer linking at the POS is optional and existing-only.** The cashier may
+    attach an already-registered customer to a sale; blank means a walk-in and
+    the sale stores `sales.customer_id = NULL`. The POS **must not** create a
+    customer account (no inline registration), and linking a customer has **no**
+    loyalty, pricing or payment side effect — it is only recorded. Whether an
+    admin can create customer accounts through some *other* screen stays out of
+    scope / open (Known Open Questions). Reaffirms Decision 14.
+
+52. **`items.category` stays a plain nullable free-text column for Phase 5.** No
+    category table is introduced in Phase 5. A datalist / suggestion list of the
+    values already in use is acceptable UI later. (Whether it ever becomes its
+    own table remains open beyond Phase 5.) Reaffirms Decision 15's note.
+
+53. **A minimal Admin app shell / navigation is approved as a Phase 5
+    prerequisite.** Just enough chrome to reach **Dashboard, POS, Inventory**
+    (e.g. `src/Views/partials/admin_top.php` + `admin_bottom.php`, mirroring the
+    existing customer shell). It must **not** ship Phase 6 features early — no
+    OTG request management, no Tireman management, no reporting screens.
+
+54. **Cash tender / change are never persisted.** The POS UI computes the sale
+    total, accepts an amount tendered, computes change, and blocks completion
+    when the tender is below the total. The server may receive `cash_tendered`
+    **only** to re-validate it against the server-authoritative total and may
+    compute change for the response/display. Neither value is written to the
+    database; the only monetary values stored are `sales.total_amount` and the
+    per-line `sale_items` values. Reaffirms Decision 30. There is no payment
+    subsystem.
+
+55. **Money arithmetic uses integer centavos** (or an equivalent exact method) —
+    never PHP floating-point arithmetic — for line subtotals, the sale total,
+    tender and change. `DECIMAL(10,2)` values read from the database are treated
+    as exact and converted to integer centavos for computation.
+
+56. **Application-layer validation limits for Phase 5:** `price >= 0`,
+    `quantity > 0`, `stock_quantity >= 0` (a product sale may not drive stock
+    negative). These are enforced in the service / repository layer. The
+    approved Phase 2 schema is **not** modified to add new `CHECK` constraints
+    unless a genuine correctness problem later forces the schema to be
+    reconsidered.
+
+57. **A session-backed POS cart is acceptable only for error recovery.** A
+    temporary `$_SESSION` cart may hold the in-progress line items so the cashier
+    does not lose them when a validation or insufficient-stock error re-renders
+    the POS. It is not a persistent cart, not shared between sessions, and is
+    cleared once the sale is committed or abandoned. No cart / cart-items table.
 
 ---
 
@@ -469,11 +553,14 @@ The following are **NOT** confirmed decisions and must not be silently resolved:
   move from the `config/shop.php` constant to a `shop_settings` table). Config-value
   treatment is confirmed for v1 (Decision 37); only the *future* editable option is open.
 - Exact **UI treatment of saved-vehicle management**.
-- **`category`** as a plain field on `items` vs. its own table (currently: plain nullable
-  field).
-- Whether **Admin can manually create customer accounts** (not modeled as a separate flow).
+- **`category`** as a plain field on `items` vs. its own table — *settled for Phase 5 by
+  Decision 52 (stays plain free-text; no category table in Phase 5)*; whether it ever
+  becomes a table beyond Phase 5 is still open.
+- Whether **Admin can manually create customer accounts** through a dedicated screen — still
+  open. *Decision 51 only settles that the **POS** never creates accounts.*
 - Whether a finalized **requirements / SRS document** will be produced, and its contents.
-  Not started; when created it belongs under `docs/requirements/`.
+  Not started; when created it belongs under `docs/requirements/` (the folder exists and is
+  intentionally empty).
 
 Do not turn these into confirmed requirements without approval.
 
@@ -499,17 +586,35 @@ Do not turn these into confirmed requirements without approval.
 | Email uniqueness — global across `customers`+`admins`, or per-table? | **Per-table, independent** — Decision 42. |
 | Remember-me / persistent-login token table? | **Deferred entirely for v1; no table** — Decision 43. Session auth only. |
 
+### Resolved on 2026-09-06 (Phase 5 pre-decisions — moved out of this list)
+
+| Former open question | Resolution |
+|---|---|
+| Final receipt requirements? | **Fixed field list; printable HTML only; no receipt table** — Decision 50. |
+| Sales reporting in Phase 5? | **No — deferred to Phase 6** — Decision 49. |
+| `items.category` a plain field or its own table (for Phase 5)? | **Plain free-text; no category table in Phase 5** — Decision 52. |
+| POS customer linking — how / does it create accounts? | **Optional, existing customers only; POS never creates an account** — Decision 51. |
+| Cash tender / change persisted? *(re-affirm)* | **No — UI/response only** — Decision 54. |
+
 ---
 
 ## Current Project Status
 
-- **Phases 1–4 complete (2026-09-01):** Application Foundation, Database Schema,
-  Authentication & Authorization, Customer-Side Functionality. Phase 5 (POS &
-  inventory) is next and begins only when explicitly instructed.
-- Repo initialised on `main` at `C:\IPT102`; app at `C:\IPT102\vulcatrack\`
+- **Phases 1–4 complete (2026-09-01); Phase 4.5 stabilization pass done
+  (2026-09-06).** Application Foundation, Database Schema, Authentication &
+  Authorization, Customer-Side Functionality. Phase 5 (POS & inventory) is next
+  and begins only when explicitly instructed; its pre-decisions (49–57) are
+  settled.
+- Repo on `main` at `C:\IPT102`, pushed to
+  `https://github.com/Iyani99/VulcaTrack.git`; app at `C:\IPT102\vulcatrack\`
   served via a Windows junction from `C:\xampp\htdocs\vulcatrack`.
 - Database: the 8 tables from `docs/ERD/schema.dbml` are built
-  (`vulcatrack/database/schema.sql`); **0 application rows**.
+  (`vulcatrack/database/schema.sql`); no seed data ships (the owner keeps a
+  personal test account).
+- **Test harness (Phase 4.5):** `vulcatrack/tests/` — dependency-free CLI runner
+  (`php vulcatrack/tests/run.php`), 60 tests / 339 assertions across unit,
+  integration (schema + repositories + Auth) and end-to-end HTTP suites. All
+  green as of 2026-09-06.
 - Auth (Decisions 41–47): customer + admin login/logout, CLI
   `vulcatrack/database/seed_admin.php`, hardened sessions, guards.
 - Customer side (Decision 48): `vulcatrack/customer/*` — dashboard, profile,
@@ -545,8 +650,8 @@ phase at a time; the next phase is never auto-started.
 | `docs/flows/VulcaTrack-5-OTG-Request-Flow.png` | On-the-Go request workflow. | Image. |
 | `docs/flows/VulcaTrack-6-Inventory-Flow.png` | Inventory management workflow. | Image. |
 | `docs/decisions/project-decisions.md` | **This file.** Authoritative confirmed-decision record. | — |
-| `docs/requirements/` | Intended home of a finalized requirements/SRS document, **if/when one is produced.** | Folder does not exist yet; do not create it empty. |
-| `source/source.txt` | Placeholder. | Empty; no application code exists yet. |
+| `docs/requirements/` | Intended home of a finalized requirements/SRS document, **if/when one is produced.** | Folder exists and is intentionally empty; do not invent requirements to fill it. |
+| `source/source.txt` | Obsolete 0-byte placeholder from before the app existed. | The application lives in `vulcatrack/`. Harmless; a candidate for deletion during a future cleanup. |
 
 The **Figma prototype** is external to `C:\IPT102` and is the team's UI/UX reference when
 provided/accessed.
@@ -565,7 +670,7 @@ each item below.
 | C2 | "Tireman" as label vs. entity | **RESOLVED** | Refined by Decisions 22–26: "Tireman" stays customer-facing wording **and** gets a minimal `tiremen` table (no login/dashboard/GPS). Database Notes §12 open item superseded; a revision note + inline `tiremen` section were added to the Notes. |
 | C3 | Shop location: config vs. table | **RESOLVED for v1** | Decision 37: centralized config (`config/shop.php`) holding lat/long/address; no `shop_settings` table in v1. Admin-editable option stays a *future* open question. Database Notes §10/§12 updated. |
 | C4 | `customers` → `service_requests` cardinality | **RESOLVED** | Decision 39: corrected to `1 : 0..N`; `service_requests.customer_id` `NOT NULL`. Database Notes §3 corrected. |
-| C5 | Empty legacy stub `project-decisions.md.txt` | **OPEN (cleanup)** | 0-byte file still present in `docs/decisions/`. Deletion is cosmetic and was **not** performed in this task; pending an explicit "yes, delete it" from the project owner. |
+| C5 | Empty legacy stub `project-decisions.md.txt` | **RESOLVED** | The 0-byte stub is no longer on disk (only `project-decisions.md` remains in `docs/decisions/`). Closed in the 2026-09-06 stabilization pass. |
 | N1 | POS in-person cash payment / receipt | **RESOLVED** | Decisions 30–31: online/gateway payment out of scope; POS UI does total/tender/change but does **not** persist tender/change; `sales.total_amount` only; printable HTML receipt, no receipt table. Flow 4 (POS PNG) is consistent — annotation only (D4). |
 | N2 | Item / vehicle deactivation had no schema support | **RESOLVED** | Decisions 27–29: `is_active` on `items`, `vehicles` (and `tiremen`). Added to `schema.dbml` + Database Notes. ERD PNG needs regeneration (D1). |
 | N3 | "Manage Inventory" vs "Manage Products" | **RESOLVED** | Decision 36: one module. Use-case PNG needs update (D2). No schema impact. |
@@ -603,6 +708,39 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-06 — Phase 4.5 stabilization pass (no feature code, no schema change)
+
+- **Added Decisions 49–57** — the settled Phase 5 pre-decisions: sales reporting
+  deferred to Phase 6 (49); fixed printable-HTML receipt field list, no receipt
+  table (50); POS customer-linking is optional and existing-only, POS never
+  creates accounts (51); `items.category` stays plain free-text for Phase 5
+  (52); a minimal admin shell is an approved Phase 5 prerequisite (53); cash
+  tender/change never persisted (54); integer-centavo money arithmetic (55);
+  app-layer validation limits `price >= 0` / `quantity > 0` / `stock >= 0`
+  without new schema CHECKs (56); session cart only for error recovery (57).
+- **Moved five items** out of *Known Open / Unresolved Questions* into a new
+  "Resolved on 2026-09-06" table (receipt requirements, Phase-5 reporting,
+  `items.category`, POS customer linking, cash tender persistence).
+- **Documentation-drift fixes:** the Technology table now names MariaDB 10.4,
+  Apache 2.4, Vue-where-it-helps and Leaflet, and the GitHub remote
+  (`Iyani99/VulcaTrack.git`); the Decision 48 note records that
+  `config/shop.php` has held the **real** Baliwag shop location since commit
+  `f2043d5` (2026-09-04), not "sample coordinates"; conflict **C5** closed (the
+  `project-decisions.md.txt` stub is gone); `docs/requirements/` described as
+  existing-but-empty; `source/source.txt` flagged as an obsolete placeholder.
+- **Diagrams:** `docs/flows/VulcaTrack-Activity-Diagram-OTG.*` and
+  `VulcaTrack-Sequence-Diagram-POS.*` were reviewed against the locked design
+  (three swimlanes with the Tireman as an off-system note; four statuses; no
+  payment table; frozen `unit_price`; product-only stock deduction; printable
+  HTML receipt) — found **CONSISTENT** and added to version control as Chapter 3
+  documentation.
+- **Added a committed test harness** at `vulcatrack/tests/` (dependency-free,
+  no Composer/PHPUnit): 60 tests / 339 assertions covering the Phase 1–4
+  regression surface (unit, live-schema + repository integration, end-to-end
+  HTTP guards/CSRF/actor-separation). Ran green.
+- **No change to Decisions 1–48. No schema change** — still exactly 8 tables,
+  four OTG statuses, no new columns.
 
 ### 2026-09-01 — Phase 4 (Customer-Side Functionality)
 

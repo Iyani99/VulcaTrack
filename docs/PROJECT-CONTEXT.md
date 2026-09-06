@@ -4,8 +4,8 @@
 |---|---|
 | **Project title (LOCKED)** | **VulcaTrack: Sales and Inventory with On-the-Go Services** |
 | **Document purpose** | Single authoritative context/handoff file so a brand-new Claude (or developer) conversation can understand the project without any prior conversation memory. |
-| **Current project phase** | **Phases 1–4 COMPLETE (2026-09-01):** Application Foundation, Database Schema, Authentication & Authorization, Customer-Side Functionality. Phase 5 (POS & inventory) is the next approved phase. |
-| **Generated / last updated** | 2026-09-01 (rev. 5 — Phase 4 customer functionality; ETA method = Decision 48; no schema change) |
+| **Current project phase** | **Phases 1–4 COMPLETE (2026-09-01); Phase 4.5 stabilization pass done (2026-09-06).** Application Foundation, Database Schema, Authentication & Authorization, Customer-Side Functionality. Phase 5 (POS & inventory) is the next approved phase — its already-settled decisions are recorded as Decisions 49–57. |
+| **Generated / last updated** | 2026-09-06 (rev. 6 — Phase 4.5 stabilization: committed test harness, documentation-drift fixes, Phase 5 pre-decisions 49–57; no schema change, no feature code) |
 | **Status** | **Living document.** Update it whenever a decision changes. If it conflicts with `docs/decisions/project-decisions.md`, the decision record wins and this file must be corrected. |
 
 ---
@@ -24,7 +24,7 @@
 
 ## 0. TL;DR
 
-VulcaTrack is a **BSIT student, web-based system for a vulcanizing / tire shop**, built with **PHP + MySQL/MariaDB + Apache (XAMPP)** and a **HTML/CSS/JS frontend (Vue where it helps)**. It has a **customer side** (accounts, saved vehicles, On-the-Go roadside service requests with a map + one-time ETA) and an **admin side** (in-shop POS, unified product/service inventory, OTG request handling, reports). Three actors: **Customer** (requests OTG service), **Admin** (manages the system and handles requests), **Tireman** (performs the OTG service — a service-provider record, not a login role). It explicitly **does not** do live technician GPS tracking, online/GCash payment, or public admin sign-up. Walk-in POS sales without an account must work. Development is planned in phases; nothing is coded yet.
+VulcaTrack is a **BSIT student, web-based system for a vulcanizing / tire shop**, built with **PHP + MySQL/MariaDB + Apache (XAMPP)** and a **HTML/CSS/JS frontend (Vue where it helps)**. It has a **customer side** (accounts, saved vehicles, On-the-Go roadside service requests with a map + one-time ETA) and an **admin side** (in-shop POS, unified product/service inventory, OTG request handling, reports). Three actors: **Customer** (requests OTG service), **Admin** (manages the system and handles requests), **Tireman** (performs the OTG service — a service-provider record, not a login role). It explicitly **does not** do live technician GPS tracking, online/GCash payment, or public admin sign-up. Walk-in POS sales without an account must work. Development is phased: **Phases 1–4 are complete** (foundation, 8-table schema, auth, the full customer side) and a Phase 4.5 stabilization pass added a committed test harness; **Phase 5 (POS & inventory) is next**.
 
 ---
 
@@ -60,7 +60,7 @@ It is a student project: prioritise **maintainability, modularity, clear separat
 
 ### Repository (monorepo)
 
-- **GitHub remote:** `https://github.com/Iyani99/IPT102.git` — newly created, **was empty** at project start.
+- **GitHub remote:** `https://github.com/Iyani99/VulcaTrack.git` (branch `main`; commits are pushed here). *(Earlier drafts of this file named `Iyani99/IPT102.git`; that was the placeholder name before the repo was renamed — the local folder is still `C:\IPT102`, but the remote is `VulcaTrack`.)*
 - **Local root / repo root:** `C:\IPT102`
 - **Intended layout:**
   ```
@@ -84,13 +84,14 @@ It is a student project: prioritise **maintainability, modularity, clear separat
 | XAMPP install | `C:\xampp\` — Apache, PHP 8.0.30, MariaDB 10.4.32, phpMyAdmin, htdocs all present and working |
 | Apache | Starts, serves port 80, config `Syntax OK`, `mod_rewrite` on, `.htaccess` honored |
 | MySQL/MariaDB | Starts; user `root`, **no password** (XAMPP default) |
-| `vulcatrack` database | **8 tables built** from `vulcatrack/database/schema.sql` (Phase 2). **0 application rows** — no seed data; create an admin with `php vulcatrack/database/seed_admin.php`. |
+| `vulcatrack` database | **8 tables built** from `vulcatrack/database/schema.sql` (Phase 2). No seed data ships; the owner has created their own customer account for manual testing. Create an admin with `php vulcatrack/database/seed_admin.php`. |
 | Application code | At `C:\IPT102\vulcatrack\`. **Phases 3–4:** auth (customer + admin, hardened sessions, guards, CLI admin seeding) **and** the full customer side — dashboard, profile, saved vehicles (soft-delete), OTG rescue submission (browser geolocation → frozen ETA), request history + customer-facing status. Not built yet: admin OTG handling, POS, inventory, reports (Phases 5–6). |
-| Shop location | `vulcatrack/config/shop.php` — **sample** coordinates (generic Cebu City point). Replace with the real shop lat/long/address before deploy/demo; no code change needed (Decision 37). |
+| Test harness | `vulcatrack/tests/` (Phase 4.5) — dependency-free CLI runner, no Composer/PHPUnit. `php vulcatrack/tests/run.php` → 60 tests / 339 assertions (unit + integration + end-to-end HTTP) covering the Phase 1–4 regression surface. MariaDB must be running for the integration/http suites. |
+| Shop location | `vulcatrack/config/shop.php` — the **real shop location**: Gerald Tabayag Vulcanizing Shop, 504 San Jose St. Baliwag, Bulacan, lat `14.946654430279454` / lng `120.89290174619997` (set in commit `f2043d5`, 2026-09-04). Config value only — no `shop_settings` table (Decision 37). |
 | OTG map | Leaflet vendored at `vulcatrack/assets/lib/leaflet/` (no build step); OpenStreetMap tiles at view time; graceful degradation when offline. |
 | Apache junction | **Created:** `C:\xampp\htdocs\vulcatrack` → `C:\IPT102\vulcatrack` (Windows directory junction). App reachable at `http://localhost/vulcatrack/`. |
 | PHP → Apache → MariaDB health check | **Passing** — `http://localhost/vulcatrack/health.php` reports all checks PASS (verified 2026-09-01). |
-| Git | **Initialised** in `C:\IPT102` on branch `main`; initial commit made. Remote `origin` → `https://github.com/Iyani99/IPT102.git` configured (nothing pushed yet). Root `.gitignore` + `.gitattributes` in place. Git 2.55; identity `Lian` / `jokerjesterjay@gmail.com`. |
+| Git | Repo in `C:\IPT102` on branch `main`, pushed to `origin` → `https://github.com/Iyani99/VulcaTrack.git`. Root `.gitignore` + `.gitattributes` in place (LF in the repo, `text=auto`). Identity `Lian` / `jokerjesterjay@gmail.com`. |
 | GitHub auth | Not configured in this environment — owner must set up a PAT / `gh auth login` before any push. |
 
 **Apache and MySQL must be started manually from the XAMPP Control Panel** (they are not Windows services).
@@ -111,13 +112,15 @@ When information conflicts, use this order:
 | File | Role |
 |---|---|
 | `docs/PROJECT-CONTEXT.md` | **This file** — consolidated handoff context. |
-| `docs/decisions/project-decisions.md` | **Authoritative** confirmed decisions, scope, change-control. Decisions numbered 1–40 + open questions + conflict log + revision history. |
+| `docs/decisions/project-decisions.md` | **Authoritative** confirmed decisions, scope, change-control. Decisions numbered 1–57 + open questions + conflict log + revision history. |
 | `docs/ERD/schema.dbml` | **Database source of truth** (DBML text). |
 | `docs/ERD/VulcaTrack-ERD_1.png` | ERD diagram — visual aid only, **behind** `schema.dbml`, pending regeneration. |
 | `docs/VulcaTrack-Database-Notes_1.md` | Field-by-field DB rationale; has a 2026-08-31 revision note at the top. |
 | `docs/VulcaTrack-Use-Case-Diagram_1.png` | Actors + use cases; changes pending. |
 | `docs/flows/VulcaTrack-1..6-*.png` | Overall, Customer, Admin, POS, OTG, Inventory workflows. Flows 2 & 5 are pending updates. |
 | `docs/flows/VulcaTrack-DFD-0-Context.*` / `VulcaTrack-DFD-1-Level1.*` | **Data Flow Diagrams** (Chapter 3) — context (Level 0) and Level 1, academic notation. Regenerated 2026-09-04 from the approved scope + 8-table schema; consistent with Decision 48 (ETA computed internally — no external routing entity). Editable `.svg` + high-res `.png`. See `VulcaTrack-DFD-notes.md`. |
+| `docs/flows/VulcaTrack-Activity-Diagram-OTG.*` | **OTG activity diagram** (Chapter 3). Three swimlanes — Customer / VulcaTrack System / Admin; the roadside job is an *off-system note*, not a Tireman swimlane. Four statuses only. Committed & reviewed 2026-09-06. |
+| `docs/flows/VulcaTrack-Sequence-Diagram-POS.*` | **POS sequence diagram** (Chapter 3). Admin · VulcaTrack POS · Items DB · Sales & Line Items DB · Receipt. Frozen `unit_price`, product-only stock deduction, printable HTML receipt, no payment table. Reflects the approved Phase 5 design, not written code. Committed & reviewed 2026-09-06. |
 | `docs/requirements/` | Empty. Reserved for a finalized requirements/SRS **if one is ever produced**. Do not invent requirements to fill it. |
 
 ---
@@ -288,10 +291,13 @@ The full field-level schema is in **`docs/ERD/schema.dbml`**. Column data types 
 
 ## 10. POS & sales details
 
-- POS is **admin-operated, in-person**. No online checkout.
-- Flow: select products/services → cart (quantity, line subtotal) → total → optionally link a registered customer (optional) → **in-person cash handling in the UI** → admin confirms → save `sales` + `sale_items` → deduct stock for product lines → show/print receipt.
-- **In-person cash handling (UI only):** the POS may compute the amount tendered and change, and block completion if payment is insufficient. **These values are not persisted in v1** — only `sales.total_amount` (and per-line `sale_items` values) are stored. *(Decision record locks this as UI-only; the handoff instruction flags it as "keep open if unresolved" — it is resolved in the record. Owner may revisit if desired.)*
-- **Receipts:** printable **HTML/print view** generated from `sales` + `sale_items`. **No receipt table** in v1; a receipt "number" can just be `sale_id`.
+- POS is **admin-operated, in-person**. No online checkout. Reachable through a minimal admin shell/nav (Dashboard · POS · Inventory) — approved as a Phase 5 prerequisite (Decision 53). **Sales reporting / history UI is Phase 6, not Phase 5** (Decision 49); Phase 5's `SaleRepository` may still expose receipt-read methods.
+- Flow: select products/services → cart (quantity, line subtotal) → total → optionally link an **existing** registered customer, else walk-in (`sales.customer_id = NULL`) → **in-person cash handling in the UI** → admin confirms → in one DB transaction: save `sales` + `sale_items`, freeze `unit_price`, deduct stock for product lines only → show/print receipt. Full rollback on any failure. The POS never creates a customer account (Decision 51).
+- **In-person cash handling (UI only, Decision 54):** the server may receive `cash_tendered` for a one-off check against the server-authoritative total and may compute change for the response; **neither is persisted** — only `sales.total_amount` (and per-line `sale_items` values). No payment table.
+- **Money maths use integer centavos** end to end — never PHP float arithmetic (Decision 55).
+- **Application-layer validation for Phase 5 (Decision 52):** `price >= 0`, `quantity > 0`, `stock >= 0`, enforced in the service/repository layer. The approved Phase 2 schema is **not** changed to add CHECK constraints unless a real correctness problem forces a rethink.
+- **Session-backed cart (Decision 56):** a temporary `$_SESSION` cart is acceptable *only* to preserve cart contents across a validation/stock error. It is not a persistent e-commerce cart.
+- **Receipt (Decision 50):** printable **HTML/print view** from `sales` + `sale_items`. Fields: shop name + address, `sale_id` as the receipt number, sale date/time, cashier/Admin name, linked customer name or "Walk-in", per line {name, quantity, frozen unit price, subtotal}, total, print button/styling. **No receipt table**, no TIN/BIR/tax fields, no "official receipt" claim.
 - `sales.sale_date` is system-set at completion (no backdating in v1); reports group by `sale_date`.
 
 ---
@@ -375,9 +381,10 @@ The earlier handoff-draft wording ("Tireman is not a DB entity", 7 tables) is **
 ### 16.2 Diagrams pending regeneration (non-blocking, tracked in the decision record as D1–D5)
 - ERD PNG, use-case PNG, and OTG flowcharts 2 & 5 are **POSSIBLY OUTDATED** relative to the decision record. `schema.dbml` is the current DB truth. These are documentation-catch-up items, not blockers.
 
-### 16.3 Minor doc drift (cosmetic)
-- The decision record's Technology table lists only "HTML, CSS, JavaScript" and does not yet mention **Vue** or **MariaDB specifically**; this document reflects the owner's later statements. Update the decision record's Technology section when decision-record edits are next approved.
-- The decision record still references the empty-stub file `project-decisions.md.txt` (conflict C5) and says `docs/requirements/` "does not exist yet"; on disk the stub is gone and `docs/requirements/` exists (empty). Harmless; fix on next decision-record edit.
+### 16.3 Minor doc drift
+- The decision record's Technology table was updated in the 2026-09-06 stabilization pass to name **MariaDB 10.4 / MySQL-compatible** and **Vue (where it helps)**, matching this document. ✅
+- The empty-stub file `project-decisions.md.txt` (former conflict C5) is gone from disk; the decision record's C5 row and its "`docs/requirements/` does not exist yet" wording were corrected in the 2026-09-06 pass. `docs/requirements/` exists but is intentionally empty. ✅
+- **`README.md` (repo root)** ends mid-sentence with an unclosed ```` ``` ```` code fence (the "Database" section is truncated). Low impact — the app README at `vulcatrack/README.md` is complete and current. Left for the owner to finish or trim during the Phase 5 documentation pass; not corrected here to avoid a content rewrite outside the stabilization scope.
 
 ---
 
@@ -390,13 +397,13 @@ If a task needs one of these answered, **stop and ask the owner**:
 3. Whether **`service_requests.admin_id`** becomes mandatory once a request is accepted (current: nullable throughout).
 4. Whether **shop location** ever becomes admin-editable (would move from `config/shop.php` to a `shop_settings` table). v1 = config value.
 5. Exact **saved-vehicle management UI**. *(Phase 4 ships a clean list + add/edit + soft-delete/restore; align to Figma later.)*
-6. **`items.category`** — stay a plain field, or become its own table? (current: plain nullable field).
-7. Whether **Admin can manually create customer accounts**.
-8. Final **receipt requirements** beyond "printable HTML view, no receipt table".
+6. ~~**`items.category`** — stay a plain field, or become its own table?~~ **Settled for Phase 5 (Decision 52):** stays the existing nullable free-text `items.category`; no category table in Phase 5. A datalist of existing values is acceptable later. Whether it *ever* becomes a table is still open beyond Phase 5.
+7. ~~Whether **Admin can manually create customer accounts**.~~ **Settled for Phase 5 (Decision 51):** the POS does **not** create customer accounts — it only links an existing one, else walk-in (`customer_id = NULL`). A general "admin creates customers" flow remains out of scope / open for later phases.
+8. ~~Final **receipt requirements**.~~ **Settled for Phase 5 (Decision 50):** printable HTML only; fields = shop name + address, `sale_id` as receipt number, sale date/time, cashier/Admin name, linked customer name or "Walk-in", per line {item/service name, quantity, frozen unit price, subtotal}, total, print button/styling. No receipt table, no TIN/BIR/tax, no payment fields, no "official receipt" claim.
 9. Any Figma details not yet confirmed against the decisions. *(Figma link supplied 2026-09-01 but is not machine-readable here; customer pages built to the reported structure with clean minimal UI, to be visually aligned later.)*
 10. Whether **`sale_date`** should ever be manually adjustable at creation (v1 = system-controlled, no backdating — Decision 35).
 
-*(Resolved: "is Tireman a database entity?" — 2026-08-31, see §16.1. **Phase 3 auth (Decisions 41–47):** email-only identifier; email uniqueness per-table; Remember-me deferred entirely; 8-char password; 30-min sliding idle timeout; CLI admin provisioning. **Phase 4 (Decision 48):** OTG ETA = straight-line distance ÷ `otg.average_speed_kmph` config, floored — a frozen snapshot, no routing API.)*
+*(Resolved: "is Tireman a database entity?" — 2026-08-31, see §16.1. **Phase 3 auth (Decisions 41–47).** **Phase 4 (Decision 48):** OTG ETA = straight-line distance ÷ `otg.average_speed_kmph` config, floored — a frozen snapshot, no routing API. **Phase 5 pre-decisions (Decisions 49–57, 2026-09-06):** reporting deferred to Phase 6; receipt fields fixed; POS customer-linking optional/existing-only; `items.category` stays free-text; minimal admin shell approved; app-layer validation limits; integer-centavo money; cash tender/change never persisted; session cart only for error recovery.)*
 
 ---
 
@@ -411,8 +418,9 @@ Incremental. **Do one phase at a time. Do not auto-start the next phase.**
 | **Phase 2** | Database / MySQL foundation — 8-table schema from `schema.dbml`. *(Complete 2026-09-01: `vulcatrack/database/schema.sql` built and verified against MariaDB 10.4.32.)* |
 | **Phase 3** | Authentication & authorization — customer auth + separate admin auth; no public admin registration. *(Complete 2026-09-01: register/login/logout for customers, login/logout for admins, CLI `seed_admin.php`, hardened sessions, `require_customer()` / `require_admin()` guards. Owner decisions A–I → Decisions 41–47.)* |
 | **Phase 4** | Customer-side functionality — dashboard, profile, saved vehicles, OTG request submission + status/history. *(Complete 2026-09-01: `vulcatrack/customer/*` pages, `VehicleRepository` / `ServiceRequestRepository`, `Geo` / `OtgStatus` helpers, vendored Leaflet map. OTG requests always created `status='pending'`; ETA frozen at submission — Decision 48. No schema change.)* |
-| **Phase 5** | POS & inventory — unified `items`, one inventory module, POS with walk-in support and stock deduction. *(Next approved phase.)* |
-| **Phase 6** | OTG / On-the-Go service — admin request handling (accept/reject/complete), map/route/ETA display, status screen. |
+| **Phase 4.5** | Stabilization pass (not a feature phase). *(Complete 2026-09-06: committed dependency-free test harness `vulcatrack/tests/`; documentation-drift fixes; finalized the OTG activity + POS sequence diagrams; recorded the settled Phase 5 pre-decisions as Decisions 49–57. No feature code, no schema change.)* |
+| **Phase 5** | POS & inventory — unified `items`, one inventory module, POS with walk-in support and stock deduction, printable HTML receipt, minimal admin shell. Reporting/history UI is **not** in Phase 5 (Decision 49). *(Next approved phase — pre-decisions 49–57 settled.)* |
+| **Phase 6** | OTG / On-the-Go service — admin request handling (accept/reject/complete), map/route/ETA display, status screen. Also: sales reporting / history UI. |
 | **Phase 7** | Integration, testing, bug fixing, presentation readiness. |
 
 **When asked to start a phase:** read this file → read the decision record → inspect current code + relevant docs → implement **only that phase** → verify → report what was done and what remains → **STOP**.
@@ -444,4 +452,5 @@ Because of the presentation deadline, prefer a **working vertical slice** over p
 | 2026-08-31 (rev. 2) | Owner resolved §16.1 — **option (a): keep `tiremen` + `service_requests.tireman_id`.** Updated §0, §1, §5, §6, §8, §9, §14, §15, §16.1, §17, §18 to present the **8-table** design as approved and the three-actor model (Customer / Admin / Tireman) explicitly. No other decisions changed; title unchanged; no new tables or features. |
 | 2026-09-01 (rev. 3) | **Status-only correction.** Phase 0 folded into Phase 1 by owner; recorded **Phase 1 — Application Foundation as COMPLETE** (repo initialised on `main`, scaffold at `C:\IPT102\vulcatrack\`, Apache junction created, health check passing). Updated the header phase line, §3 "Current environment state", and the §18 phase table. **No requirements, decisions, architecture, or schema changed.** |
 | 2026-09-01 (rev. 4) | Recorded **Phase 2 (database schema) and Phase 3 (authentication & authorization) COMPLETE.** Phase 3 owner decisions A–I captured as **Decisions 41–47** in the decision record: email-only login identifier; email uniqueness stays per-table; **Remember-me deferred entirely (no token table)**; 8-char minimum password; 30-minute sliding idle timeout; CLI-only admin provisioning (`database/seed_admin.php`). Updated the header phase line, §3, §17 (removed the two now-resolved auth questions), and §18. **Schema unchanged — still exactly 8 tables.** |
-| 2026-09-01 (rev. 5) | Recorded **Phase 4 (customer-side functionality) COMPLETE** — customer dashboard, profile (name / contact / password), saved vehicles with `is_active` soft-delete, OTG rescue submission (browser geolocation → one-time frozen ETA), request history + customer-facing status ("Tireman is on the way" shown once an admin assigns a Tireman). Added **Decision 48** (OTG ETA computation method: straight-line distance ÷ `otg.average_speed_kmph`, floored — a frozen snapshot; no routing API). `config/shop.php` now holds **sample** coordinates (was `0.0/0.0`). Map = vendored Leaflet + OpenStreetMap tiles, graceful degradation. Updated the header, §3, §17 (annotated the geolocation-fallback / saved-vehicle-UI / Figma items), §18. **No schema change — still exactly 8 tables; no new status values.** |
+| 2026-09-01 (rev. 5) | Recorded **Phase 4 (customer-side functionality) COMPLETE** — customer dashboard, profile (name / contact / password), saved vehicles with `is_active` soft-delete, OTG rescue submission (browser geolocation → one-time frozen ETA), request history + customer-facing status ("Tireman is on the way" shown once an admin assigns a Tireman). Added **Decision 48** (OTG ETA computation method: straight-line distance ÷ `otg.average_speed_kmph`, floored — a frozen snapshot; no routing API). `config/shop.php` at that time held sample coordinates *(superseded — see rev. 6; the real Baliwag location was committed in `f2043d5`, 2026-09-04)*. Map = vendored Leaflet + OpenStreetMap tiles, graceful degradation. Updated the header, §3, §17 (annotated the geolocation-fallback / saved-vehicle-UI / Figma items), §18. **No schema change — still exactly 8 tables; no new status values.** |
+| 2026-09-06 (rev. 6) | **Phase 4.5 stabilization pass — no feature code, no schema change.** (1) Added a committed dependency-free test harness at `vulcatrack/tests/` (60 tests / 339 assertions; unit + integration + end-to-end HTTP) as the Phase 1–4 regression net. (2) Fixed known documentation drift: GitHub remote is `Iyani99/VulcaTrack.git` (was written as `IPT102.git`); `config/shop.php` holds the **real** shop location, not "sample coordinates" (§3, §10, rev. 5 note, `vulcatrack/README.md`); decision-record Technology table now names MariaDB + Vue; former conflict C5 (stub file) closed; `docs/requirements/` noted as existing-but-empty. (3) Added the OTG activity diagram + POS sequence diagram (`docs/flows/VulcaTrack-Activity-Diagram-OTG.*`, `VulcaTrack-Sequence-Diagram-POS.*`) to version control — reviewed as consistent with the locked design (no Tireman swimlane, Tireman as off-system note, four statuses, no payment table, printable HTML receipt). (4) Recorded the settled Phase 5 pre-decisions as **Decisions 49–57** and annotated §10 and §17. Ran the Phase 1–4 regression + smoke verification: all green. |
