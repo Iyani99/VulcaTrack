@@ -79,3 +79,61 @@ test('Validator::coordinates returns floats for a valid pair, null otherwise', f
     assert_null($v2->coordinates('loc', '999', '0'));
     assert_true(isset($v2->errors()['loc']));
 });
+
+// --- Phase 5 inventory / POS field validation -------------------------------
+
+test('Validator::price returns integer centavos for a valid amount', function () {
+    $v = new Validator();
+    assert_same(10000, $v->price('p1', '100.00'));
+    assert_same(9995, $v->price('p2', '99.95'));
+    assert_same(0, $v->price('p3', '0'));
+    assert_true($v->passes());
+});
+
+test('Validator::price rejects negatives, junk and excess precision', function () {
+    $v = new Validator();
+    assert_null($v->price('a', '-1.00'));
+    assert_null($v->price('b', 'free'));
+    assert_null($v->price('c', '10.999'));
+    assert_null($v->price('d', ''));
+    assert_true(isset($v->errors()['a'], $v->errors()['b'], $v->errors()['c'], $v->errors()['d']));
+});
+
+test('Validator::quantity accepts > 0 and rejects zero / negative / non-integer', function () {
+    $v = new Validator();
+    assert_same(1, $v->quantity('a', '1'));
+    assert_same(7, $v->quantity('b', 7));
+    assert_null($v->quantity('c', '0'));
+    assert_null($v->quantity('d', '-3'));
+    assert_null($v->quantity('e', '2.5'));
+    assert_null($v->quantity('f', ''));
+    assert_true(isset($v->errors()['c'], $v->errors()['d'], $v->errors()['e'], $v->errors()['f']));
+});
+
+test('Validator::stock accepts >= 0 and rejects negative / non-integer', function () {
+    $v = new Validator();
+    assert_same(0, $v->stock('a', '0'));
+    assert_same(42, $v->stock('b', '42'));
+    assert_null($v->stock('c', '-1'));
+    assert_null($v->stock('d', '3.0'));
+    assert_true(isset($v->errors()['c'], $v->errors()['d']));
+});
+
+test('Validator::optionalNonNegativeInt allows blank but validates a present value', function () {
+    $v = new Validator();
+    assert_null($v->optionalNonNegativeInt('a', '', 'Reorder level'));
+    assert_null($v->optionalNonNegativeInt('b', null, 'Reorder level'));
+    assert_same(5, $v->optionalNonNegativeInt('c', '5', 'Reorder level'));
+    assert_true($v->passes());
+    assert_null($v->optionalNonNegativeInt('d', '-2', 'Reorder level'));
+    assert_true(isset($v->errors()['d']));
+});
+
+test('Validator::itemType accepts only product or service', function () {
+    $v = new Validator();
+    assert_same('product', $v->itemType('a', 'product'));
+    assert_same('service', $v->itemType('b', 'service'));
+    assert_null($v->itemType('c', 'widget'));
+    assert_null($v->itemType('d', ''));
+    assert_true(isset($v->errors()['c'], $v->errors()['d']));
+});

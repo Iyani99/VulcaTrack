@@ -123,4 +123,88 @@ final class Validator
             $this->add($field, "{$label} do not match.");
         }
     }
+
+    // --- Phase 5: inventory / POS field validation ---------------------------
+    //
+    // Aligns with the approved limits (Decisions 52/55/56): price >= 0,
+    // quantity > 0, stock >= 0. No schema CHECK constraints are added for these.
+
+    /**
+     * A money amount (price). Returns the value in integer centavos, or null.
+     * Accepts "0", "100", "100.00", "99.95"; rejects negatives, separators,
+     * more than two decimal places, and amounts DECIMAL(10,2) cannot hold.
+     */
+    public function price(string $field, $value, string $label = 'Price'): ?int
+    {
+        $centavos = \VulcaTrack\Support\Money::tryToCentavos(
+            is_string($value) || is_int($value) ? $value : ''
+        );
+        if ($centavos === null) {
+            $this->add($field, "{$label} must be an amount like 0, 100 or 99.95.");
+            return null;
+        }
+        return $centavos;
+    }
+
+    /** A required whole number greater than zero (e.g. a cart quantity). */
+    public function quantity(string $field, $value, string $label = 'Quantity'): ?int
+    {
+        $n = $this->wholeNumber($value, 1);
+        if ($n === null) {
+            $this->add($field, "{$label} must be a whole number greater than zero.");
+        }
+        return $n;
+    }
+
+    /** A required whole number of zero or more (product stock). */
+    public function stock(string $field, $value, string $label = 'Stock quantity'): ?int
+    {
+        $n = $this->wholeNumber($value, 0);
+        if ($n === null) {
+            $this->add($field, "{$label} must be zero or a positive whole number.");
+        }
+        return $n;
+    }
+
+    /**
+     * An optional whole number of zero or more (product reorder level). Blank
+     * returns null with no error; a present-but-invalid value records one.
+     */
+    public function optionalNonNegativeInt(string $field, $value, string $label): ?int
+    {
+        if ($value === null || (is_string($value) && trim($value) === '')) {
+            return null;
+        }
+        $n = $this->wholeNumber($value, 0);
+        if ($n === null) {
+            $this->add($field, "{$label} must be zero or a positive whole number.");
+        }
+        return $n;
+    }
+
+    /** The unified items table's type discriminator: 'product' or 'service'. */
+    public function itemType(string $field, $value): ?string
+    {
+        if (is_string($value) && ($value === 'product' || $value === 'service')) {
+            return $value;
+        }
+        $this->add($field, 'Choose a valid item type (product or service).');
+        return null;
+    }
+
+    /**
+     * Parse an integer that is >= $min. Accepts a real int or a plain digit
+     * string ("5"); rejects floats, "5.0", "5x", empty and out-of-range values.
+     */
+    private function wholeNumber($value, int $min): ?int
+    {
+        if (is_int($value)) {
+            $n = $value;
+        } elseif (is_string($value) && preg_match('/^-?\d+$/', trim($value))) {
+            $n = (int) trim($value);
+        } else {
+            return null;
+        }
+        return $n >= $min ? $n : null;
+    }
 }
