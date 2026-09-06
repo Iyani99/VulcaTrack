@@ -12,8 +12,10 @@ restore), On-the-Go rescue-request submission with a one-time route + frozen ETA
 and the customer request history + status views.
 
 A **Phase 4.5 stabilization pass** (2026-09-06) then added a committed test
-harness (`tests/`) and fixed documentation drift -- no feature code, no schema
-change.
+harness (`tests/`) and fixed documentation drift. A focused **Phase 4
+enhancement** (2026-09-06, Decisions 58-59) then added **landmark / address
+search** to Book-a-Rescue alongside browser geolocation, with draggable-marker
+map confirmation -- no schema change (`service_requests` lat/lng/eta unchanged).
 
 Not yet implemented (later phases): admin OTG request handling (accept / reject /
 assign a Tireman / complete), POS, inventory, reports, admin dashboard. Do not add
@@ -79,17 +81,21 @@ email verification, 2FA, CAPTCHA, account lockout / rate limiting, Tireman/Staff
 | `customer/profile.php` | Edit full name + contact number (mandatory); change password (current + new). Email is the login id and is read-only in v1. |
 | `customer/vehicles.php` | List active vehicles; **soft-delete** (`is_active = 0`) and restore. Removed vehicles stay on past requests. |
 | `customer/vehicle-edit.php` | Add (`?id` absent) / edit (`?id=N`, ownership-checked). `plate_number` required; type/make/model optional. |
-| `customer/rescue.php` | OTG submission: pick an active vehicle, describe the problem, share location (browser geolocation / map pin / manual coords). ETA is computed **once** here and stored frozen. Request is always created `status = 'pending'`. |
+| `customer/rescue.php` | OTG submission: pick an active vehicle, describe the problem, set the location by **browser geolocation** or **landmark/address search**, then confirm on the map (the marker is draggable — its final position wins). ETA is computed **once** here and stored frozen. Request is always created `status = 'pending'`. |
+| `customer/geocode.php` | Landmark/address search endpoint (POST, customer-auth, CSRF). Server-side proxy to OpenStreetMap Nominatim — identifying `User-Agent`, ≥ 1 req/sec app-wide, cached identical queries, explicit-Search only (no autocomplete), PH + Bulacan bias. Returns a small JSON list of `{label, latitude, longitude}`. Provider data is re-validated and escaped. `geocoding.driver = 'none'` runs it offline from a local list. |
 | `customer/bookings.php` | Request history (read-only list, newest first). |
 | `customer/booking.php?id=N` | Customer-facing status: frozen ETA, straight-line route map, and -- once an admin assigns one -- the Tireman's name + contact ("Tireman is on the way"). `?new=1` shows the submission confirmation. |
 
 **On-the-Go rules honoured:** account required; contact number mandatory;
-location captured once via geolocation and stored as `latitude`/`longitude`; **no
-live tracking**; ETA is a frozen snapshot (`Geo::etaMinutes()` = straight-line
+location set once (browser geolocation **or** landmark/address search, then a
+draggable-marker confirmation) and stored as `latitude`/`longitude`; **no live
+tracking**; ETA is a frozen snapshot (`Geo::etaMinutes()` = straight-line
 distance / `otg.average_speed_kmph`, floored at `otg.min_eta_minutes`) written
 once and never recomputed; **no route polyline persisted** (the map line is
 redrawn client-side from the two stored endpoints); statuses stay exactly
-`pending / accepted / rejected / completed`.
+`pending / accepted / rejected / completed`. Landmark search is geocoding only
+(place name -> coordinates); it is **not** a routing API and does not change the
+ETA method.
 
 The map uses **Leaflet** (vendored at `assets/lib/leaflet/`, no build step) with
 OpenStreetMap tiles. It degrades gracefully: if Leaflet or the tiles fail to
@@ -116,7 +122,7 @@ database table (Decision 37); route/ETA code reads from here.
 | `includes/` | `bootstrap.php`, `db.php`, `auth.php` -- **not web-accessible** |
 | `src/Auth/` | `Auth.php` (session/actor lifecycle), `Password.php`, `Csrf.php` |
 | `src/Repository/` | `CustomerRepository`, `AdminRepository`, `VehicleRepository`, `ServiceRequestRepository` -- prepared statements, customer-scoped |
-| `src/Support/` | `Validator.php`, `Geo.php` (haversine + frozen ETA), `OtgStatus.php` (status→label mapping) |
+| `src/Support/` | `Validator.php`, `Geo.php` (haversine + frozen ETA), `OtgStatus.php` (status→label mapping), `Geocoder.php` + `NominatimGeocoder.php` / `ArrayGeocoder.php` / `GeocoderFactory.php` / `GeocodeResult.php` / `GeocodeException.php`, `GeocodeCache.php` (query cache + ≥1s throttle) |
 | `src/Views/` | Form templates + shared partials (`partials/customer_top.php` app shell) |
 | `assets/` | `css/app.css`, `js/otg-map.js`, `lib/leaflet/` (vendored), `img/` |
 | `database/` | `schema.sql`, `seed_admin.php` -- **not web-accessible** |

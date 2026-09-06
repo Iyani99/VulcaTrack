@@ -404,7 +404,51 @@ when recording them. The Phase 2 schema is still exactly the approved 8 tables.
 
 ---
 
-## Canonical OTG Request Flow (v1)
+## Confirmed Project Decisions — 2026-09-06 (Phase 4 enhancement: Rescue location selection)
+
+A focused Book-a-Rescue improvement. **No schema change** — still exactly 8
+tables, four OTG statuses, `latitude` / `longitude` / `eta_minutes` unchanged.
+
+58. **The rescue location may be chosen by browser geolocation OR by landmark /
+    address search.** Both first-class; neither is "more accurate".
+    - **Use my current location** — the existing browser Geolocation flow,
+      unchanged. Best when the device location is working.
+    - **Search landmark or address** — the customer types a place (gas station,
+      mall, church, street, barangay landmark…), presses an explicit **Search**
+      button, and picks from a short result list. The chosen result supplies
+      latitude / longitude. Useful when geolocation is denied / unavailable /
+      inaccurate, or the customer knows a nearby landmark.
+    - Either way the point is shown on the existing Leaflet / OpenStreetMap map
+      and **the marker is draggable**; the customer confirms before submitting.
+    - **The final (possibly dragged) marker position is what is stored** — it
+      overrides the initial GPS or geocoder coordinates.
+    - The request is still created `status = 'pending'`; `eta_minutes` is still a
+      one-time frozen snapshot computed from the stored coordinates (Decision
+      48); no route geometry, no live tracking, no new statuses.
+
+59. **Geocoding is a small replaceable layer, called only through a server-side
+    endpoint.** `src/Support/Geocoder` (interface) + `NominatimGeocoder` (public
+    OSM Nominatim) + `ArrayGeocoder` (offline / tests) + `GeocoderFactory`. The
+    browser never calls Nominatim directly; it POSTs to
+    `customer/geocode.php` (authenticated customer, CSRF-checked), which:
+    - identifies the app with a real `User-Agent` (config `geocoding.user_agent`
+      — the OSM policy rejects stock defaults, and a browser cannot set one);
+    - enforces **≥ 1 second between outbound calls** app-wide and **caches
+      identical queries** (`GeocodeCache`, files under `storage/cache/geocode/`,
+      git-ignored);
+    - only searches on an explicit user action — **no autocomplete / no
+      per-keystroke requests** (the OSM policy forbids client-side autocomplete);
+    - biases results to the Philippines + a Bulacan-area viewbox (soft bias,
+      `bounded = 0`, so a legitimate request just outside still works);
+    - treats every returned field as untrusted: coordinates are re-validated
+      with `Geo`, labels are output-escaped.
+    Swapping the provider later is a config + one-class change; `geocode.php`
+    and the schema are unaffected. Attribution ("OpenStreetMap / Nominatim") is
+    shown on the Rescue page. `geocoding.driver = 'none'` disables the network
+    call and uses a small local landmark list instead.
+
+    This is **not** a routing / directions / distance-matrix API and does not
+    change the ETA method (still straight-line ÷ configured speed — Decision 48).
 
 The intended end-to-end flow, as the text reference until flowcharts 2 & 5 are regenerated
 (see [Required Diagram Changes](#required-diagram-changes)):
@@ -413,9 +457,12 @@ The intended end-to-end flow, as the text reference until flowcharts 2 & 5 are r
 2. Customer selects a saved vehicle (or adds one).
 3. Customer describes the problem / service needed.
 4. Customer's (already required) contact number is on file / confirmed.
-5. Customer shares their current location; the browser captures `latitude` / `longitude`.
-6. System shows the route from the customer's location to the shop (shop endpoint from
-   `config/shop.php`).
+5. Customer sets their location — either **browser geolocation** ("use my current
+   location") or **landmark / address search** (type a place, press Search, pick a
+   result) — then confirms the point on the map, dragging the marker if needed
+   (Decisions 58–59). The confirmed `latitude` / `longitude` are captured.
+6. System shows the straight line from the customer's location to the shop (shop
+   endpoint from `config/shop.php`).
 7. System calculates an ETA **at request time**.
 8. Customer reviews and submits the request.
 9. Request is saved with `status = pending`, `eta_minutes` frozen.
@@ -450,6 +497,11 @@ Unless explicitly approved later, do **not** introduce:
 - Tireman login portal, Tireman dashboard, Tireman authentication
 - Technician scheduling, ratings, payroll, or employee-management features
 - Advanced dispatch / routing-optimization algorithms
+- Routing / directions / distance-matrix APIs. *(The Rescue page's landmark
+  search — Decision 59 — is **geocoding only**: place name → coordinates. It does
+  not compute routes and does not change the straight-line ETA of Decision 48.)*
+- Client-side geocoding autocomplete / per-keystroke place search (forbidden by
+  the OSM Nominatim usage policy; the Rescue search is an explicit-button action)
 - Status-history / audit tables (e.g. per-status timestamp trails)
 - In-app customer/technician messaging
 - Anything beyond identity / contact / assignment for the `tiremen` table
@@ -545,8 +597,10 @@ The following are **NOT** confirmed decisions and must not be silently resolved:
 
 - Whether **"Manage Customer Accounts"** (admin capability) is officially in scope. It
   appears in the use-case diagram but is flagged there as proposed.
-- Exact handling of **denied geolocation** beyond the documented retry/fallback behavior
-  (`latitude`/`longitude` simply stay unset until a successful capture).
+- ~~Exact handling of **denied geolocation**.~~ **Resolved 2026-09-06 (Decisions
+  58–59):** landmark / address search is a first-class alternative to browser
+  geolocation, with map + draggable-marker confirmation. Both resolve to
+  `latitude` / `longitude`; a location is still required to submit.
 - Whether **`service_requests.admin_id`** should remain nullable throughout the workflow or
   become mandatory once accepted.
 - Whether **shop location** should eventually become editable through admin settings (i.e.
@@ -595,6 +649,7 @@ Do not turn these into confirmed requirements without approval.
 | `items.category` a plain field or its own table (for Phase 5)? | **Plain free-text; no category table in Phase 5** — Decision 52. |
 | POS customer linking — how / does it create accounts? | **Optional, existing customers only; POS never creates an account** — Decision 51. |
 | Cash tender / change persisted? *(re-affirm)* | **No — UI/response only** — Decision 54. |
+| Denied / poor geolocation UX on Book-a-Rescue? | **Landmark / address search alongside browser GPS, both with map + draggable-marker confirmation** — Decisions 58–59. |
 
 ---
 
@@ -708,6 +763,32 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-06 — Phase 4 enhancement: Rescue location selection (Decisions 58–59)
+
+- **Decision 58** — the Book-a-Rescue location step now offers **browser
+  geolocation OR landmark/address search**, both first-class, both confirmed on
+  the existing Leaflet map with a **draggable marker**; the final marker position
+  is what is stored. Request stays `pending` on creation; ETA stays a one-time
+  frozen snapshot (Decision 48). No schema change.
+- **Decision 59** — geocoding is a small replaceable layer
+  (`src/Support/Geocoder` + `NominatimGeocoder` + `ArrayGeocoder` +
+  `GeocoderFactory` + `GeocodeCache`) reached only through a server-side
+  endpoint, `customer/geocode.php` (auth + CSRF). The endpoint enforces the OSM
+  Nominatim usage policy: identifying `User-Agent`, ≥ 1 request/second app-wide,
+  cache identical queries (`storage/cache/geocode/`, git-ignored), explicit
+  Search button only (no autocomplete), PH + Bulacan soft bias, all provider
+  data treated as untrusted (coords re-validated, labels escaped). Attribution
+  shown on the page. **Not** a routing API — the ETA method is unchanged.
+- Moved "denied geolocation UX" out of *Known Open / Unresolved Questions*.
+- Added a `geocoding` block to `config/config.example.php` (and the local
+  `config.php`). Added `src/Support/` classes + `customer/geocode.php` +
+  landmark-search UI in `customer/rescue.php` + search handling in
+  `assets/js/otg-map.js`. Extended the test harness: `unit/GeocoderTest`,
+  `unit/GeocodeCacheTest`, `http/GeocodeHttpTest`, plus a landmark-coords case in
+  `integration/RepositoryTest` (81 tests / 420 assertions, green).
+- **No schema change** — still exactly 8 tables, four OTG statuses, and
+  `service_requests.latitude` / `longitude` / `eta_minutes` unchanged.
 
 ### 2026-09-06 — Phase 4.5 stabilization pass (no feature code, no schema change)
 

@@ -4,8 +4,8 @@
 |---|---|
 | **Project title (LOCKED)** | **VulcaTrack: Sales and Inventory with On-the-Go Services** |
 | **Document purpose** | Single authoritative context/handoff file so a brand-new Claude (or developer) conversation can understand the project without any prior conversation memory. |
-| **Current project phase** | **Phases 1–4 COMPLETE (2026-09-01); Phase 4.5 stabilization pass done (2026-09-06).** Application Foundation, Database Schema, Authentication & Authorization, Customer-Side Functionality. Phase 5 (POS & inventory) is the next approved phase — its already-settled decisions are recorded as Decisions 49–57. |
-| **Generated / last updated** | 2026-09-06 (rev. 6 — Phase 4.5 stabilization: committed test harness, documentation-drift fixes, Phase 5 pre-decisions 49–57; no schema change, no feature code) |
+| **Current project phase** | **Phases 1–4 COMPLETE (2026-09-01); Phase 4.5 stabilization done (2026-09-06); Rescue location-selection enhancement done (2026-09-06, Decisions 58–59).** Phase 5 (POS & inventory) is the next approved phase — its already-settled decisions are Decisions 49–57. |
+| **Generated / last updated** | 2026-09-06 (rev. 7 — Book-a-Rescue: landmark/address search + draggable-marker confirmation alongside browser GPS; Decisions 58–59; no schema change) |
 | **Status** | **Living document.** Update it whenever a decision changes. If it conflicts with `docs/decisions/project-decisions.md`, the decision record wins and this file must be corrected. |
 
 ---
@@ -24,7 +24,7 @@
 
 ## 0. TL;DR
 
-VulcaTrack is a **BSIT student, web-based system for a vulcanizing / tire shop**, built with **PHP + MySQL/MariaDB + Apache (XAMPP)** and a **HTML/CSS/JS frontend (Vue where it helps)**. It has a **customer side** (accounts, saved vehicles, On-the-Go roadside service requests with a map + one-time ETA) and an **admin side** (in-shop POS, unified product/service inventory, OTG request handling, reports). Three actors: **Customer** (requests OTG service), **Admin** (manages the system and handles requests), **Tireman** (performs the OTG service — a service-provider record, not a login role). It explicitly **does not** do live technician GPS tracking, online/GCash payment, or public admin sign-up. Walk-in POS sales without an account must work. Development is phased: **Phases 1–4 are complete** (foundation, 8-table schema, auth, the full customer side) and a Phase 4.5 stabilization pass added a committed test harness; **Phase 5 (POS & inventory) is next**.
+VulcaTrack is a **BSIT student, web-based system for a vulcanizing / tire shop**, built with **PHP + MySQL/MariaDB + Apache (XAMPP)** and a **HTML/CSS/JS frontend (Vue where it helps)**. It has a **customer side** (accounts, saved vehicles, On-the-Go roadside service requests with a map + one-time ETA) and an **admin side** (in-shop POS, unified product/service inventory, OTG request handling, reports). Three actors: **Customer** (requests OTG service), **Admin** (manages the system and handles requests), **Tireman** (performs the OTG service — a service-provider record, not a login role). It explicitly **does not** do live technician GPS tracking, online/GCash payment, or public admin sign-up. Walk-in POS sales without an account must work. Development is phased: **Phases 1–4 are complete** (foundation, 8-table schema, auth, the full customer side) a Phase 4.5 stabilization pass added a committed test harness, and a focused Phase 4 enhancement added landmark/address search to Book-a-Rescue; **Phase 5 (POS & inventory) is next**.
 
 ---
 
@@ -85,8 +85,8 @@ It is a student project: prioritise **maintainability, modularity, clear separat
 | Apache | Starts, serves port 80, config `Syntax OK`, `mod_rewrite` on, `.htaccess` honored |
 | MySQL/MariaDB | Starts; user `root`, **no password** (XAMPP default) |
 | `vulcatrack` database | **8 tables built** from `vulcatrack/database/schema.sql` (Phase 2). No seed data ships; the owner has created their own customer account for manual testing. Create an admin with `php vulcatrack/database/seed_admin.php`. |
-| Application code | At `C:\IPT102\vulcatrack\`. **Phases 3–4:** auth (customer + admin, hardened sessions, guards, CLI admin seeding) **and** the full customer side — dashboard, profile, saved vehicles (soft-delete), OTG rescue submission (browser geolocation → frozen ETA), request history + customer-facing status. Not built yet: admin OTG handling, POS, inventory, reports (Phases 5–6). |
-| Test harness | `vulcatrack/tests/` (Phase 4.5) — dependency-free CLI runner, no Composer/PHPUnit. `php vulcatrack/tests/run.php` → 60 tests / 339 assertions (unit + integration + end-to-end HTTP) covering the Phase 1–4 regression surface. MariaDB must be running for the integration/http suites. |
+| Application code | At `C:\IPT102\vulcatrack\`. **Phases 3–4:** auth (customer + admin, hardened sessions, guards, CLI admin seeding) **and** the full customer side — dashboard, profile, saved vehicles (soft-delete), OTG rescue submission (browser geolocation **or landmark/address search**, draggable-marker confirmation → frozen ETA; geocode proxy at `customer/geocode.php`), request history + customer-facing status. Not built yet: admin OTG handling, POS, inventory, reports (Phases 5–6). |
+| Test harness | `vulcatrack/tests/` — dependency-free CLI runner, no Composer/PHPUnit. `php vulcatrack/tests/run.php` → **81 tests / 420 assertions** (unit + integration + end-to-end HTTP). MariaDB must be running for the integration/http suites; geocoding HTTP tests use a fake provider (`VULCATRACK_GEOCODER_FAKE`), never the network. |
 | Shop location | `vulcatrack/config/shop.php` — the **real shop location**: Gerald Tabayag Vulcanizing Shop, 504 San Jose St. Baliwag, Bulacan, lat `14.946654430279454` / lng `120.89290174619997` (set in commit `f2043d5`, 2026-09-04). Config value only — no `shop_settings` table (Decision 37). |
 | OTG map | Leaflet vendored at `vulcatrack/assets/lib/leaflet/` (no build step); OpenStreetMap tiles at view time; graceful degradation when offline. |
 | Apache junction | **Created:** `C:\xampp\htdocs\vulcatrack` → `C:\IPT102\vulcatrack` (Windows directory junction). App reachable at `http://localhost/vulcatrack/`. |
@@ -112,7 +112,7 @@ When information conflicts, use this order:
 | File | Role |
 |---|---|
 | `docs/PROJECT-CONTEXT.md` | **This file** — consolidated handoff context. |
-| `docs/decisions/project-decisions.md` | **Authoritative** confirmed decisions, scope, change-control. Decisions numbered 1–57 + open questions + conflict log + revision history. |
+| `docs/decisions/project-decisions.md` | **Authoritative** confirmed decisions, scope, change-control. Decisions numbered 1–59 + open questions + conflict log + revision history. |
 | `docs/ERD/schema.dbml` | **Database source of truth** (DBML text). |
 | `docs/ERD/VulcaTrack-ERD_1.png` | ERD diagram — visual aid only, **behind** `schema.dbml`, pending regeneration. |
 | `docs/VulcaTrack-Database-Notes_1.md` | Field-by-field DB rationale; has a 2026-08-31 revision note at the top. |
@@ -132,7 +132,7 @@ These are confirmed in the decision record. Numbers reference `project-decisions
 **OTG / On-the-Go**
 - **[D1]** OTG requests require an **authenticated customer account**. No anonymous OTG submissions.
 - **[D2]** Customer **cellphone / contact number is mandatory** (used for shop↔customer coordination; there is no in-app messaging).
-- **[D3]** OTG captures the customer's location via browser geolocation → stores `latitude` / `longitude`.
+- **[D3]** OTG captures the customer's location as `latitude` / `longitude` — via browser geolocation **or** landmark/address search (Decisions 58–59), confirmed on the map. No live tracking.
 - **[D4]** **No live technician GPS tracking.** No location feed, no history, no moving marker.
 - **[D5/D6/D32]** Route + ETA are computed **once at request time**; **`service_requests.eta_minutes` is a frozen snapshot** — never recomputed for display.
 - **[D33]** **No route geometry/polyline is persisted.** A map line may be re-drawn from the two fixed endpoints, but the displayed ETA stays the stored value.
@@ -177,7 +177,7 @@ These describe intended scope. They are **not** all "designed and locked" — cr
 - Customer dashboard / home.
 - Customer profile (includes the **required** contact number).
 - Saved vehicles (multiple per customer).
-- On-the-Go service request (see **§9**).
+- On-the-Go service request (see **§9**) — location set by browser geolocation or landmark/address search, confirmed with a draggable map marker.
 - Request confirmation screen (route + ETA snapshot).
 - Request status screen ("Tireman is on the way", assigned Tireman name + contact number, ETA, map).
 - Request history / "My Bookings".
@@ -262,8 +262,8 @@ The full field-level schema is in **`docs/ERD/schema.dbml`**. Column data types 
 2. Customer selects a saved vehicle (or adds one) and provides required vehicle info.
 3. Customer describes the problem / service needed.
 4. Customer's required contact number is on file / confirmed (**D2**).
-5. Customer shares current location → system captures `latitude` / `longitude` (**D3**).
-6. System renders the route: **customer location → fixed shop location** (shop coords from `config/shop.php`).
+5. Customer sets their location — **browser geolocation** ("use my current location") **or** **landmark / address search** (type a place → explicit Search → pick a result) — confirms it on the map (marker is **draggable**), and the confirmed `latitude` / `longitude` are captured (**D3**, Decisions 58–59). The dragged marker position wins over the initial GPS/geocoder point.
+6. System renders the straight line: **customer location → fixed shop location** (shop coords from `config/shop.php`).
 7. System calculates an **ETA at request time**.
 8. Customer reviews and submits.
 9. Request saved with **`status = pending`**, **`eta_minutes` frozen** as a snapshot.
@@ -279,7 +279,7 @@ The full field-level schema is in **`docs/ERD/schema.dbml`**. Column data types 
 - Shop location is a **fixed application-config value** (`config/shop.php`: `SHOP_LAT` / `SHOP_LNG` / `SHOP_ADDRESS` conceptually). **No `shop_settings` table in v1.**
 - **`service_requests.eta_minutes`** is stored once and **displayed from storage thereafter** — never silently recomputed on re-open.
 - Route geometry is **not** persisted; re-render it from the stored endpoints if a map is shown again.
-- Denied geolocation: retry/fallback; `latitude`/`longitude` stay unset until a successful capture. Exact UX is an **open question**.
+- **Location selection (Decisions 58–59):** two first-class methods — browser geolocation, or landmark/address search via `customer/geocode.php` (server-side proxy to OSM Nominatim: identifying `User-Agent`, ≥ 1 req/sec app-wide, cached identical queries, explicit-button only / no autocomplete, PH + Bulacan soft bias, all provider data re-validated + escaped). Both end at a **draggable** Leaflet marker the customer confirms; the final marker position is stored. A location is still required to submit. Geocoding is `src/Support/Geocoder` + `NominatimGeocoder` / `ArrayGeocoder` / `GeocoderFactory` / `GeocodeCache` — a replaceable layer; **not** a routing API, ETA method unchanged. `geocoding.driver = 'none'` runs it fully offline from a local landmark list.
 
 ### "Tireman" — service provider (approved)
 - A **Tireman** is the person who performs the OTG job. It **is** a database entity: the `tiremen` table (see §8), managed by an Admin.
@@ -393,7 +393,7 @@ The earlier handoff-draft wording ("Tireman is not a DB entity", 7 tables) is **
 If a task needs one of these answered, **stop and ask the owner**:
 
 1. Exact scope of **"Manage Customer Accounts"** (admin) — is it in scope at all?
-2. Exact **denied-geolocation** fallback UX. *(Phase 4 ships a pragmatic fallback — retry button + map pin-drop + manual lat/long entry; still requires a location to submit. Refine against Figma later; not blocking.)*
+2. ~~Exact **denied-geolocation** fallback UX.~~ **Resolved 2026-09-06 (Decisions 58–59):** landmark/address search is a first-class alternative to browser GPS, both confirmed on the map with a draggable marker. A location is still required to submit. Figma visual alignment still later.
 3. Whether **`service_requests.admin_id`** becomes mandatory once a request is accepted (current: nullable throughout).
 4. Whether **shop location** ever becomes admin-editable (would move from `config/shop.php` to a `shop_settings` table). v1 = config value.
 5. Exact **saved-vehicle management UI**. *(Phase 4 ships a clean list + add/edit + soft-delete/restore; align to Figma later.)*
@@ -403,7 +403,7 @@ If a task needs one of these answered, **stop and ask the owner**:
 9. Any Figma details not yet confirmed against the decisions. *(Figma link supplied 2026-09-01 but is not machine-readable here; customer pages built to the reported structure with clean minimal UI, to be visually aligned later.)*
 10. Whether **`sale_date`** should ever be manually adjustable at creation (v1 = system-controlled, no backdating — Decision 35).
 
-*(Resolved: "is Tireman a database entity?" — 2026-08-31, see §16.1. **Phase 3 auth (Decisions 41–47).** **Phase 4 (Decision 48):** OTG ETA = straight-line distance ÷ `otg.average_speed_kmph` config, floored — a frozen snapshot, no routing API. **Phase 5 pre-decisions (Decisions 49–57, 2026-09-06):** reporting deferred to Phase 6; receipt fields fixed; POS customer-linking optional/existing-only; `items.category` stays free-text; minimal admin shell approved; app-layer validation limits; integer-centavo money; cash tender/change never persisted; session cart only for error recovery.)*
+*(Resolved: "is Tireman a database entity?" — 2026-08-31, see §16.1. **Phase 3 auth (Decisions 41–47).** **Phase 4 (Decision 48):** OTG ETA = straight-line distance ÷ `otg.average_speed_kmph` config, floored — a frozen snapshot, no routing API. **Phase 5 pre-decisions (Decisions 49–57, 2026-09-06):** reporting deferred to Phase 6; receipt fields fixed; POS customer-linking optional/existing-only; `items.category` stays free-text; minimal admin shell approved; app-layer validation limits; integer-centavo money; cash tender/change never persisted; session cart only for error recovery. **Rescue location (Decisions 58–59, 2026-09-06):** landmark/address search + draggable-marker map confirmation alongside browser GPS; server-side geocode proxy respecting the OSM Nominatim policy; not a routing API.)*
 
 ---
 
@@ -417,7 +417,7 @@ Incremental. **Do one phase at a time. Do not auto-start the next phase.**
 | **Phase 1** | Application foundation. *(Complete 2026-09-01: scaffold moved to `C:\IPT102\vulcatrack\`; Apache junction `C:\xampp\htdocs\vulcatrack` → `C:\IPT102\vulcatrack` created; Git initialised on `main` with root `.gitignore`/`.gitattributes` and `origin` remote; PHP→Apache→MariaDB health check passing.)* |
 | **Phase 2** | Database / MySQL foundation — 8-table schema from `schema.dbml`. *(Complete 2026-09-01: `vulcatrack/database/schema.sql` built and verified against MariaDB 10.4.32.)* |
 | **Phase 3** | Authentication & authorization — customer auth + separate admin auth; no public admin registration. *(Complete 2026-09-01: register/login/logout for customers, login/logout for admins, CLI `seed_admin.php`, hardened sessions, `require_customer()` / `require_admin()` guards. Owner decisions A–I → Decisions 41–47.)* |
-| **Phase 4** | Customer-side functionality — dashboard, profile, saved vehicles, OTG request submission + status/history. *(Complete 2026-09-01: `vulcatrack/customer/*` pages, `VehicleRepository` / `ServiceRequestRepository`, `Geo` / `OtgStatus` helpers, vendored Leaflet map. OTG requests always created `status='pending'`; ETA frozen at submission — Decision 48. No schema change.)* |
+| **Phase 4** | Customer-side functionality — dashboard, profile, saved vehicles, OTG request submission + status/history. *(Complete 2026-09-01. Enhanced 2026-09-06 — Decisions 58–59: Book-a-Rescue location can be set by browser geolocation OR landmark/address search (`customer/geocode.php` → OSM Nominatim, policy-respecting), both confirmed with a draggable map marker. `src/Support/Geocoder*`. Still `status='pending'`, still a frozen ETA, no schema change.)* |
 | **Phase 4.5** | Stabilization pass (not a feature phase). *(Complete 2026-09-06: committed dependency-free test harness `vulcatrack/tests/`; documentation-drift fixes; finalized the OTG activity + POS sequence diagrams; recorded the settled Phase 5 pre-decisions as Decisions 49–57. No feature code, no schema change.)* |
 | **Phase 5** | POS & inventory — unified `items`, one inventory module, POS with walk-in support and stock deduction, printable HTML receipt, minimal admin shell. Reporting/history UI is **not** in Phase 5 (Decision 49). *(Next approved phase — pre-decisions 49–57 settled.)* |
 | **Phase 6** | OTG / On-the-Go service — admin request handling (accept/reject/complete), map/route/ETA display, status screen. Also: sales reporting / history UI. |
@@ -453,4 +453,5 @@ Because of the presentation deadline, prefer a **working vertical slice** over p
 | 2026-09-01 (rev. 3) | **Status-only correction.** Phase 0 folded into Phase 1 by owner; recorded **Phase 1 — Application Foundation as COMPLETE** (repo initialised on `main`, scaffold at `C:\IPT102\vulcatrack\`, Apache junction created, health check passing). Updated the header phase line, §3 "Current environment state", and the §18 phase table. **No requirements, decisions, architecture, or schema changed.** |
 | 2026-09-01 (rev. 4) | Recorded **Phase 2 (database schema) and Phase 3 (authentication & authorization) COMPLETE.** Phase 3 owner decisions A–I captured as **Decisions 41–47** in the decision record: email-only login identifier; email uniqueness stays per-table; **Remember-me deferred entirely (no token table)**; 8-char minimum password; 30-minute sliding idle timeout; CLI-only admin provisioning (`database/seed_admin.php`). Updated the header phase line, §3, §17 (removed the two now-resolved auth questions), and §18. **Schema unchanged — still exactly 8 tables.** |
 | 2026-09-01 (rev. 5) | Recorded **Phase 4 (customer-side functionality) COMPLETE** — customer dashboard, profile (name / contact / password), saved vehicles with `is_active` soft-delete, OTG rescue submission (browser geolocation → one-time frozen ETA), request history + customer-facing status ("Tireman is on the way" shown once an admin assigns a Tireman). Added **Decision 48** (OTG ETA computation method: straight-line distance ÷ `otg.average_speed_kmph`, floored — a frozen snapshot; no routing API). `config/shop.php` at that time held sample coordinates *(superseded — see rev. 6; the real Baliwag location was committed in `f2043d5`, 2026-09-04)*. Map = vendored Leaflet + OpenStreetMap tiles, graceful degradation. Updated the header, §3, §17 (annotated the geolocation-fallback / saved-vehicle-UI / Figma items), §18. **No schema change — still exactly 8 tables; no new status values.** |
+| 2026-09-06 (rev. 7) | **Phase 4 enhancement — Book-a-Rescue location selection (Decisions 58–59). No schema change.** The location step now offers **browser geolocation OR landmark/address search**; both are confirmed on the existing Leaflet map with a **draggable marker**, and the final marker position is stored. Added `customer/geocode.php` (authenticated, CSRF, server-side proxy to OSM Nominatim — identifying User-Agent, ≥1 req/sec app-wide, cached identical queries, explicit-Search-button only, PH+Bulacan bias, all provider data re-validated + escaped) and `src/Support/Geocoder` + `NominatimGeocoder` / `ArrayGeocoder` / `GeocoderFactory` / `GeocodeCache`. Landmark-search UI in `customer/rescue.php`; search handling in `assets/js/otg-map.js`; `geocoding` block in `config/config.example.php`. Test harness now 81 tests / 420 assertions. Moved "denied geolocation UX" out of Open Questions. Not a routing API — ETA method unchanged (Decision 48). |
 | 2026-09-06 (rev. 6) | **Phase 4.5 stabilization pass — no feature code, no schema change.** (1) Added a committed dependency-free test harness at `vulcatrack/tests/` (60 tests / 339 assertions; unit + integration + end-to-end HTTP) as the Phase 1–4 regression net. (2) Fixed known documentation drift: GitHub remote is `Iyani99/VulcaTrack.git` (was written as `IPT102.git`); `config/shop.php` holds the **real** shop location, not "sample coordinates" (§3, §10, rev. 5 note, `vulcatrack/README.md`); decision-record Technology table now names MariaDB + Vue; former conflict C5 (stub file) closed; `docs/requirements/` noted as existing-but-empty. (3) Added the OTG activity diagram + POS sequence diagram (`docs/flows/VulcaTrack-Activity-Diagram-OTG.*`, `VulcaTrack-Sequence-Diagram-POS.*`) to version control — reviewed as consistent with the locked design (no Tireman swimlane, Tireman as off-system note, four statuses, no payment table, printable HTML receipt). (4) Recorded the settled Phase 5 pre-decisions as **Decisions 49–57** and annotated §10 and §17. Ran the Phase 1–4 regression + smoke verification: all green. |
