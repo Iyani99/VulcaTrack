@@ -3,14 +3,14 @@
 | | |
 |---|---|
 | **Project title (LOCKED)** | **VulcaTrack: Sales and Inventory with On-the-Go Services** |
-| **Document purpose** | Single authoritative context/handoff file so a brand-new Claude (or developer) conversation can understand the project without any prior conversation memory. |
+| **Document purpose** | Single authoritative context/handoff file so anyone new to the project can understand it without relying on prior discussion or undocumented context. |
 | **Current project phase** | **Phases 1–4 COMPLETE (2026-09-01); Phase 4.5 stabilization done (2026-09-06); Rescue location-selection enhancement done (2026-09-06, Decisions 58–59).** Phase 5 (POS & inventory) is the next approved phase — its already-settled decisions are Decisions 49–57. |
-| **Generated / last updated** | 2026-09-06 (rev. 7 — Book-a-Rescue: landmark/address search + draggable-marker confirmation alongside browser GPS; Decisions 58–59; no schema change) |
+| **Last updated** | 2026-09-06 (rev. 7 — Book-a-Rescue: landmark/address search + draggable-marker confirmation alongside browser GPS; Decisions 58–59; no schema change) |
 | **Status** | **Living document.** Update it whenever a decision changes. If it conflicts with `docs/decisions/project-decisions.md`, the decision record wins and this file must be corrected. |
 
 ---
 
-## How to use this document in a new Claude conversation
+## How to use this document
 
 > **Read this file first.** Then, before taking any development action:
 > 1. Read `docs/decisions/project-decisions.md` (the authoritative decision record).
@@ -107,7 +107,7 @@ When information conflicts, use this order:
 3. **`docs/ERD/schema.dbml`** (DB structure) and **current flow diagrams / project docs**.
 4. **Current Figma prototype** (UI/UX direction).
 5. Older documentation / earlier ideas.
-6. Claude's assumptions (lowest — do not act on these alone).
+6. Unverified assumptions or inferences (lowest — do not act on these alone).
 
 | File | Role |
 |---|---|
@@ -340,9 +340,9 @@ The Figma labels are a **presentation mapping** over the four DB values. For exa
 
 ## 15. Figma context & known Figma/flow differences
 
-**Figma is strong UI/UX context** — it is the team's current agreed visual direction and should guide frontend layout, navigation, and interaction. **It does not override explicit technical/scope decisions.** The prototype is **external to the repo**. Owner-supplied link (2026-09-01): `https://www.figma.com/design/dFFRqFrAVZgkr3l4RT6Yeh/VulcaTrack--Copy-`. It is a Figma design URL (not machine-readable from a plain fetch), so Phase 4 customer pages were built to the **reported** structure below with clean minimal UI, to be visually aligned to the prototype in a later pass.
+**Figma is strong UI/UX context** — it is the team's current agreed visual direction and should guide frontend layout, navigation, and interaction. **It does not override explicit technical/scope decisions.** The prototype is **external to the repo**. Owner-supplied link (2026-09-01): `https://www.figma.com/design/dFFRqFrAVZgkr3l4RT6Yeh/VulcaTrack--Copy-`. It is a design link only — the frames are not exported into the repo — so Phase 4 customer pages were built to the **reported** structure below with clean minimal UI, to be visually aligned to the prototype in a later pass.
 
-**Reported Figma contents** (per the owner; not independently verified by Claude — ~18 frames):
+**Reported Figma contents** (per the owner; not yet independently cross-checked against the repo — ~18 frames):
 - **Public:** Landing, Features, How It Works, Login, "Book a Rescue"/OTG entry.
 - **Auth:** Customer login, Admin login, Customer sign-up.
 - **Customer:** Home/dashboard, Book-a-Rescue/OTG screens, Rescue confirmation, Tracking/status screen, Profile, Vehicles/account info.
@@ -400,7 +400,7 @@ If a task needs one of these answered, **stop and ask the owner**:
 6. ~~**`items.category`** — stay a plain field, or become its own table?~~ **Settled for Phase 5 (Decision 52):** stays the existing nullable free-text `items.category`; no category table in Phase 5. A datalist of existing values is acceptable later. Whether it *ever* becomes a table is still open beyond Phase 5.
 7. ~~Whether **Admin can manually create customer accounts**.~~ **Settled for Phase 5 (Decision 51):** the POS does **not** create customer accounts — it only links an existing one, else walk-in (`customer_id = NULL`). A general "admin creates customers" flow remains out of scope / open for later phases.
 8. ~~Final **receipt requirements**.~~ **Settled for Phase 5 (Decision 50):** printable HTML only; fields = shop name + address, `sale_id` as receipt number, sale date/time, cashier/Admin name, linked customer name or "Walk-in", per line {item/service name, quantity, frozen unit price, subtotal}, total, print button/styling. No receipt table, no TIN/BIR/tax, no payment fields, no "official receipt" claim.
-9. Any Figma details not yet confirmed against the decisions. *(Figma link supplied 2026-09-01 but is not machine-readable here; customer pages built to the reported structure with clean minimal UI, to be visually aligned later.)*
+9. Any Figma details not yet confirmed against the decisions. *(Figma link supplied 2026-09-01 but the frames are not exported into the repo; customer pages built to the reported structure with clean minimal UI, to be visually aligned later.)*
 10. Whether **`sale_date`** should ever be manually adjustable at creation (v1 = system-controlled, no backdating — Decision 35).
 
 *(Resolved: "is Tireman a database entity?" — 2026-08-31, see §16.1. **Phase 3 auth (Decisions 41–47).** **Phase 4 (Decision 48):** OTG ETA = straight-line distance ÷ `otg.average_speed_kmph` config, floored — a frozen snapshot, no routing API. **Phase 5 pre-decisions (Decisions 49–57, 2026-09-06):** reporting deferred to Phase 6; receipt fields fixed; POS customer-linking optional/existing-only; `items.category` stays free-text; minimal admin shell approved; app-layer validation limits; integer-centavo money; cash tender/change never persisted; session cart only for error recovery. **Rescue location (Decisions 58–59, 2026-09-06):** landmark/address search + draggable-marker map confirmation alongside browser GPS; server-side geocode proxy respecting the OSM Nominatim policy; not a routing API.)*

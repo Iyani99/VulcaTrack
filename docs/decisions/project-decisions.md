@@ -5,9 +5,9 @@
 **Last revised:** 2026-09-06 — Phase 4.5 stabilization; Phase 5 pre-decisions 49–57;
 Rescue location selection 58–59; road-routing approved-but-deferred (Decision 60)
 (see [Revision History](#revision-history)).
-**Purpose:** This file exists so that a completely new session (human or Claude Code) can
-understand the project's confirmed decisions, scope boundaries, and change-control rules
-**without** relying on conversation history or any assistant's persistent memory.
+**Purpose:** This file exists so that anyone new to the project can understand its
+confirmed decisions, scope boundaries, and change-control rules **without** relying on
+prior discussion or any undocumented context.
 
 If anything in this file conflicts with another artifact, see
 [Artifact Authority / Change-Control Rule](#artifact-authority--change-control-rule) and
