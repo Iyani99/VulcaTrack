@@ -52,10 +52,20 @@ the software.
   no login or dashboard, and exchanges no data with the software (the Admin
   records/assigns Tiremen; the customer phones the assigned Tireman). The Tireman
   therefore appears as stored data (**D7 `tiremen`**), managed by process 4.
-- **No "Map / Routing Service" entity** — per Decision 48 the ETA is computed
-  inside the system from the captured coordinates and the fixed shop location
-  (`config/shop.php`); there is no external routing/directions API. (The older
-  2026-08-31 draft DFDs that showed this entity are superseded by these files.)
+- **No "Map / Routing Service" entity.** The one-time ETA is computed inside the
+  system from the captured coordinates and the fixed shop location
+  (`config/shop.php`) — a straight-line/haversine distance ÷ configured speed
+  (Decision 48). Any external map-support calls are treated as optional support
+  services, not modelled external entities: they add no data store and change no
+  domain data flow (the frozen ETA still lands in **D-`service_requests`**). This
+  covers the landmark/address geocoding call added by **Decision 59** (place name
+  → coordinates, via `customer/geocode.php`) and the road-routing call
+  **conditionally approved but not yet implemented** under **Decision 60** (a
+  single shop→customer route for a display line and road distance feeding the
+  same ETA formula; provider replaceable; straight-line fallback mandatory).
+  Distance-matrix / multi-stop / navigation / live-tracking routing remains out
+  of scope. (The older 2026-08-31 draft DFDs that showed a routing entity are
+  superseded by these files.)
 
 ## Processes (Level 1)
 

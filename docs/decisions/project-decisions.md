@@ -2,7 +2,8 @@
 
 **Status:** Authoritative record of CONFIRMED project decisions.
 **Last updated:** 2026-09-06
-**Last revised:** 2026-09-06 — Phase 4.5 stabilization; Phase 5 pre-decisions 49–57
+**Last revised:** 2026-09-06 — Phase 4.5 stabilization; Phase 5 pre-decisions 49–57;
+Rescue location selection 58–59; road-routing approved-but-deferred (Decision 60)
 (see [Revision History](#revision-history)).
 **Purpose:** This file exists so that a completely new session (human or Claude Code) can
 understand the project's confirmed decisions, scope boundaries, and change-control rules
@@ -309,7 +310,11 @@ decision was needed and is recorded here; it changes no scope and no schema.
     `service_requests.eta_minutes` and never recomputed. **No external routing /
     directions API** is used (avoids an API key, billing, and a runtime
     dependency). Swapping in a routing service later is a config/code change with
-    no schema impact. The map is drawn with **Leaflet** vendored at
+    no schema impact. *(The future stance on this is now settled by
+    **Decision 60**: a single origin→destination road-routing call is approved as
+    a deferred enhancement — road distance only, feeding this same
+    `Geo::etaMinutes()` formula, with this haversine method as the mandatory
+    fallback. Not implemented; not started before Phase 5.)* The map is drawn with **Leaflet** vendored at
     `vulcatrack/assets/lib/leaflet/` (OpenStreetMap tiles, graceful degradation);
     the route line is a client-side straight line between the two stored
     endpoints — **no polyline is persisted** (Decision 33).
@@ -449,6 +454,8 @@ tables, four OTG statuses, `latitude` / `longitude` / `eta_minutes` unchanged.
 
     This is **not** a routing / directions / distance-matrix API and does not
     change the ETA method (still straight-line ÷ configured speed — Decision 48).
+    *(Decision 60 later approves a separate, deferred road-routing enhancement;
+    it does not change this geocoding layer.)*
 
 The intended end-to-end flow, as the text reference until flowcharts 2 & 5 are regenerated
 (see [Required Diagram Changes](#required-diagram-changes)):
@@ -477,6 +484,84 @@ The intended end-to-end flow, as the text reference until flowcharts 2 & 5 are r
 
 ---
 
+## Confirmed Project Decisions — 2026-09-06 (Phase 4 follow-up: road-routing — approved, deferred)
+
+A design direction settled ahead of time so a future session does not re-open it.
+**No code, no schema change, and no diagram redraw** was made when recording this.
+Nothing here is implemented yet.
+
+60. **Road-following routing on Book-a-Rescue is APPROVED as a future
+    enhancement, with implementation DEFERRED.**
+
+    **Status:** approved in principle; **not implemented**. Implementation does
+    **not** begin until Phase 5 (POS & inventory) is complete, or until the owner
+    explicitly approves starting it earlier. Until then the Rescue map keeps the
+    current client-side straight line and the current haversine ETA (Decision 48)
+    with no change.
+
+    **What routing may be used for (only these two):**
+    - **Display** a road-following route line between the fixed shop location
+      (`config/shop.php`) and the customer's confirmed `latitude` / `longitude`
+      on the existing Leaflet / OpenStreetMap map.
+    - **Obtain road (driving) distance** for the existing one-time ETA
+      calculation.
+
+    **ETA rules (unchanged in substance):**
+    - The routed **distance** feeds the existing `Geo::etaMinutes()` formula
+      (`distance ÷ otg.average_speed_kmph`, rounded up, floored at
+      `otg.min_eta_minutes`). One speed model, one formula.
+    - The routing provider's **own travel-duration value does NOT become the
+      authoritative stored ETA.** It may only be shown on screen as an
+      informational label, if at all.
+    - `service_requests.eta_minutes` stays a **single frozen snapshot**, computed
+      once at submission and never recomputed for display (Decisions 5/6/32).
+    - The ETA is computed **server-side** at submission; a client-sent distance
+      or duration is never trusted.
+
+    **Fallback / reliability (mandatory):**
+    - If the routing provider fails, times out, or returns nothing, VulcaTrack
+      **falls back to the existing straight-line / haversine distance** and the
+      rescue request **must still be submittable**. Routing is strictly optional
+      on the submission path — it never blocks a booking.
+
+    **Persistence / schema (unchanged):**
+    - **No route geometry / polyline is persisted** (Decision 33). A road line is
+      re-drawn from the two endpoints when shown; it is not stored.
+    - **No new database column and no new table.** The 8-table schema and
+      `service_requests` are untouched.
+
+    **Still explicitly OUT OF SCOPE (these exclusions are preserved, not
+    superseded):**
+    - No live Tireman GPS tracking / location feed / moving marker (Decision 4).
+    - No continuously updating ETA and no continuous re-routing — routing runs
+      once, after the customer confirms the location, not per marker-drag.
+    - No turn-by-turn navigation / directions UI.
+    - No distance-matrix, multi-stop, or route-optimization / dispatch routing.
+    - No admin-side routing as part of this future change unless separately
+      approved (an admin OTG map is Phase 6 work).
+
+    **Privacy:** implementing this will send the customer's **confirmed
+    coordinates** to a third-party routing provider (today, only the landmark
+    *search text* leaves the system, via Nominatim). This is an acknowledged
+    privacy implication; the existing "we use this location once … we do not
+    track you" wording on the Rescue page stays and should cover it.
+
+    **Provider:** the routing provider must remain **replaceable / configurable**
+    (a `routing.driver` config value and a small provider class behind an
+    interface, mirroring the Decision 59 `Geocoder` layer), with an offline /
+    no-network driver that returns the haversine distance. Choosing the specific
+    default provider is left to implementation time.
+
+    **This decision supersedes** the earlier blanket wording that
+    routing / directions APIs are *entirely* out of scope (the "Currently Out of
+    Scope / Do Not Invent" entry, and the parentheticals in Decisions 48 and 59).
+    A **single origin→destination road-routing call**, used only as described
+    above, is now a sanctioned — but not yet built — enhancement. Distance-matrix
+    APIs, multi-stop routing, navigation, live tracking, persisted routes, and
+    continuous ETA updates remain out of scope.
+
+---
+
 ## Currently Out of Scope / Do Not Invent
 
 Unless explicitly approved later, do **not** introduce:
@@ -497,9 +582,12 @@ Unless explicitly approved later, do **not** introduce:
 - Tireman login portal, Tireman dashboard, Tireman authentication
 - Technician scheduling, ratings, payroll, or employee-management features
 - Advanced dispatch / routing-optimization algorithms
-- Routing / directions / distance-matrix APIs. *(The Rescue page's landmark
-  search — Decision 59 — is **geocoding only**: place name → coordinates. It does
-  not compute routes and does not change the straight-line ETA of Decision 48.)*
+- Distance-matrix APIs, multi-stop routing, and turn-by-turn navigation.
+  *(**Revised by Decision 60:** a single origin→destination road-routing call —
+  for a display route line and road distance feeding the existing one-time ETA —
+  is approved as a **deferred, not-yet-implemented** enhancement. The Rescue
+  landmark search — Decision 59 — remains **geocoding only**: place name →
+  coordinates, no route computation.)*
 - Client-side geocoding autocomplete / per-keystroke place search (forbidden by
   the OSM Nominatim usage policy; the Rescue search is an explicit-button action)
 - Status-history / audit tables (e.g. per-status timestamp trails)
@@ -763,6 +851,38 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-06 — Phase 4 follow-up: road-routing approved but deferred (Decision 60)
+
+- **Decision 60** — road-following routing on Book-a-Rescue is **approved in
+  principle as a future enhancement, with implementation deferred** until after
+  Phase 5 (or until the owner explicitly approves starting earlier). Recorded
+  after a documentation review of the proposal; **no code, no schema change, no
+  diagram redraw.**
+- Routing, when built, may only: (a) display a road-following route line between
+  the fixed shop location and the customer's confirmed location, and (b) supply
+  **road distance** to the existing `Geo::etaMinutes()` formula. The provider's
+  own travel duration will **not** become the authoritative stored ETA.
+  `eta_minutes` stays a single frozen snapshot; the ETA is computed server-side
+  at submission.
+- If routing fails, VulcaTrack falls back to the existing straight-line /
+  haversine distance and the rescue request **must still be submittable**.
+- No route geometry / polyline persisted; **no new DB column or table.** No live
+  Tireman tracking, no continuous re-routing, no turn-by-turn navigation, no
+  distance-matrix / multi-stop routing, no admin-side routing (unless separately
+  approved). The routing provider must remain replaceable / configurable.
+- Acknowledged privacy implication: implementing this sends the customer's
+  confirmed coordinates to a third-party routing provider.
+- **Supersedes** the earlier blanket "routing / directions / distance-matrix
+  APIs" out-of-scope entry and the "no routing API" parentheticals in Decisions
+  48 and 59, narrowing them to a single sanctioned origin→destination call.
+  Distance-matrix / multi-stop / navigation / live tracking / persisted routes /
+  continuous ETA remain out of scope.
+- Also corrected the one directly conflicting sentence in
+  `docs/flows/VulcaTrack-DFD-notes.md` (the "there is no external
+  routing/directions API" line) to point at Decision 60. **No DFD diagram was
+  redrawn** — geocoding and routing are treated as optional external support
+  calls that add no data store and no domain data flow.
 
 ### 2026-09-06 — Phase 4 enhancement: Rescue location selection (Decisions 58–59)
 
