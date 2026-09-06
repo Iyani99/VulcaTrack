@@ -32,6 +32,24 @@ Staff / Tireman login table — by explicit decision.
 `DROP TABLE IF EXISTS …`, so it is safe to re-run to rebuild a clean schema
 during development. The database holds no seed/application data in v1.
 
+## Creating an admin account
+
+There is no public admin registration (Decision 18/40/46). Admin accounts are
+created from the command line with `seed_admin.php` — this is the supported
+mechanism for the first admin and for every additional admin:
+
+```
+php vulcatrack/database/seed_admin.php
+```
+
+Run it from a terminal with MySQL started. It refuses to run over the web,
+prompts for full name, email and password (password entry is hidden on Windows
+PowerShell and on POSIX shells; it falls back to visible input elsewhere),
+enforces the 8-character minimum, hashes the password with `password_hash()`,
+and inserts one row into `admins`. A duplicate email is rejected by the unique
+key and the script exits non-zero. The plaintext password is never printed,
+logged, or stored. Do not commit real credentials.
+
 ## Environment
 
 MariaDB 10.4.32 · engine InnoDB · charset `utf8mb4` / `utf8mb4_unicode_ci`.

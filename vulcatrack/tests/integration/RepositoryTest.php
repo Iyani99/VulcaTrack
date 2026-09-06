@@ -72,6 +72,41 @@ test('customers.email and admins.email are independent (Decision 42)', function 
     });
 });
 
+test('admin provisioning path: create stores a hash, rejects duplicates, and the admin can authenticate', function () {
+    $pdo = test_pdo();
+    TestDb::rollback($pdo, function () use ($pdo) {
+        // This mirrors what database/seed_admin.php does: validate, hash with
+        // Password::hash(), then AdminRepository::create().
+        $repo = new AdminRepository($pdo);
+        $email = TestDb::email('provision');
+        $plain = 'seed-admin-password-123';
+
+        $id = $repo->create('Provisioned Admin', $email, Password::hash($plain));
+        assert_true($id > 0, 'create() returns the new admin id');
+
+        // The stored value is a bcrypt/argon hash, never the plaintext.
+        $row = $repo->findByEmail($email);
+        assert_not_null($row, 'the new admin is found by email');
+        assert_same($id, (int) $row['admin_id']);
+        assert_true($row['password_hash'] !== $plain, 'the plaintext password is never stored');
+        assert_true(str_starts_with((string) $row['password_hash'], '$'), 'the stored value is a password_hash() digest');
+        assert_true(password_get_info($row['password_hash'])['algo'] !== null, 'the stored value is a recognised hash');
+
+        // A second admin with the same email is rejected by the unique key (1062) --
+        // this is the failure seed_admin.php reports as "already exists" and exits 1.
+        assert_throws(
+            fn () => $repo->create('Duplicate Admin', $email, Password::hash($plain)),
+            \PDOException::class
+        );
+
+        // The provisioned admin can authenticate the same way admin/login.php checks:
+        // findByEmail() + Password::verify().
+        $login = $repo->findByEmail($email);
+        assert_true(Password::verify($plain, $login['password_hash']), 'the provisioned admin authenticates');
+        assert_false(Password::verify('wrong-password', $login['password_hash']), 'a wrong password is rejected');
+    });
+});
+
 test('VehicleRepository scopes every read and write to the owning customer', function () {
     $pdo = test_pdo();
     TestDb::rollback($pdo, function () use ($pdo) {
