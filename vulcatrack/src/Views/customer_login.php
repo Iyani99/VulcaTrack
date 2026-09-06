@@ -29,5 +29,6 @@ require __DIR__ . '/partials/top.php';
 </form>
 
 <p class="muted"><a href="<?= e(vulcatrack_url('/register.php')) ?>">Need an account? Register</a></p>
+<p class="muted"><a href="<?= e(vulcatrack_url('/admin/login.php')) ?>">Admin? Sign in here</a></p>
 
 <?php require __DIR__ . '/partials/bottom.php'; ?>
