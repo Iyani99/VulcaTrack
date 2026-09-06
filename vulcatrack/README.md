@@ -44,8 +44,8 @@ the database design source of truth is `docs/ERD/schema.dbml`.
 
 ## Creating an admin account
 
-There is **no public admin registration** (Decision 18/40). Admins are provisioned
-from the command line:
+We deliberately expose **no public admin registration** (Decision 18/40); admin accounts
+are provisioned from the command line:
 
 ```
 php vulcatrack/database/seed_admin.php
