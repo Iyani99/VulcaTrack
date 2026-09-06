@@ -6,20 +6,20 @@ Local development runs on XAMPP (Apache + PHP + MariaDB).
 ## Status
 
 **Phase 4 complete -- customer-side functionality.**
-Implemented on top of the Phase 3 auth system: customer dashboard, profile
+We built this on top of the Phase 3 auth system: customer dashboard, profile
 (name / contact number / password), saved vehicles (add / edit / soft-delete /
 restore), On-the-Go rescue-request submission with a one-time route + frozen ETA,
 and the customer request history + status views.
 
-A **Phase 4.5 stabilization pass** (2026-09-06) then added a committed test
+In a **Phase 4.5 stabilization pass** (2026-09-06) we added a committed test
 harness (`tests/`) and fixed documentation drift. A focused **Phase 4
-enhancement** (2026-09-06, Decisions 58-59) then added **landmark / address
-search** to Book-a-Rescue alongside browser geolocation, with draggable-marker
+enhancement** followed (2026-09-06, Decisions 58-59): **landmark / address
+search** for Book-a-Rescue alongside browser geolocation, with draggable-marker
 map confirmation -- no schema change (`service_requests` lat/lng/eta unchanged).
 
 Not yet implemented (later phases): admin OTG request handling (accept / reject /
-assign a Tireman / complete), POS, inventory, reports, admin dashboard. Do not add
-these until the relevant phase is explicitly approved.
+assign a Tireman / complete), POS, inventory, reports, admin dashboard. We add
+these only when the relevant phase is explicitly approved.
 
 ## Design / decision documents
 
@@ -70,8 +70,9 @@ password. **Do not commit real admin credentials.**
 | Enumeration | Generic "Invalid email or password"; dummy `password_verify()` when the account does not exist. |
 | Data access | `src/Repository/*` -- prepared statements only. Duplicate email caught via the DB unique constraint (SQLSTATE 23000 / 1062). |
 
-**Not in scope (by decision):** Remember Me / persistent tokens, password reset,
-email verification, 2FA, CAPTCHA, account lockout / rate limiting, Tireman/Staff login.
+**Deliberately out of scope (by team decision):** Remember Me / persistent tokens,
+password reset, email verification, 2FA, CAPTCHA, account lockout / rate limiting,
+Tireman/Staff login.
 
 ## Customer functionality (Phase 4)
 
