@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2440" height="1800" viewBox="0 0 2440 1800" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<defs>
+  <marker id="solid" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+    <path d="M0,0 L12,6 L0,12 z" fill="#1a1a1a"/>
+  </marker>
+  <marker id="ret" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+    <path d="M0,0 L12,6 L0,12 z" fill="#555"/>
+  </marker>
+</defs>
+<rect width="2440" height="1800" fill="#ffffff"/>
+
+<text x="1220" y="44" text-anchor="middle" font-size="30" font-weight="700" fill="#1a1a1a">VulcaTrack: In-Shop POS Sale</text>
+<text x="1220" y="72" text-anchor="middle" font-size="16" fill="#5b6b7b">Sequence Diagram &#8212; Chapter 3</text>
+
+<!-- ===================== LIFELINES ===================== -->
+<line x1="160" y1="188" x2="160" y2="1600" stroke="#8a8a8a" stroke-width="1.6" stroke-dasharray="7 6"/>
+<line x1="640" y1="150" x2="640" y2="1600" stroke="#8a8a8a" stroke-width="1.6" stroke-dasharray="7 6"/>
+<line x1="1150" y1="150" x2="1150" y2="1600" stroke="#8a8a8a" stroke-width="1.6" stroke-dasharray="7 6"/>
+<line x1="1720" y1="150" x2="1720" y2="1600" stroke="#8a8a8a" stroke-width="1.6" stroke-dasharray="7 6"/>
+<line x1="2280" y1="150" x2="2280" y2="1600" stroke="#8a8a8a" stroke-width="1.6" stroke-dasharray="7 6"/>
+
+<!-- ===================== ACTIVATION BARS ===================== -->
+<rect x="153" y="222" width="14" height="1236" fill="#eceff2" stroke="#9aa4ad" stroke-width="1"/>
+<rect x="633" y="222" width="14" height="1400" fill="#eceff2" stroke="#9aa4ad" stroke-width="1"/>
+<rect x="1143" y="400" width="14" height="86" fill="#eceff2" stroke="#9aa4ad" stroke-width="1"/>
+<rect x="1143" y="1128" width="14" height="100" fill="#eceff2" stroke="#9aa4ad" stroke-width="1"/>
+<rect x="1713" y="852" width="14" height="240" fill="#eceff2" stroke="#9aa4ad" stroke-width="1"/>
+<rect x="2273" y="1352" width="14" height="106" fill="#eceff2" stroke="#9aa4ad" stroke-width="1"/>
+
+<!-- ===================== PARTICIPANTS ===================== -->
+<!-- Admin actor -->
+<circle cx="160" cy="98" r="17" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.2"/>
+<line x1="160" y1="115" x2="160" y2="158" stroke="#1a1a1a" stroke-width="2.2"/>
+<line x1="134" y1="130" x2="186" y2="130" stroke="#1a1a1a" stroke-width="2.2"/>
+<line x1="160" y1="158" x2="140" y2="186" stroke="#1a1a1a" stroke-width="2.2"/>
+<line x1="160" y1="158" x2="180" y2="186" stroke="#1a1a1a" stroke-width="2.2"/>
+<text x="160" y="210" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1a1a">Admin</text>
+
+<rect x="536" y="76" width="208" height="62" rx="4" fill="#f5c542" stroke="#c99a1e" stroke-width="2"/>
+<text x="640" y="113" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1a1a">VulcaTrack POS</text>
+
+<rect x="1034" y="76" width="232" height="62" rx="4" fill="#f5c542" stroke="#c99a1e" stroke-width="2"/>
+<text x="1150" y="113" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1a1a">Items Database</text>
+
+<rect x="1560" y="76" width="320" height="62" rx="4" fill="#f5c542" stroke="#c99a1e" stroke-width="2"/>
+<text x="1720" y="105" text-anchor="middle" font-size="16" font-weight="700" fill="#1a1a1a">Sales &amp; Line Items</text>
+<text x="1720" y="126" text-anchor="middle" font-size="16" font-weight="700" fill="#1a1a1a">Database</text>
+
+<rect x="2196" y="76" width="168" height="62" rx="4" fill="#f5c542" stroke="#c99a1e" stroke-width="2"/>
+<text x="2280" y="113" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1a1a">Receipt</text>
+
+<!-- ===================== MESSAGES ===================== -->
+<!-- m1 -->
+<line x1="167" y1="238" x2="632" y2="238" stroke="#1a1a1a" stroke-width="1.8" marker-end="url(#solid)"/>
+<text x="400" y="230" text-anchor="middle" font-size="15" fill="#1a1a1a">Start Sale</text>
+<!-- m2 -->
+<line x1="167" y1="322" x2="632" y2="322" stroke="#1a1a1a" stroke-width="1.8" marker-end="url(#solid)"/>
+<text x="400" y="314" text-anchor="middle" font-size="15" fill="#1a1a1a">Select Items &amp; Quantities</text>
+<!-- m3 -->
+<line x1="647" y1="406" x2="1142" y2="406" stroke="#1a1a1a" stroke-width="1.8" marker-end="url(#solid)"/>
+<text x="895" y="398" text-anchor="middle" font-size="15" fill="#1a1a1a">Request Item Details</text>
+<!-- m4 return -->
+<line x1="1142" y1="470" x2="648" y2="470" stroke="#555" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#ret)"/>
+<text x="895" y="462" text-anchor="middle" font-size="14" fill="#555">Return Item Details &amp; Prices</text>
+<!-- m5 self -->
+<path d="M647,536 h70 v34 h-70" fill="none" stroke="#1a1a1a" stroke-width="1.8" marker-end="url(#solid)"/>
+<text x="732" y="546" text-anchor="start" font-size="15" fill="#1a1a1a">Compute Subtotals &amp; Total</text>
+<!-- m6 return to Admin -->
+<line x1="632" y1="632" x2="168" y2="632" stroke="#555" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#ret)"/>
+<text x="400" y="624" text-anchor="middle" font-size="14" fill="#555">Display Total</text>
+<!-- m7 -->
+<line x1="167" y1="716" x2="632" y2="716" stroke="#1a1a1a" stroke-width="1.8" marker-end="url(#solid)"/>
+<text x="400" y="708" text-anchor="middle" font-size="15" fill="#1a1a1a">Enter Cash Tendered</text>
+<!-- m8 self -->
+<path d="M647,776 h70 v34 h-70" fill="none" stroke="#1a1a1a" stroke-width="1.8" marker-end="url(#solid)"/>
+<text x="732" y="786" text-anchor="start" font-size="15" fill="#1a1a1a">Calculate Change</text>
+<!-- m9 -->
+<line x1="647" y1="872" x2="1712" y2="872" stroke="#1a1a1a" stroke-width="1.8" marker-end="url(#solid)"/>
+<text x="1180" y="864" text-anchor="middle" font-size="15" fill="#1a1a1a">Save Sale</text>
+<!-- m10 return -->
+<line x1="1712" y1="936" x2="648" y2="936" stroke="#555" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#ret)"/>
+<text x="1180" y="928" text-anchor="middle" font-size="14" fill="#555">Return New Sale ID</text>
+<!-- m11 -->
+<line x1="647" y1="1012" x2="1712" y2="1012" stroke="#1a1a1a" stroke-width="1.8" marker-end="url(#solid)"/>
+<text x="1180" y="1004" text-anchor="middle" font-size="15" fill="#1a1a1a">Save Sale Items</text>
+<!-- m12 return -->
+<line x1="1712" y1="1076" x2="648" y2="1076" stroke="#555" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#ret)"/>
+<text x="1180" y="1068" text-anchor="middle" font-size="14" fill="#555">Sale Items Saved</text>
+<!-- m13 -->
+<line x1="647" y1="1152" x2="1142" y2="1152" stroke="#1a1a1a" stroke-width="1.8" marker-end="url(#solid)"/>
+<text x="895" y="1144" text-anchor="middle" font-size="15" fill="#1a1a1a">Deduct Product Stock</text>
+<!-- m14 return -->
+<line x1="1142" y1="1216" x2="648" y2="1216" stroke="#555" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#ret)"/>
+<text x="895" y="1208" text-anchor="middle" font-size="14" fill="#555">Stock Updated</text>
+<!-- m15 return to Admin -->
+<line x1="632" y1="1296" x2="168" y2="1296" stroke="#555" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#ret)"/>
+<text x="400" y="1288" text-anchor="middle" font-size="14" fill="#555">Confirm Sale</text>
+<!-- m16 -->
+<line x1="647" y1="1372" x2="2272" y2="1372" stroke="#1a1a1a" stroke-width="1.8" marker-end="url(#solid)"/>
+<text x="1450" y="1364" text-anchor="middle" font-size="15" fill="#1a1a1a">Generate Printable Receipt</text>
+<!-- m17 return to Admin -->
+<line x1="2272" y1="1450" x2="168" y2="1450" stroke="#555" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#ret)"/>
+<text x="1220" y="1442" text-anchor="middle" font-size="14" fill="#555">Printable Receipt</text>
+
+<!-- ===================== NOTE (walk-in) ===================== -->
+<path d="M1728,858 C 1830,820 1900,810 1980,806" fill="none" stroke="#c9b45f" stroke-width="1.2" stroke-dasharray="4 4"/>
+<rect x="1980" y="762" width="392" height="88" rx="3" fill="#fff8dc" stroke="#c9b45f" stroke-width="1.4"/>
+<text x="1992" y="788" font-size="13.5" fill="#5a4a12">Walk-in supported: sales.customer_id may be</text>
+<text x="1992" y="808" font-size="13.5" fill="#5a4a12">NULL. A registered customer may optionally be</text>
+<text x="1992" y="828" font-size="13.5" fill="#5a4a12">linked to the sale before it is saved.</text>
+
+<!-- ===================== LIFELINE ENDS (X) ===================== -->
+<g stroke="#1a1a1a" stroke-width="4">
+  <line x1="146" y1="1596" x2="174" y2="1624"/><line x1="174" y1="1596" x2="146" y2="1624"/>
+  <line x1="626" y1="1596" x2="654" y2="1624"/><line x1="654" y1="1596" x2="626" y2="1624"/>
+  <line x1="1136" y1="1596" x2="1164" y2="1624"/><line x1="1164" y1="1596" x2="1136" y2="1624"/>
+  <line x1="1706" y1="1596" x2="1734" y2="1624"/><line x1="1734" y1="1596" x2="1706" y2="1624"/>
+  <line x1="2266" y1="1596" x2="2294" y2="1624"/><line x1="2294" y1="1596" x2="2266" y2="1624"/>
+</g>
+
+<!-- ===================== SCOPE FOOTER ===================== -->
+<rect x="160" y="1672" width="2120" height="96" rx="3" fill="#fafafa" stroke="#dcdfe3"/>
+<text x="178" y="1698" font-size="14" font-weight="700" fill="#1a1a1a">Scope notes</text>
+<text x="178" y="1720" font-size="13" fill="#4a4a4a">&#8226; The Admin operates the POS. Online / GCash payment is out of scope &#8212; there is no payment table. Cash tendered and change are shown in the POS UI only and are not persisted.</text>
+<text x="178" y="1740" font-size="13" fill="#4a4a4a">&#8226; Persisted per sale: one sales row (total_amount, system sale_date) and its sale_items rows (unit_price frozen at time of sale). Product lines deduct items.stock_quantity; service lines do not.</text>
+<text x="178" y="1760" font-size="13" fill="#4a4a4a">&#8226; The Receipt is generated HTML output for printing, not a database entity.</text>
+
+<text x="1220" y="1792" text-anchor="middle" font-size="15" letter-spacing="3" fill="#b8c0c8">SEQUENCE DIAGRAM</text>
+</svg>

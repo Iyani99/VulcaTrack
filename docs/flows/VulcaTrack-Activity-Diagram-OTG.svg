@@ -1,0 +1,234 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1520" height="2790" viewBox="0 0 1520 2790" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<defs>
+  <marker id="flow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8.5" markerHeight="8.5" orient="auto-start-reverse">
+    <path d="M0,0 L12,6 L0,12 z" fill="#1a1a1a"/>
+  </marker>
+</defs>
+<rect width="1520" height="2790" fill="#ffffff"/>
+
+<text x="760" y="42" text-anchor="middle" font-size="27" font-weight="700" fill="#1a1a1a">VulcaTrack: On-the-Go (OTG) Service Request</text>
+<text x="760" y="70" text-anchor="middle" font-size="16" fill="#5b6b7b">Activity Diagram &#8212; Chapter 3</text>
+
+<!-- ===================== SWIMLANES ===================== -->
+<rect x="40" y="92" width="1440" height="2398" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+<line x1="520" y1="92" x2="520" y2="2490" stroke="#1a1a1a" stroke-width="1.6"/>
+<line x1="1000" y1="92" x2="1000" y2="2490" stroke="#1a1a1a" stroke-width="1.6"/>
+<line x1="40" y1="134" x2="1480" y2="134" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="280" y="120" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1a1a">Customer</text>
+<text x="760" y="120" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1a1a">VulcaTrack System</text>
+<text x="1240" y="120" text-anchor="middle" font-size="17" font-weight="700" fill="#1a1a1a">Admin</text>
+
+<!-- ===================== NODES ===================== -->
+<!-- initial -->
+<circle cx="280" cy="168" r="15" fill="#1a1a1a"/>
+
+<!-- Customer actions -->
+<g>
+<rect x="120" y="190" width="320" height="60" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="280" y="226" text-anchor="middle" font-size="14" fill="#12303f">Log in to VulcaTrack</text>
+</g>
+<g>
+<rect x="120" y="300" width="320" height="64" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="280" y="326" text-anchor="middle" font-size="13.5" fill="#12303f">Open the Rescue (OTG)</text>
+<text x="280" y="346" text-anchor="middle" font-size="13.5" fill="#12303f">request form</text>
+</g>
+<g>
+<rect x="120" y="412" width="320" height="64" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="280" y="438" text-anchor="middle" font-size="13.5" fill="#12303f">Select an active saved vehicle</text>
+<text x="280" y="458" text-anchor="middle" font-size="13.5" fill="#12303f">&amp; describe the problem</text>
+</g>
+<g>
+<rect x="120" y="524" width="320" height="64" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="280" y="550" text-anchor="middle" font-size="13.5" fill="#12303f">Share current location &#8212; browser</text>
+<text x="280" y="570" text-anchor="middle" font-size="13.5" fill="#12303f">geolocation or map pin (lat / lng)</text>
+</g>
+<g>
+<rect x="120" y="636" width="320" height="64" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="280" y="662" text-anchor="middle" font-size="13.5" fill="#12303f">Confirm contact number on file</text>
+<text x="280" y="682" text-anchor="middle" font-size="13.5" fill="#12303f">(mandatory)</text>
+</g>
+<g>
+<rect x="120" y="748" width="320" height="60" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="280" y="784" text-anchor="middle" font-size="14" fill="#12303f">Submit the rescue request</text>
+</g>
+
+<!-- System actions -->
+<g>
+<rect x="595" y="746" width="330" height="64" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="760" y="772" text-anchor="middle" font-size="13.5" fill="#12303f">Validate the authenticated customer</text>
+<text x="760" y="792" text-anchor="middle" font-size="13.5" fill="#12303f">&amp; submitted request data</text>
+</g>
+<g>
+<rect x="595" y="858" width="330" height="60" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="760" y="894" text-anchor="middle" font-size="13.5" fill="#12303f">Read submitted latitude &amp; longitude</text>
+</g>
+<g>
+<rect x="595" y="966" width="330" height="78" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="760" y="990" text-anchor="middle" font-size="13" fill="#12303f">Calculate the one-time ETA from the</text>
+<text x="760" y="1008" text-anchor="middle" font-size="13" fill="#12303f">customer coordinates + shop location</text>
+<text x="760" y="1026" text-anchor="middle" font-size="13" fill="#12303f">(config/shop.php)</text>
+</g>
+<g>
+<rect x="595" y="1088" width="330" height="78" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="760" y="1112" text-anchor="middle" font-size="13" fill="#12303f">Create the service request;</text>
+<text x="760" y="1130" text-anchor="middle" font-size="13" fill="#12303f">status = pending. ETA is stored</text>
+<text x="760" y="1148" text-anchor="middle" font-size="13" fill="#12303f">as a frozen snapshot</text>
+</g>
+<g>
+<rect x="595" y="1210" width="330" height="64" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="760" y="1236" text-anchor="middle" font-size="13.5" fill="#12303f">Show request confirmation</text>
+<text x="760" y="1256" text-anchor="middle" font-size="13.5" fill="#12303f">&amp; frozen ETA to the customer</text>
+</g>
+
+<!-- Admin actions -->
+<g>
+<rect x="1075" y="1212" width="330" height="60" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="1240" y="1248" text-anchor="middle" font-size="13.5" fill="#12303f">Open the pending OTG requests</text>
+</g>
+<g>
+<rect x="1075" y="1322" width="330" height="64" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="1240" y="1348" text-anchor="middle" font-size="13" fill="#12303f">Review the request details: customer,</text>
+<text x="1240" y="1368" text-anchor="middle" font-size="13" fill="#12303f">vehicle, problem, location, ETA</text>
+</g>
+
+<!-- decision -->
+<polygon points="1240,1400 1356,1470 1240,1540 1124,1470" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="1240" y="1466" text-anchor="middle" font-size="13.5" font-weight="600" fill="#12303f">Accept</text>
+<text x="1240" y="1484" text-anchor="middle" font-size="13.5" font-weight="600" fill="#12303f">request?</text>
+
+<!-- NO branch -->
+<g>
+<rect x="1010" y="1600" width="220" height="60" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="1120" y="1636" text-anchor="middle" font-size="14" fill="#12303f">Reject the request</text>
+</g>
+<g>
+<rect x="595" y="1720" width="330" height="60" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="760" y="1756" text-anchor="middle" font-size="13.5" fill="#12303f">Update request status = rejected</text>
+</g>
+<g>
+<rect x="120" y="1830" width="320" height="60" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="280" y="1866" text-anchor="middle" font-size="14" fill="#12303f">View the declined request</text>
+</g>
+
+<!-- YES branch -->
+<g>
+<rect x="1250" y="1600" width="220" height="60" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="1360" y="1636" text-anchor="middle" font-size="14" fill="#12303f">Accept the request</text>
+</g>
+<g>
+<rect x="1075" y="1720" width="330" height="60" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="1240" y="1756" text-anchor="middle" font-size="14" fill="#12303f">Assign an active Tireman</text>
+</g>
+<g>
+<rect x="595" y="1830" width="330" height="64" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="760" y="1856" text-anchor="middle" font-size="13.5" fill="#12303f">Store the assigned Tireman;</text>
+<text x="760" y="1876" text-anchor="middle" font-size="13.5" fill="#12303f">set status = accepted</text>
+</g>
+<g>
+<rect x="120" y="1942" width="320" height="64" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="280" y="1968" text-anchor="middle" font-size="13.5" fill="#12303f">View status:</text>
+<text x="280" y="1988" text-anchor="middle" font-size="13.5" fill="#12303f">&#8220;Tireman is on the way&#8221;</text>
+</g>
+<g>
+<rect x="1075" y="2054" width="330" height="60" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="1240" y="2090" text-anchor="middle" font-size="14" fill="#12303f">Mark the request as completed</text>
+</g>
+<g>
+<rect x="595" y="2164" width="330" height="60" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="760" y="2200" text-anchor="middle" font-size="13.5" fill="#12303f">Update request status = completed</text>
+</g>
+<g>
+<rect x="120" y="2274" width="320" height="64" rx="12" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.8"/>
+<text x="280" y="2300" text-anchor="middle" font-size="13.5" fill="#12303f">View the completed request</text>
+<text x="280" y="2320" text-anchor="middle" font-size="13.5" fill="#12303f">in booking history</text>
+</g>
+
+<!-- final node -->
+<circle cx="280" cy="2398" r="17" fill="none" stroke="#1a1a1a" stroke-width="2.2"/>
+<circle cx="280" cy="2398" r="9" fill="#1a1a1a"/>
+
+<!-- off-system annotation: the roadside service itself is real-world, performed by the
+     assigned Tireman, not a VulcaTrack / Admin system action. No Tireman swimlane. -->
+<path d="M615,1968 H969 L985,1984 V2036 H615 Z" fill="#fff8dc" stroke="#c9b45f" stroke-width="1.4"/>
+<path d="M969,1968 L969,1984 L985,1984 Z" fill="#f0e2ab" stroke="#c9b45f" stroke-width="1.2"/>
+<text x="631" y="1994" font-size="12.5" font-style="italic" fill="#5a4a12">Off-system: the assigned Tireman carries out</text>
+<text x="631" y="2014" font-size="12.5" font-style="italic" fill="#5a4a12">the roadside service (not a VulcaTrack action).</text>
+<line x1="615" y1="2004" x2="603" y2="2010" stroke="#c9b45f" stroke-width="1.2" stroke-dasharray="4 4"/>
+
+<!-- ===================== CONTROL FLOWS ===================== -->
+<g stroke="#1a1a1a" stroke-width="1.8" fill="none">
+<!-- customer vertical chain -->
+<line x1="280" y1="183" x2="280" y2="188" marker-end="url(#flow)"/>
+<line x1="280" y1="250" x2="280" y2="298" marker-end="url(#flow)"/>
+<line x1="280" y1="364" x2="280" y2="410" marker-end="url(#flow)"/>
+<line x1="280" y1="476" x2="280" y2="522" marker-end="url(#flow)"/>
+<line x1="280" y1="588" x2="280" y2="634" marker-end="url(#flow)"/>
+<line x1="280" y1="700" x2="280" y2="746" marker-end="url(#flow)"/>
+<!-- submit -> validate (direct, shortest gap) -->
+<line x1="440" y1="778" x2="593" y2="778" marker-end="url(#flow)"/>
+<!-- system vertical chain -->
+<line x1="760" y1="810" x2="760" y2="856" marker-end="url(#flow)"/>
+<line x1="760" y1="918" x2="760" y2="964" marker-end="url(#flow)"/>
+<line x1="760" y1="1044" x2="760" y2="1086" marker-end="url(#flow)"/>
+<line x1="760" y1="1166" x2="760" y2="1208" marker-end="url(#flow)"/>
+<!-- show confirmation -> open pending (direct, shortest gap) -->
+<line x1="925" y1="1242" x2="1073" y2="1242" marker-end="url(#flow)"/>
+<!-- admin -->
+<line x1="1240" y1="1272" x2="1240" y2="1320" marker-end="url(#flow)"/>
+<line x1="1240" y1="1386" x2="1240" y2="1398" marker-end="url(#flow)"/>
+<!-- decision NO -> reject: straight down, clearly separate from YES -->
+<line x1="1124" y1="1470" x2="1124" y2="1598" marker-end="url(#flow)"/>
+<!-- decision YES -> accept: short jog right, clearly separate from NO -->
+<path d="M1240,1540 L1240,1572 L1260,1572 L1260,1598" marker-end="url(#flow)"/>
+<!-- NO chain: reject -> update rejected -> view declined -->
+<path d="M1120,1660 L1120,1692 L760,1692 L760,1718" marker-end="url(#flow)"/>
+<path d="M595,1750 L504,1750 L504,1860 L442,1860" marker-end="url(#flow)"/>
+<!-- rejected -> final (short gutter, stays inside Customer lane, clears all boxes) -->
+<path d="M280,1890 L280,1914 L47,1914 L47,2398 L261,2398" marker-end="url(#flow)"/>
+<!-- YES chain -->
+<path d="M1360,1660 L1360,1692 L1240,1692 L1240,1718" marker-end="url(#flow)"/>
+<path d="M1075,1750 L978,1750 L978,1862 L927,1862" marker-end="url(#flow)"/>
+<path d="M595,1862 L528,1862 L528,1958 L442,1958" marker-end="url(#flow)"/>
+<path d="M440,1990 L603,1990 L603,2070 L1073,2070" marker-end="url(#flow)"/>
+<path d="M1075,2098 L978,2098 L978,2194 L927,2194" marker-end="url(#flow)"/>
+<path d="M595,2194 L515,2194 L515,2306 L442,2306" marker-end="url(#flow)"/>
+<line x1="280" y1="2338" x2="280" y2="2379" marker-end="url(#flow)"/>
+</g>
+
+<!-- guard labels -->
+<text x="1080" y="1462" text-anchor="middle" font-size="13.5" font-style="italic" fill="#1a1a1a">[No]</text>
+<text x="1272" y="1590" text-anchor="start" font-size="13.5" font-style="italic" fill="#1a1a1a">[Yes]</text>
+
+<!-- ===================== LEGEND ===================== -->
+<rect x="40" y="2514" width="560" height="250" fill="#fafafa" stroke="#dcdfe3"/>
+<text x="58" y="2538" font-size="13" font-weight="700" fill="#1a1a1a">Notation</text>
+<circle cx="70" cy="2560" r="8" fill="#1a1a1a"/>
+<text x="90" y="2564" font-size="12.5" fill="#1a1a1a">Initial node</text>
+<rect x="60" y="2578" width="20" height="14" rx="4" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.4"/>
+<text x="90" y="2589" font-size="12.5" fill="#1a1a1a">Action</text>
+<polygon points="70,2602 82,2611 70,2620 58,2611" fill="#cfe8f5" stroke="#3f7d9c" stroke-width="1.4"/>
+<text x="90" y="2615" font-size="12.5" fill="#1a1a1a">Decision</text>
+<circle cx="70" cy="2635" r="8" fill="none" stroke="#1a1a1a" stroke-width="1.8"/><circle cx="70" cy="2635" r="4" fill="#1a1a1a"/>
+<text x="90" y="2639" font-size="12.5" fill="#1a1a1a">Activity final node</text>
+<line x1="300" y1="2560" x2="330" y2="2560" stroke="#1a1a1a" stroke-width="1.8" marker-end="url(#flow)"/>
+<text x="340" y="2564" font-size="12.5" fill="#1a1a1a">Control flow</text>
+<text x="300" y="2589" font-size="12.5" font-style="italic" fill="#1a1a1a">[guard]</text>
+<text x="360" y="2589" font-size="12.5" fill="#1a1a1a">Guard condition on a branch</text>
+<path d="M300,2601 H322 L328,2607 V2618 H300 Z" fill="#fff8dc" stroke="#c9b45f" stroke-width="1.2"/>
+<text x="340" y="2615" font-size="12.5" fill="#1a1a1a">Note &#8212; off-system / real-world activity</text>
+
+<!-- ===================== SCOPE NOTES ===================== -->
+<rect x="620" y="2514" width="860" height="250" fill="#fafafa" stroke="#dcdfe3"/>
+<text x="638" y="2538" font-size="13" font-weight="700" fill="#1a1a1a">Scope notes</text>
+<text x="638" y="2559" font-size="12" fill="#4a4a4a">&#8226;  OTG requires an authenticated customer; the contact number on file is mandatory.</text>
+<text x="638" y="2578" font-size="12" fill="#4a4a4a">   Location (latitude / longitude) is captured once, via browser geolocation or a map pin.</text>
+<text x="638" y="2597" font-size="12" fill="#4a4a4a">&#8226;  The ETA is calculated once at request creation and stored as a frozen snapshot &#8212;</text>
+<text x="638" y="2616" font-size="12" fill="#4a4a4a">   it is never recalculated. There is no live GPS tracking and no stored route geometry.</text>
+<text x="638" y="2635" font-size="12" fill="#4a4a4a">&#8226;  Request status is exactly one of: pending, accepted, rejected, completed.</text>
+<text x="638" y="2654" font-size="12" fill="#4a4a4a">   &#8220;Tireman is on the way&#8221; is display wording for the accepted state, not a separate status.</text>
+<text x="638" y="2673" font-size="12" fill="#4a4a4a">&#8226;  A Tireman is a database record assigned by the Admin &#8212; not a login role, not a swimlane.</text>
+<text x="638" y="2692" font-size="12" fill="#4a4a4a">   Tiremen do not log in to the system and have no dashboard.</text>
+<text x="638" y="2711" font-size="12" fill="#4a4a4a">&#8226;  The roadside service itself is a real-world activity performed by the assigned Tireman,</text>
+<text x="638" y="2730" font-size="12" fill="#4a4a4a">   off-system (see note) &#8212; it is not an Admin or VulcaTrack system action.</text>
+<text x="638" y="2749" font-size="12" fill="#4a4a4a">&#8226;  Both the rejected and the completed paths end at the single activity final node.</text>
+</svg>
