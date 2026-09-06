@@ -27,10 +27,43 @@
   var manualLng = document.getElementById('otg-lng-manual');
   var manualApply = document.getElementById('otg-apply-manual');
 
+  // Landmark / address search (optional; only wired up when the elements exist).
+  var geocodeUrl = el.getAttribute('data-geocode-url');
+  var searchInput = document.getElementById('otg-search-q');
+  var searchBtn = document.getElementById('otg-search-btn');
+  var searchStatusEl = document.getElementById('otg-search-status');
+  var resultsEl = document.getElementById('otg-search-results');
+  var selectedEl = document.getElementById('otg-selected-label');
+  var csrfInput = document.querySelector('input[name="_csrf"]');
+  var selectedPlace = null; // label of the last landmark result the user picked
+
   function setStatus(msg, kind) {
     if (!statusEl) { return; }
     statusEl.textContent = msg;
     statusEl.className = 'loc-status' + (kind ? ' loc-status--' + kind : '');
+  }
+
+  function setSearchStatus(msg, kind) {
+    if (!searchStatusEl) { return; }
+    searchStatusEl.textContent = msg || '';
+    searchStatusEl.className = 'loc-status' + (kind ? ' loc-status--' + kind : '');
+    searchStatusEl.hidden = !msg;
+  }
+
+  function showSelected(text) {
+    if (!selectedEl) { return; }
+    selectedEl.textContent = text || '';
+    selectedEl.hidden = !text;
+  }
+
+  function clearSelected() {
+    selectedPlace = null;
+    showSelected('');
+  }
+
+  // Called when the user drags the pin or clicks the map after a pick.
+  function markAdjusted() {
+    if (selectedPlace) { showSelected('Selected: ' + selectedPlace + ' — position adjusted on map'); }
   }
 
   function inRange(lat, lng) {
@@ -85,7 +118,7 @@
         if (!readonly) {
           custMarker.on('dragend', function () {
             var p = custMarker.getLatLng();
-            updateFormValue(p.lat, p.lng); drawLine();
+            updateFormValue(p.lat, p.lng); drawLine(); markAdjusted();
           });
         }
       }
@@ -106,7 +139,7 @@
     map.setView([shopLat, shopLng], 13);
 
     if (!readonly) {
-      map.on('click', function (ev) { setCustomer(ev.latlng.lat, ev.latlng.lng, false); });
+      map.on('click', function (ev) { setCustomer(ev.latlng.lat, ev.latlng.lng, false); markAdjusted(); });
     }
 
     var initial = readInitialCustomer();
@@ -136,7 +169,7 @@
       }
       setStatus('Getting your location…');
       navigator.geolocation.getCurrentPosition(
-        function (pos) { setCustomer(pos.coords.latitude, pos.coords.longitude, true); },
+        function (pos) { clearSelected(); setCustomer(pos.coords.latitude, pos.coords.longitude, true); },
         function (err) {
           setStatus(
             (err && err.code === 1
@@ -158,7 +191,81 @@
         setStatus('Enter a valid latitude (-90..90) and longitude (-180..180).', 'err');
         return;
       }
+      clearSelected();
       setCustomer(lat, lng, true);
+    });
+  }
+
+  // --- Landmark / address search --------------------------------------------
+  if (geocodeUrl && searchInput && searchBtn && !readonly) {
+
+    var renderResults = function (list, attribution) {
+      resultsEl.textContent = '';
+      if (!list.length) {
+        resultsEl.hidden = true;
+        setSearchStatus('No matching places found. Try a nearby landmark, or use your current location.', 'err');
+        return;
+      }
+      list.forEach(function (place) {
+        var lat = parseFloat(place.latitude), lng = parseFloat(place.longitude);
+        if (!inRange(lat, lng)) { return; }
+        var li = document.createElement('li');
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'linklike loc-result';
+        btn.textContent = place.label; // textContent -> external text is never HTML
+        btn.addEventListener('click', function () {
+          selectedPlace = place.label;
+          setCustomer(lat, lng, true);
+          showSelected('Selected: ' + place.label);
+          setSearchStatus('');
+          resultsEl.hidden = true;
+        });
+        li.appendChild(btn);
+        resultsEl.appendChild(li);
+      });
+      resultsEl.hidden = false;
+      setSearchStatus(attribution ? 'Pick the closest match, then drag the pin to fine-tune.' : '');
+    };
+
+    var runSearch = function () {
+      var q = (searchInput.value || '').trim();
+      if (q.length < 3) {
+        setSearchStatus('Type at least 3 characters, e.g. a store or street name.', 'err');
+        return;
+      }
+      var body = new FormData();
+      body.append('q', q);
+      if (csrfInput) { body.append('_csrf', csrfInput.value); }
+
+      searchBtn.disabled = true;
+      setSearchStatus('Searching…');
+      resultsEl.hidden = true;
+
+      fetch(geocodeUrl, { method: 'POST', body: body, credentials: 'same-origin' })
+        .then(function (res) { return res.json().catch(function () { return { ok: false, error: 'unavailable' }; }); })
+        .then(function (data) {
+          if (data && data.ok) {
+            renderResults(Array.isArray(data.results) ? data.results : [], data.attribution);
+          } else {
+            var code = data && data.error;
+            setSearchStatus(
+              code === 'too_short' ? 'Type at least 3 characters.' :
+              code === 'auth' ? 'Your session expired — reload the page and sign in again.' :
+              'Landmark search is unavailable right now. Use your current location or the map instead.',
+              'err'
+            );
+          }
+        })
+        .catch(function () {
+          setSearchStatus('Landmark search is unavailable right now. Use your current location or the map instead.', 'err');
+        })
+        .then(function () { searchBtn.disabled = false; });
+    };
+
+    searchBtn.addEventListener('click', runSearch);
+    searchInput.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); runSearch(); }
     });
   }
 })();

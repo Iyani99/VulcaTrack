@@ -19,10 +19,14 @@ final class HttpServer
     private int $port;
     private string $cookieJar;
     private string $logFile;
+    /** @var array<string,string> extra environment for the php -S child */
+    private array $extraEnv;
 
-    public function __construct(int $port = 8677)
+    /** @param array<string,string> $extraEnv extra env vars for the served app */
+    public function __construct(int $port = 8677, array $extraEnv = [])
     {
         $this->port = $port;
+        $this->extraEnv = $extraEnv;
         $base = sys_get_temp_dir() . '/vulcatrack_test_' . getmypid();
         $this->cookieJar = $base . '_cookies.txt';
         $this->logFile = $base . '_serverlog.txt';
@@ -37,12 +41,17 @@ final class HttpServer
              . ' -t ' . escapeshellarg($repoRoot);
 
         @unlink($this->logFile);
+        // Inherit the parent environment and layer any extras on top (Windows
+        // php.exe needs SystemRoot etc., so a partial env is not an option).
+        $env = $this->extraEnv === [] ? null : array_merge(getenv(), $this->extraEnv);
         // stdout/stderr go to a FILE, not a pipe: an undrained pipe buffer would
         // deadlock the single-threaded built-in server after a few dozen requests.
         $this->proc = proc_open(
             $cmd,
             [0 => ['pipe', 'r'], 1 => ['file', $this->logFile, 'a'], 2 => ['file', $this->logFile, 'a']],
-            $this->pipes
+            $this->pipes,
+            null,
+            $env
         );
         if (!is_resource($this->proc)) {
             throw new \RuntimeException('could not start php -S');

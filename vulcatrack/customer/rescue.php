@@ -134,20 +134,42 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
     </section>
 
     <section class="card">
-      <h2>3. Where are you?</h2>
-      <p class="muted">We use your location once, to work out the route and a one-time ETA. We do not track you.</p>
+      <h2>3. Where do you need assistance?</h2>
+      <p class="muted">We use this location once, to work out the route and a one-time ETA. We do not track you.</p>
+
+      <div class="loc-methods">
+        <div class="loc-method">
+          <button type="button" id="otg-locate" class="secondary">Use my current location</button>
+          <span class="muted">Uses your device location when GPS is available.</span>
+        </div>
+
+        <p class="loc-or">or</p>
+
+        <div class="loc-method">
+          <label for="otg-search-q">Search a landmark or address</label>
+          <div class="loc-search">
+            <input type="text" id="otg-search-q" name="otg_search_q" maxlength="120" autocomplete="off"
+                   placeholder="e.g. Shell Baliwag, SM City Baliwag, San Jose St">
+            <button type="button" id="otg-search-btn" class="secondary">Search</button>
+          </div>
+          <p id="otg-search-status" class="loc-status" hidden></p>
+          <ul id="otg-search-results" class="loc-results" hidden></ul>
+          <p class="loc-attribution muted">Search results from OpenStreetMap / Nominatim.</p>
+        </div>
+      </div>
+
+      <p id="otg-loc-status" class="loc-status">Location not set yet.</p>
+      <p id="otg-selected-label" class="loc-selected" hidden></p>
 
       <div class="mapwrap">
         <div id="otg-map" class="otg-map"
              data-shop-lat="<?= e((string) $shop['latitude']) ?>"
              data-shop-lng="<?= e((string) $shop['longitude']) ?>"
-             data-shop-name="<?= e($shop['name'] ?? 'Shop') ?>"></div>
+             data-shop-name="<?= e($shop['name'] ?? 'Shop') ?>"
+             data-geocode-url="<?= e(vulcatrack_url('/customer/geocode.php')) ?>"></div>
       </div>
+      <p class="muted">Drag the pin to the exact roadside spot before you submit — that final position is what we use.</p>
 
-      <p>
-        <button type="button" id="otg-locate" class="secondary">Use my current location</button>
-      </p>
-      <p id="otg-loc-status" class="loc-status">Location not set yet.</p>
       <?php if (!empty($errors['location'])): ?><small class="error"><?= e($errors['location']) ?></small><?php endif; ?>
 
       <input type="hidden" id="otg-lat" name="latitude" value="<?= e($old['latitude']) ?>">
@@ -156,9 +178,9 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
       <details class="manual-coords">
         <summary>Enter coordinates manually</summary>
         <label for="otg-lat-manual">Latitude</label>
-        <input type="text" id="otg-lat-manual" inputmode="decimal" placeholder="e.g. 10.31570">
+        <input type="text" id="otg-lat-manual" inputmode="decimal" placeholder="e.g. 14.95120">
         <label for="otg-lng-manual">Longitude</label>
-        <input type="text" id="otg-lng-manual" inputmode="decimal" placeholder="e.g. 123.88540">
+        <input type="text" id="otg-lng-manual" inputmode="decimal" placeholder="e.g. 120.89810">
         <button type="button" id="otg-apply-manual" class="secondary">Apply coordinates</button>
       </details>
     </section>

@@ -152,6 +152,40 @@ test('ServiceRequestRepository read methods are customer-scoped', function () {
     });
 });
 
+test('coordinates chosen via landmark search create the same valid pending request', function () {
+    $pdo = test_pdo();
+    TestDb::rollback($pdo, function () use ($pdo) {
+        // A landmark result is just a lat/lng like any other -- it must flow
+        // through the unchanged OTG path: pending + frozen ETA, no schema change.
+        $place = \VulcaTrack\Support\GeocoderFactory::fakeFixtures()[2]; // "SM City Baliwag"
+        assert_true(\VulcaTrack\Support\Geo::isValidLatitude($place['latitude']));
+        assert_true(\VulcaTrack\Support\Geo::isValidLongitude($place['longitude']));
+
+        $cust = seed_customer($pdo);
+        $vid = (new VehicleRepository($pdo))->create($cust, 'LMK-1', null, null, null);
+
+        $config = $GLOBALS['vulcatrack_config'];
+        $shop = require app_path('config/shop.php');
+        $dist = \VulcaTrack\Support\Geo::haversineKm(
+            (float) $place['latitude'], (float) $place['longitude'],
+            (float) $shop['latitude'], (float) $shop['longitude']
+        );
+        $eta = \VulcaTrack\Support\Geo::etaMinutes(
+            $dist,
+            (float) $config['otg']['average_speed_kmph'],
+            (int) $config['otg']['min_eta_minutes']
+        );
+
+        $rid = (new ServiceRequestRepository($pdo))->createPending(
+            $cust, $vid, 'Landmark-selected location test', (float) $place['latitude'], (float) $place['longitude'], $eta
+        );
+        $row = (new ServiceRequestRepository($pdo))->findForCustomer($rid, $cust);
+        assert_same('pending', $row['status']);
+        assert_same($eta, (int) $row['eta_minutes'], 'ETA frozen as computed');
+        assert_true($eta >= (int) $config['otg']['min_eta_minutes']);
+    });
+});
+
 test('the frozen ETA is never recomputed on read (no live ETA)', function () {
     $pdo = test_pdo();
     TestDb::rollback($pdo, function () use ($pdo) {

@@ -44,4 +44,28 @@ return [
         'average_speed_kmph' => 25,
         'min_eta_minutes'    => 5,
     ],
+
+    // Book-a-Rescue landmark / address search. Resolves a place name to
+    // coordinates only; the OTG request still stores lat/lng + a frozen ETA.
+    // If you use the public Nominatim service you MUST keep a real identifying
+    // 'user_agent' (the OSM usage policy rejects stock/library defaults) and
+    // must not lower 'min_interval_ms' below ~1000 (max 1 request/second).
+    'geocoding' => [
+        'driver'          => 'nominatim',   // 'nominatim' | 'none' (offline_places only)
+        'endpoint'        => 'https://nominatim.openstreetmap.org/search',
+        'user_agent'      => 'VulcaTrack/1.0 (student project; set a real contact here)',
+        'referer'         => 'http://localhost/vulcatrack/',
+        'email'           => '',
+        'country_codes'   => 'ph',
+        'viewbox'         => '120.55,15.20,121.15,14.60', // lon,lat,lon,lat -- soft bias
+        'bounded'         => false,
+        'timeout'         => 6,
+        'max_results'     => 5,
+        'cache_ttl'       => 86400,
+        'min_interval_ms' => 1100,
+        'attribution'     => 'Search results from OpenStreetMap / Nominatim',
+        'offline_places'  => [
+            // ['label' => 'Some Landmark, Baliwag, Bulacan', 'latitude' => 14.95, 'longitude' => 120.90],
+        ],
+    ],
 ];

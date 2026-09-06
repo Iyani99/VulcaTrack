@@ -269,3 +269,18 @@ button.secondary:hover { background: #e2e4e8; }
 .loc-status { font-size: .9rem; color: #555; margin: .3rem 0; }
 .loc-status--ok { color: #1c6b32; }
 .loc-status--err { color: #b3261e; }
+
+/* Book-a-Rescue location picker: GPS button + landmark search */
+.loc-methods { display: flex; flex-direction: column; gap: .6rem; margin: .4rem 0 .2rem; }
+.loc-method { display: flex; flex-direction: column; gap: .35rem; }
+.loc-method > .muted { font-size: .85rem; }
+.loc-or { margin: 0; color: #888; font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; }
+.loc-search { display: flex; gap: .4rem; flex-wrap: wrap; }
+.loc-search input { flex: 1 1 16rem; min-width: 0; }
+.loc-search button { flex: 0 0 auto; }
+.loc-results { list-style: none; margin: .4rem 0 0; padding: 0; border: 1px solid #d7dade; border-radius: 8px; overflow: hidden; }
+.loc-results li + li { border-top: 1px solid #e4e6ea; }
+button.loc-result { display: block; width: 100%; text-align: left; padding: .55rem .7rem; font-size: .92rem; color: #17427e; background: none; }
+button.loc-result:hover { background: #eef2fb; }
+.loc-attribution { font-size: .78rem; margin: .35rem 0 0; }
+.loc-selected { font-size: .9rem; color: #1c6b32; margin: .3rem 0; font-weight: 600; }
