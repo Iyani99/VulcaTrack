@@ -786,7 +786,17 @@ PNGs and the Figma prototype were not modified).
   landmark-search UI in `customer/rescue.php` + search handling in
   `assets/js/otg-map.js`. Extended the test harness: `unit/GeocoderTest`,
   `unit/GeocodeCacheTest`, `http/GeocodeHttpTest`, plus a landmark-coords case in
-  `integration/RepositoryTest` (81 tests / 420 assertions, green).
+  `integration/RepositoryTest`.
+- **Follow-up fix (same day):** verified the whole flow in a real headless
+  Chrome against Apache + live Nominatim — it worked. The reported "pressing
+  Enter / Search does nothing" was a **stale browser cache** of `otg-map.js`
+  (Apache serves `assets/` with only `Last-Modified`/`ETag`, no `Cache-Control`,
+  so browsers heuristically cache and can hold a pre-enhancement copy across a
+  redeploy). Fix: `vulcatrack_asset()` stamps `?v=<filemtime>` on the app-owned
+  CSS/JS (`app.css`, `otg-map.js`, vendored Leaflet); the search field also got
+  an inline `onkeydown` Enter guard so a stale/failed `otg-map.js` can never turn
+  Enter into a full form submit. `unit/GeocoderTest` etc. now total **82 tests /
+  429 assertions, green.**
 - **No schema change** — still exactly 8 tables, four OTG statuses, and
   `service_requests.latitude` / `longitude` / `eta_minutes` unchanged.
 

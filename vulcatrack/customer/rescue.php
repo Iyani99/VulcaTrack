@@ -149,7 +149,8 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
           <label for="otg-search-q">Search a landmark or address</label>
           <div class="loc-search">
             <input type="text" id="otg-search-q" name="otg_search_q" maxlength="120" autocomplete="off"
-                   placeholder="e.g. Shell Baliwag, SM City Baliwag, San Jose St">
+                   placeholder="e.g. Shell Baliwag, SM City Baliwag, San Jose St"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();}">
             <button type="button" id="otg-search-btn" class="secondary">Search</button>
           </div>
           <p id="otg-search-status" class="loc-status" hidden></p>
@@ -197,7 +198,7 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
     </section>
   </form>
 
-  <script src="<?= e(vulcatrack_url('/assets/js/otg-map.js')) ?>" defer></script>
+  <script src="<?= e(vulcatrack_asset('/assets/js/otg-map.js')) ?>" defer></script>
 <?php endif; ?>
 
 <?php require __DIR__ . '/../src/Views/partials/customer_bottom.php'; ?>

@@ -72,6 +72,23 @@ if (!function_exists('vulcatrack_url')) {
     }
 }
 
+if (!function_exists('vulcatrack_asset')) {
+    /**
+     * URL for a static asset under vulcatrack/, with a cache-busting `?v=`
+     * stamped from the file's modification time. Apache serves assets/ with
+     * only Last-Modified/ETag (no Cache-Control), so browsers apply heuristic
+     * caching and can hold a stale copy across a redeploy; changing the URL
+     * when the file changes forces a fresh fetch. No build step needed.
+     */
+    function vulcatrack_asset(string $path): string
+    {
+        $url = vulcatrack_url($path);
+        $file = VULCATRACK_ROOT . '/' . ltrim($path, '/');
+        $mtime = is_file($file) ? filemtime($file) : false;
+        return $mtime !== false ? $url . '?v=' . $mtime : $url;
+    }
+}
+
 if (!function_exists('e')) {
     /** HTML-escape a value for safe output in a view. */
     function e(?string $value): string

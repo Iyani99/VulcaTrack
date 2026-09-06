@@ -9,7 +9,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($pageTitle ?? 'VulcaTrack') ?> &mdash; VulcaTrack</title>
-<link rel="stylesheet" href="<?= e(vulcatrack_url('/assets/css/app.css')) ?>">
+<link rel="stylesheet" href="<?= e(vulcatrack_asset('/assets/css/app.css')) ?>">
 </head>
 <body>
 <main class="auth">

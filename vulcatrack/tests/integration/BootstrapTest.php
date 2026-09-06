@@ -50,6 +50,17 @@ test('vulcatrack_url() builds an app URL from the configured base', function () 
     assert_same(0, strpos($url, 'http'), 'should be an absolute URL');
 });
 
+test('vulcatrack_asset() adds a mtime cache-buster for a real file, plain URL otherwise', function () {
+    $asset = vulcatrack_asset('/assets/js/otg-map.js');
+    assert_same(1, preg_match('~/assets/js/otg-map\.js\?v=\d+$~', $asset),
+        'a real asset gets ?v=<mtime>');
+    $mtime = filemtime(VULCATRACK_ROOT . '/assets/js/otg-map.js');
+    assert_contains('?v=' . $mtime, $asset, 'the version is the file mtime');
+
+    $missing = vulcatrack_asset('/assets/js/does-not-exist.js');
+    assert_not_contains('?v=', $missing, 'a missing file falls back to the plain URL');
+});
+
 test('the shop config holds the real Baliwag location, not 0/0 or a placeholder', function () {
     $shop = require app_path('config/shop.php');
     assert_same('Gerald Tabayag Vulcanizing Shop', $shop['name']);

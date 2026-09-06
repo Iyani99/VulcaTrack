@@ -106,7 +106,7 @@ $vehicleBits = array_filter([$request['make'] ?? '', $request['model'] ?? '', $r
       Shop: <?= e($shop['name'] ?? 'VulcaTrack') ?>.
       The line is a straight-line reference, not a driving route.
     </p>
-    <script src="<?= e(vulcatrack_url('/assets/js/otg-map.js')) ?>" defer></script>
+    <script src="<?= e(vulcatrack_asset('/assets/js/otg-map.js')) ?>" defer></script>
   <?php else: ?>
     <p class="muted">No location was captured for this request.</p>
   <?php endif; ?>

@@ -52,6 +52,19 @@ test('geocode endpoint: auth gate, CSRF, JSON shape, and clean output', function
         assert_contains('id="otg-search-q"', $rescue['body'], 'the rescue page shows the landmark search box');
         assert_contains('OpenStreetMap', $rescue['body'], 'attribution is rendered on the page');
 
+        // The wiring the browser needs -- and the guards that keep a stale /
+        // failed otg-map.js from turning Enter into a full form submit:
+        assert_contains('data-geocode-url=', $rescue['body'], 'the map div carries the geocode endpoint URL');
+        assert_contains('id="otg-search-btn" class="secondary"', $rescue['body']);
+        assert_contains('<button type="button" id="otg-search-btn"', $rescue['body'], 'the Search control is type=button (never submits)');
+        assert_contains("if(event.key==='Enter'){event.preventDefault();}", $rescue['body'],
+            'the search field blocks implicit form submission even without JS');
+        // Cache-busting on the app-owned assets so a redeploy is picked up.
+        assert_same(1, preg_match('~assets/js/otg-map\.js\?v=\d+~', $rescue['body']),
+            'otg-map.js must be served with a ?v= cache-buster');
+        assert_same(1, preg_match('~assets/css/app\.css\?v=\d+~', $rescue['body']),
+            'app.css must be served with a ?v= cache-buster');
+
         // 2. GET is refused.
         $r = $server->request('/vulcatrack/customer/geocode.php');
         assert_same(405, $r['status']);
