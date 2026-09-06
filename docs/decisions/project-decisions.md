@@ -667,9 +667,9 @@ Do not turn these into confirmed requirements without approval.
   (`vulcatrack/database/schema.sql`); no seed data ships (the owner keeps a
   personal test account).
 - **Test harness (Phase 4.5):** `vulcatrack/tests/` — dependency-free CLI runner
-  (`php vulcatrack/tests/run.php`), 60 tests / 339 assertions across unit,
-  integration (schema + repositories + Auth) and end-to-end HTTP suites. All
-  green as of 2026-09-06.
+  (`php vulcatrack/tests/run.php`), 82 passed, 0 failed, 429 assertions across
+  unit, integration (schema + repositories + Auth) and end-to-end HTTP suites.
+  All green as of 2026-09-06.
 - Auth (Decisions 41–47): customer + admin login/logout, CLI
   `vulcatrack/database/seed_admin.php`, hardened sessions, guards.
 - Customer side (Decision 48): `vulcatrack/customer/*` — dashboard, profile,
