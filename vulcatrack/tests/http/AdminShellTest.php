@@ -96,13 +96,17 @@ test('admin shell: guards, actor separation, logout CSRF, nav and clean output',
             assert_not_contains('>' . $absent . '<', $dash['body'], "the admin nav must not contain a '{$absent}' link yet");
         }
 
-        // 5. The placeholder pages load for the admin, warning-free.
-        foreach (['/vulcatrack/admin/pos.php', '/vulcatrack/admin/inventory.php'] as $path) {
-            $r = $server->request($path);
-            assert_same(200, $r['status'], "{$path} should load for the signed-in admin");
-            assert_contains('not available yet', $r['body'], "{$path} is a clearly non-functional placeholder");
-            $assertCleanHtml($r['body'], $path);
-        }
+        // 5. POS is still a non-functional placeholder; Inventory is now a real
+        //    page. Both load for the admin, warning-free.
+        $pos = $server->request('/vulcatrack/admin/pos.php');
+        assert_same(200, $pos['status'], 'admin/pos.php should load for the signed-in admin');
+        assert_contains('not available yet', $pos['body'], 'POS is still a clearly non-functional placeholder');
+        $assertCleanHtml($pos['body'], 'admin/pos.php');
+
+        $inv = $server->request('/vulcatrack/admin/inventory.php');
+        assert_same(200, $inv['status'], 'admin/inventory.php should load for the signed-in admin');
+        assert_contains('Inventory', $inv['body']);
+        $assertCleanHtml($inv['body'], 'admin/inventory.php');
 
         // 6. Admin logout stays POST-only + CSRF protected.
         $r = $server->request('/vulcatrack/admin/logout.php'); // GET
