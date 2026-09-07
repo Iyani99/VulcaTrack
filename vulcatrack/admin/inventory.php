@@ -1,13 +1,14 @@
 <?php
 /**
- * Admin — Inventory browsing (Phase 5, Chunk 3A).
+ * Admin — Inventory (Phase 5, Chunks 3A + 3B).
  *
- * A read-only view of the unified `items` table with server-rendered GET
- * filters: text search, item_type, active state, and a low-stock-only toggle.
- * All data access goes through ItemRepository; this page performs NO writes.
- * Add / edit / activate arrive in a later chunk.
+ * Browsing: server-rendered GET filters (search, item_type, active state,
+ * low-stock toggle). Mutations here are limited to activate / deactivate,
+ * which are POST + CSRF and redirect afterwards (PRG). Create / edit live on
+ * item-edit.php. All persistence goes through ItemRepository.
  */
 
+use VulcaTrack\Auth\Csrf;
 use VulcaTrack\Repository\ItemRepository;
 use VulcaTrack\Support\Money;
 
@@ -16,6 +17,33 @@ require __DIR__ . '/../includes/auth.php';
 
 $admin = require_admin();
 $repo  = new ItemRepository(vulcatrack_db());
+
+// --- activate / deactivate (POST only, CSRF, then redirect) ----------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = (string) ($_POST['_action'] ?? '');
+    $target = (int) ($_POST['item_id'] ?? 0);
+
+    if (!Csrf::check($_POST['_csrf'] ?? null)) {
+        header('Location: ' . vulcatrack_url('/admin/inventory.php?saved=error'));
+        exit;
+    }
+    if ($target > 0 && in_array($action, ['activate', 'deactivate'], true) && $repo->findById($target) !== null) {
+        $repo->setActive($target, $action === 'activate');
+        header('Location: ' . vulcatrack_url('/admin/inventory.php?saved=' . $action . 'd'));
+        exit;
+    }
+    header('Location: ' . vulcatrack_url('/admin/inventory.php?saved=error'));
+    exit;
+}
+
+$flash = null;
+switch ((string) ($_GET['saved'] ?? '')) {
+    case 'created':      $flash = ['notice', 'Item created.']; break;
+    case 'updated':      $flash = ['notice', 'Item updated.']; break;
+    case 'activated':    $flash = ['notice', 'Item activated.']; break;
+    case 'deactivated':  $flash = ['notice', 'Item deactivated.']; break;
+    case 'error':        $flash = ['error', 'That action could not be completed. Please try again.']; break;
+}
 
 // --- read + normalise the GET filters --------------------------------------
 $search = trim((string) ($_GET['q'] ?? ''));
@@ -59,8 +87,13 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 ?>
 <div class="pagehead">
   <h1>Inventory</h1>
+  <a class="btnlink" href="<?= e(vulcatrack_url('/admin/item-edit.php')) ?>">Add item</a>
 </div>
-<p class="muted">Products and services in one list. Adding and editing items arrives in a later update.</p>
+<p class="muted">Products and services in one list.</p>
+
+<?php if ($flash !== null): ?>
+  <p class="<?= $flash[0] === 'error' ? 'error' : 'notice' ?>"><?= e($flash[1]) ?></p>
+<?php endif; ?>
 
 <form class="filterbar" method="get" action="<?= e(vulcatrack_url('/admin/inventory.php')) ?>">
   <label>Search
@@ -90,7 +123,8 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <?php endif; ?>
 </form>
 
-<p class="muted"><?= count($items) ?> item<?= count($items) === 1 ? '' : 's' ?><?= $hasFilters ? ' match these filters' : '' ?>.</p>
+<?php $n = count($items); ?>
+<p class="muted"><?= $n ?> <?= $n === 1 ? 'item' : 'items' ?><?= $hasFilters ? ($n === 1 ? ' matches your filters' : ' match your filters') : '' ?>.</p>
 
 <?php if (!$items): ?>
   <p class="muted">No items to show.</p>
@@ -99,7 +133,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <thead>
       <tr>
         <th>Name</th><th>Type</th><th>Category</th><th class="num">Price</th>
-        <th class="num">Stock</th><th class="num">Reorder</th><th>State</th>
+        <th class="num">Stock</th><th class="num">Reorder</th><th>State</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -132,6 +166,21 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
           <span class="badge badge--<?= (int) $row['is_active'] === 1 ? 'active' : 'inactive' ?>">
             <?= (int) $row['is_active'] === 1 ? 'Active' : 'Inactive' ?>
           </span>
+        </td>
+        <td class="rowactions">
+          <a href="<?= e(vulcatrack_url('/admin/item-edit.php?id=' . (int) $row['item_id'])) ?>">Edit</a>
+          <form method="post" action="<?= e(vulcatrack_url('/admin/inventory.php')) ?>">
+            <?= Csrf::field() ?>
+            <input type="hidden" name="item_id" value="<?= (int) $row['item_id'] ?>">
+            <?php if ((int) $row['is_active'] === 1): ?>
+              <input type="hidden" name="_action" value="deactivate">
+              <button type="submit" class="linklike"
+                      onclick="return confirm('Deactivate this item? It is hidden from the POS and active inventory but stays on past sales.');">Deactivate</button>
+            <?php else: ?>
+              <input type="hidden" name="_action" value="activate">
+              <button type="submit" class="linklike">Activate</button>
+            <?php endif; ?>
+          </form>
         </td>
       </tr>
     <?php endforeach; ?>
