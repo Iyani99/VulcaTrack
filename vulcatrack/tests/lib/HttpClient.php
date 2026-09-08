@@ -103,10 +103,12 @@ final class HttpServer
     }
 
     /**
-     * @param array<string,string>|null $post  null => GET, array => form POST
+     * @param array<string,string>|null $post          null => GET, array => form POST
+     * @param array<int,string>          $extraHeaders  extra raw request headers,
+     *        e.g. ['Host: vulcatrack.lan'] to simulate a LAN / other-host client
      * @return array{status:int,headers:string,body:string,location:?string}
      */
-    public function request(string $path, ?array $post = null, bool $followRedirects = false): array
+    public function request(string $path, ?array $post = null, bool $followRedirects = false, array $extraHeaders = []): array
     {
         $ch = curl_init('http://127.0.0.1:' . $this->port . $path);
         curl_setopt_array($ch, [
@@ -122,7 +124,7 @@ final class HttpServer
             // server to close it.
             CURLOPT_FRESH_CONNECT  => true,
             CURLOPT_FORBID_REUSE   => true,
-            CURLOPT_HTTPHEADER     => ['Connection: close'],
+            CURLOPT_HTTPHEADER     => array_merge(['Connection: close'], $extraHeaders),
         ]);
         if ($post !== null) {
             curl_setopt($ch, CURLOPT_POST, true);

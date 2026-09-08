@@ -64,11 +64,21 @@ if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
 }
 
 if (!function_exists('vulcatrack_url')) {
-    /** Build an absolute application URL from a root-relative path. */
+    /**
+     * Build a HOST-RELATIVE application URL (e.g. "/vulcatrack/login.php").
+     *
+     * Only the PATH of `app.base_url` is used; the scheme and host are dropped
+     * so every generated link, form action and redirect stays on whatever
+     * origin the visitor actually used -- localhost, a LAN IP (a phone reaching
+     * the PC), or a future deployment hostname. Baking in a scheme+host breaks
+     * access from any other device: "localhost" on a phone is the phone itself.
+     */
     function vulcatrack_url(string $path = '/'): string
     {
-        $base = rtrim($GLOBALS['vulcatrack_config']['app']['base_url'] ?? '', '/');
-        return $base . '/' . ltrim($path, '/');
+        $configured = $GLOBALS['vulcatrack_config']['app']['base_url'] ?? '';
+        $basePath = parse_url((string) $configured, PHP_URL_PATH);
+        $prefix = rtrim(is_string($basePath) ? $basePath : '', '/');
+        return $prefix . '/' . ltrim($path, '/');
     }
 }
 

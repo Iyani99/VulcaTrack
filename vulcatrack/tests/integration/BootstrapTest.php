@@ -44,10 +44,30 @@ test('the e() helper HTML-escapes for output', function () {
     assert_same('', e(null));
 });
 
-test('vulcatrack_url() builds an app URL from the configured base', function () {
+test('vulcatrack_url() builds a HOST-RELATIVE app URL so it works from any device', function () {
+    // Must NOT bake in a scheme/host: a phone on the LAN reaches the PC by its
+    // LAN IP, and "localhost" there is the phone itself -> "Safari cannot connect".
     $url = vulcatrack_url('/customer/dashboard.php');
+    assert_same('/', substr($url, 0, 1), 'the URL is rooted at "/", not "http://host/..."');
+    assert_not_contains('://', $url);
+    assert_not_contains('localhost', $url);
+    assert_not_contains('127.0.0.1', $url);
     assert_contains('/customer/dashboard.php', $url);
-    assert_same(0, strpos($url, 'http'), 'should be an absolute URL');
+
+    // It uses only the PATH of the configured base_url, whatever the host is.
+    $saved = $GLOBALS['vulcatrack_config']['app']['base_url'];
+    try {
+        $GLOBALS['vulcatrack_config']['app']['base_url'] = 'https://shop.example.com/vulcatrack';
+        assert_same('/vulcatrack/login.php', vulcatrack_url('/login.php'));
+        $GLOBALS['vulcatrack_config']['app']['base_url'] = 'http://192.168.1.50/vulcatrack/';
+        assert_same('/vulcatrack/admin/index.php', vulcatrack_url('/admin/index.php'));
+        $GLOBALS['vulcatrack_config']['app']['base_url'] = '';
+        assert_same('/login.php', vulcatrack_url('/login.php'), 'app served from the web root still works');
+        $GLOBALS['vulcatrack_config']['app']['base_url'] = '/vulcatrack';
+        assert_same('/vulcatrack/x.php?id=3', vulcatrack_url('/x.php?id=3'), 'query strings pass through');
+    } finally {
+        $GLOBALS['vulcatrack_config']['app']['base_url'] = $saved;
+    }
 });
 
 test('vulcatrack_asset() adds a mtime cache-buster for a real file, plain URL otherwise', function () {
