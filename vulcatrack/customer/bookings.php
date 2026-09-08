@@ -24,6 +24,7 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
 <?php if (!$requests): ?>
   <p class="muted">You have not requested any roadside service yet.</p>
 <?php else: ?>
+  <div class="table-scroll">
   <table class="datatable">
     <thead><tr><th>#</th><th>Requested</th><th>Vehicle</th><th>Status</th><th>ETA snapshot</th><th></th></tr></thead>
     <tbody>
@@ -43,6 +44,7 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
 <?php endif; ?>
 
 <?php require __DIR__ . '/../src/Views/partials/customer_bottom.php'; ?>

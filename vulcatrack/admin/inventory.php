@@ -129,6 +129,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 <?php if (!$items): ?>
   <p class="muted">No items to show.</p>
 <?php else: ?>
+  <div class="table-scroll">
   <table class="datatable">
     <thead>
       <tr>
@@ -186,6 +187,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
 <?php endif; ?>
 
 <?php require __DIR__ . '/../src/Views/partials/admin_bottom.php'; ?>

@@ -58,6 +58,7 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
 <?php if (!$active): ?>
   <p class="muted">You have no active vehicles. Add one before booking a rescue.</p>
 <?php else: ?>
+  <div class="table-scroll">
   <table class="datatable">
     <thead><tr><th>Plate</th><th>Details</th><th>Added</th><th></th></tr></thead>
     <tbody>
@@ -80,11 +81,13 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
 <?php endif; ?>
 
 <?php if ($inactive): ?>
   <details class="removed">
     <summary>Removed vehicles (<?= count($inactive) ?>)</summary>
+    <div class="table-scroll">
     <table class="datatable">
       <tbody>
       <?php foreach ($inactive as $v): ?>
@@ -103,6 +106,7 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
       <?php endforeach; ?>
       </tbody>
     </table>
+    </div>
     <p class="muted">Removed vehicles stay on any past rescue requests that used them.</p>
   </details>
 <?php endif; ?>

@@ -99,6 +99,7 @@ test('admin inventory: guard, actor separation, filters, low-stock and escaping'
         assert_contains("{$tag} OK Widget", $r['body']);
         assert_contains("{$tag} Labor", $r['body']);
         assert_not_contains("{$tag} Retired", $r['body'], 'the default view is active-only');
+        assert_contains('<div class="table-scroll">', $r['body'], 'the wide table is wrapped for horizontal scroll on narrow screens');
 
         // 4. Product / service distinction: the service row shows no stock number.
         assert_contains('badge--product', $r['body']);

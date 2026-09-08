@@ -269,6 +269,12 @@ button.secondary:hover { background: #e2e4e8; }
 .datatable th.num,
 .datatable td.num { text-align: right; white-space: nowrap; }
 
+/* wide data tables: scroll inside their own box on narrow screens; unchanged on
+   tablet/desktop where the table already fits (min-width does not bind). The
+   wrapper carries the table's usual vertical margin so spacing is preserved. */
+.table-scroll { overflow-x: auto; overscroll-behavior-x: contain; margin: 1rem 0; }
+.table-scroll > .datatable { margin: 0; min-width: 36rem; }
+
 .kv { margin: 0; }
 .kv dt { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: #666; margin-top: .7rem; }
 .kv dd { margin: .15rem 0 0; }
