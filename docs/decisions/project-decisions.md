@@ -562,7 +562,105 @@ Nothing here is implemented yet.
 
 ---
 
-## Currently Out of Scope / Do Not Invent
+## Confirmed Project Decisions — 2026-09-08 (Phase 5: Sales foundation)
+
+The trusted server-side foundation for recording an in-person sale
+(`SaleRepository` + `SaleService`). **No schema change** — the 8 tables,
+`sales`, and `sale_items` are exactly as approved. The POS UI is a later chunk
+and is a thin caller of this foundation.
+
+61. **`SaleService` is the single owner of the checkout transaction.** One
+    `SaleService::checkout()` call = one database transaction that it begins,
+    commits, or rolls back. `SaleRepository` / `ItemRepository` take the same
+    PDO connection and only read/write rows — they never begin, commit or roll
+    back, and hold no business policy. `checkout()` refuses to run if a
+    transaction is already open (no nested transactions). On **any** failure the
+    whole transaction is rolled back: no `sales` row, no `sale_items`, and no
+    stock change survives — a partial sale is never left behind.
+
+62. **The server is authoritative for every business-critical value.** The
+    caller may choose only: item ids, quantities, and an optional *existing*
+    `customer_id` (blank / null = walk-in). `checkout()` ignores any
+    caller-supplied price, subtotal, total or `item_type`.
+    - **Price:** each line's unit price is read from `items.price` at checkout
+      time (in the same locked read as the stock check) and written to
+      `sale_items.unit_price` — a frozen historical snapshot (Decision 17). A
+      later change to `items.price` does not alter past sales.
+    - **Totals:** line subtotal = unit price × quantity; `sales.total_amount` =
+      sum of the line subtotals — all computed server-side in **integer
+      centavos** via `Money` (Decision 55). `DECIMAL(10,2)` values from the DB
+      are treated as exact strings, converted to centavos for arithmetic, and
+      formatted back with `Money::format()` for storage. No `float`, no
+      `round()`-to-repair.
+    - **Sale date:** `sales.sale_date` is set by the application at completion
+      (`date('Y-m-d H:i:s')`), never from the client (Decision 35).
+    - **Quantity:** must be a whole number between 1 and the largest value the
+      approved `sale_items.quantity` column (a signed `INT`) can hold —
+      `SaleRepository::MAX_QUANTITY` (2,147,483,647). Enforced on each supplied
+      line **and** on the merged per-item total (duplicate lines for the same
+      item are merged by summing). The service rejects an over-range quantity as
+      a clean `SaleException` with a clear message; the strict session
+      (Decision 64) is the DB-level backstop.
+    - **Overflow safety:** because `unit_price_centavos` (≤ `Money::MAX_CENTAVOS`)
+      × quantity (≤ `MAX_QUANTITY`) can exceed PHP's integer range, each line is
+      bounded with `intdiv` **before** the multiply and the running total is
+      checked with subtraction **before** each add — no intermediate can
+      overflow to a float and then be validated after the fact.
+    - **Recording admin:** `admin_id` must be sourced by the caller from the
+      authenticated Admin session; `checkout()` additionally confirms the id
+      still refers to a real `admins` row (so a stale session becomes a clean
+      `SaleException`, not a raw FK `PDOException`).
+
+63. **Overselling is prevented with transaction-scoped row locking.** For each
+    line, `ItemRepository::lockForUpdate()` does `SELECT … FOR UPDATE` on the
+    item row, so two concurrent checkouts for the same product serialize and
+    cannot both consume the same stock. Product lines then deduct stock with a
+    single guarded statement
+    (`UPDATE … SET stock_quantity = stock_quantity - ? WHERE item_id = ? AND
+    item_type = 'product' AND stock_quantity >= ?`), which can never drive stock
+    negative. **Service lines never touch stock** (Decision 16). Rows are locked
+    in ascending item-id order to avoid deadlocks. No reservation system, no
+    inventory ledger, no queue — just the transactional stock guarantee. This is
+    the Decision 56 application-layer limit (`stock_quantity >= 0`); no new
+    `CHECK` constraint was added.
+
+64. **VulcaTrack puts its own database sessions in strict SQL mode.** The
+    connection factory `includes/db.php` runs, on every PDO connection it hands
+    out (app pages, CLI scripts, and the whole test harness, which shares that
+    factory):
+
+    ```sql
+    SET SESSION sql_mode = IF(
+        FIND_IN_SET('STRICT_TRANS_TABLES', @@SESSION.sql_mode),
+        @@SESSION.sql_mode,
+        CONCAT_WS(',', NULLIF(@@SESSION.sql_mode, ''), 'STRICT_TRANS_TABLES')
+    )
+    ```
+
+    Effect: an over-long string or an out-of-range number is **rejected with an
+    error**, never silently truncated or clamped — the sales-audit defect (an
+    over-range `sale_items.quantity` silently clamped to `2147483647`) becomes
+    impossible at the DB layer too, not only in `SaleService`.
+    - **Robust across environments** — the expression is explicit about all three
+      inherited states: strict already present → mode left untouched (no
+      duplicate); strict absent on a non-empty list → prepended, other modes
+      kept; inherited mode empty → `NULLIF` drops the empty side so there is no
+      stray comma. It is idempotent (safe to re-run).
+    - **Session-scoped only.** The XAMPP server's *global* `sql_mode` and
+      `my.ini` are **not** touched, so nothing depends on how a particular
+      machine is configured and no developer has to change their server.
+    - **No schema change**, no `CHECK` constraints, no repository-level
+      `SET sql_mode`.
+    - **Verified compatible** with all completed modules: every write path
+      already caps each string field to its exact column width (`Validator::text`
+      / `optionalText` / `email`), and DECIMAL *fractional* rounding (the OTG
+      `latitude` / `longitude` DECIMAL(10,7) receiving ~15-dp browser
+      coordinates) is a warning, **not** an error, even under strict mode — so
+      the rescue-submission path is unaffected. The full suite (HTTP end-to-end
+      included) passes under the strict session.
+    - Standing rule: **new INSERT/UPDATE code must validate string length and
+      numeric range at the application layer** (the strict session is the
+      backstop, not the primary guard) — see [feedback / standing rules].
 
 Unless explicitly approved later, do **not** introduce:
 
@@ -745,19 +843,22 @@ Do not turn these into confirmed requirements without approval.
 
 - **Phases 1–4 complete (2026-09-01); Phase 4.5 stabilization pass done
   (2026-09-06).** Application Foundation, Database Schema, Authentication &
-  Authorization, Customer-Side Functionality. Phase 5 (POS & inventory) is next
-  and begins only when explicitly instructed; its pre-decisions (49–57) are
-  settled.
+  Authorization, Customer-Side Functionality.
+- **Phase 5 (POS & inventory) IN PROGRESS.** Done: the minimal Admin shell, the
+  full Inventory module, and the **Sales foundation** — `SaleRepository` +
+  atomic `SaleService` (Decisions 61–63). Remaining Phase 5 work: the POS UI
+  (cart, checkout screen, printable HTML receipt). Pre-decisions 49–57 settled.
 - Repo on `main` at `C:\IPT102`, pushed to
   `https://github.com/Iyani99/VulcaTrack.git`; app at `C:\IPT102\vulcatrack\`
   served via a Windows junction from `C:\xampp\htdocs\vulcatrack`.
 - Database: the 8 tables from `docs/ERD/schema.dbml` are built
   (`vulcatrack/database/schema.sql`); no seed data ships (the owner keeps a
   personal test account).
-- **Test harness (Phase 4.5):** `vulcatrack/tests/` — dependency-free CLI runner
-  (`php vulcatrack/tests/run.php`), 82 passed, 0 failed, 429 assertions across
-  unit, integration (schema + repositories + Auth) and end-to-end HTTP suites.
-  All green as of 2026-09-06.
+- **Test harness (Phase 4.5, extended each chunk):** `vulcatrack/tests/` —
+  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **143 passed, 0
+  failed, 1028 assertions across 22 files** (unit, integration — schema +
+  repositories + Auth + inventory + sales + DB session, and end-to-end HTTP). All
+  green as of 2026-09-08.
 - Auth (Decisions 41–47): customer + admin login/logout, CLI
   `vulcatrack/database/seed_admin.php`, hardened sessions, guards.
 - Customer side (Decision 48): `vulcatrack/customer/*` — dashboard, profile,
@@ -851,6 +952,80 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-08 — Phase 5: Sales foundation — `SaleRepository` + atomic `SaleService` (Decisions 61–63)
+
+- **Decision 61** — `SaleService` is the **single owner of the checkout
+  transaction**: it begins / commits / rolls back; repositories share its PDO
+  connection and only persist rows. Any failure rolls everything back — no
+  partial sale. No nested transactions (`checkout()` refuses to run inside an
+  open one).
+- **Decision 62** — the **server is authoritative** for price (read from
+  `items.price` at checkout, frozen into `sale_items.unit_price`), subtotals,
+  `sales.total_amount` (all integer-centavo `Money` arithmetic — no float),
+  `sale_date` (app-set at completion), and quantity validation (whole number
+  ≥ 1). The caller may choose only item ids, quantities and an optional existing
+  `customer_id`; caller-supplied prices / totals / `item_type` are ignored.
+- **Decision 63** — **overselling is prevented with `SELECT … FOR UPDATE`** on
+  each item row inside the transaction plus a guarded decrement that cannot go
+  negative; product lines only, service lines never touch stock; rows locked in
+  ascending item-id order. No reservation system / ledger / queue.
+- **New code:** `vulcatrack/src/Repository/SaleRepository.php`,
+  `vulcatrack/src/Service/SaleService.php`,
+  `vulcatrack/src/Service/SaleException.php`; `ItemRepository` gained
+  `lockForUpdate()` + `decrementStock()` (both used only by `SaleService`).
+  `ItemRepository` / `SaleRepository` are no longer `final` so the (mock-library-free)
+  test harness can subclass them to simulate mid-checkout failures.
+- **No schema change** — `sales` / `sale_items` / the 8 tables are untouched; no
+  new `CHECK` constraint (Decision 56's app-layer limits stand). No POS UI, no
+  receipt table, no payment/tender persistence.
+- **Pre-commit integrity audit (same day):** four small hardening fixes, no
+  redesign — (a) `SaleRepository::MAX_QUANTITY` (the `sale_items.quantity` signed
+  `INT` ceiling) is enforced on each line and on the merged per-item total, so a
+  pathological quantity is a clean `SaleException` rather than a silent DB clamp
+  (the server's *global* SQL mode is non-strict — later addressed by Decision 64);
+  (b) the money maths now bounds each line
+  with `intdiv` before multiplying and the running total with subtraction before
+  adding, so no intermediate can overflow PHP's integer range; (c) new
+  `AdminRepository::findById()` (mirrors `CustomerRepository::findById`) lets
+  `checkout()` turn a stale/deleted recording-admin session into a clean
+  `SaleException` instead of a raw FK `PDOException`; (d) the rollback in the
+  `catch` is itself wrapped so a failing `rollBack()` cannot mask the original
+  exception. Points audited and found already correct (no change): authoritative
+  input surface, frozen-history reads, deterministic ascending-item-id locking
+  with no duplicate locks, customer validation inside the transaction.
+- **Tests:** `tests/integration/SaleRepositoryTest.php` (4 cases) +
+  `tests/integration/SaleServiceTest.php` (23 cases) — happy paths, authoritative
+  / frozen pricing, integer-centavo exactness, walk-in vs linked customer,
+  quantity/item validation, DB-representable + merged quantity limits, money
+  overflow boundaries, stale-admin rejection, `FOR UPDATE` locking, and full
+  rollback on header / line / stock-deduction failure.
+
+### 2026-09-08 — Application-scoped strict SQL mode (Decision 64)
+
+- **Decision 64** — prompted by the sales audit finding that this XAMPP server's
+  global `sql_mode` is **non-strict** and silently clamped an over-range `INT`.
+  `includes/db.php` now adds `STRICT_TRANS_TABLES` to `@@SESSION.sql_mode` on
+  every connection it creates — one central place, so app pages, CLI scripts and
+  the entire test harness get identical behaviour on any machine and on a future
+  host. The statement (see Decision 64 for the full expression) uses
+  `IF(FIND_IN_SET(…))` + `CONCAT_WS` + `NULLIF` so it is correct whether the
+  inherited mode already has strict, does not, or is empty. **No `my.ini` /
+  global change; no schema change; no repo-level `SET sql_mode`.**
+- **Why safe:** empirically verified — every completed write path already caps
+  each string to its exact column width, and DECIMAL *fractional* rounding (OTG
+  `latitude` / `longitude` at DECIMAL(10,7) receiving ~15-dp coordinates) stays a
+  warning, not an error, under strict mode, so rescue submission is unaffected.
+  All pre-existing tests (HTTP end-to-end included) pass unchanged under the
+  strict session.
+- **New tests:** `tests/integration/DbSessionTest.php` (5 cases) — the session is
+  strict with the other modes preserved, the global is left non-strict, the
+  mode-setup expression is correct for all three inherited states (non-strict
+  list / already-strict / empty), over-length string → `1406`, over-range int →
+  `1264`, high-precision coordinate still stores rounded. Suite now **143 passed
+  / 0 failed / 1028 assertions / 22 files**.
+- **Standing rule:** new INSERT/UPDATE code still validates string length and
+  numeric range at the application layer; the strict session is the backstop.
 
 ### 2026-09-06 — Phase 4 follow-up: road-routing approved but deferred (Decision 60)
 

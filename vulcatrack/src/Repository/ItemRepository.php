@@ -24,8 +24,12 @@ use VulcaTrack\Support\Money;
  * inactive item stays visible on historical `sale_items` (Decisions 27-29).
  *
  * `items.updated_at` has no ON UPDATE clause, so every UPDATE sets it here.
+ *
+ * Not `final`: the mock-library-free test harness subclasses this to simulate a
+ * database failure during checkout (SaleServiceTest). Application code always
+ * uses ItemRepository directly.
  */
-final class ItemRepository
+class ItemRepository
 {
     private const COLUMNS =
         'item_id, item_name, item_type, category, price, stock_quantity, reorder_level, is_active, created_at, updated_at';
@@ -204,6 +208,56 @@ final class ItemRepository
             ':active' => $active ? 1 : 0,
             ':id'     => $itemId,
         ]);
+    }
+
+    // --- Phase 5: POS checkout support -------------------------------------
+    //
+    // These two are used ONLY by SaleService, inside its checkout transaction.
+    // They stay here so all SQL against `items` lives in one class; the policy
+    // (which rows to lock, when to deduct, product-only) belongs to SaleService.
+
+    /**
+     * Read one item FOR UPDATE — the authoritative price / type / stock / active
+     * state, with the row locked for the rest of the caller's transaction so a
+     * concurrent checkout cannot consume the same stock (no overselling).
+     *
+     * Same shape as findById(); only meaningful inside an open transaction.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function lockForUpdate(int $itemId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT ' . self::COLUMNS . ' FROM items WHERE item_id = ? LIMIT 1 FOR UPDATE'
+        );
+        $stmt->execute([$itemId]);
+        $row = $stmt->fetch();
+
+        return $row === false ? null : $this->hydrate($row);
+    }
+
+    /**
+     * Deduct product stock in a single guarded statement: the row is only
+     * touched when it is a product with enough stock, so it can never go
+     * negative even if a caller passes a bad quantity. Call inside the same
+     * transaction as lockForUpdate().
+     *
+     * @return bool true when exactly one product row was decremented
+     */
+    public function decrementStock(int $itemId, int $quantity): bool
+    {
+        $stmt = $this->pdo->prepare(
+            "UPDATE items
+                SET stock_quantity = stock_quantity - ?,
+                    updated_at = CURRENT_TIMESTAMP
+              WHERE item_id = ?
+                AND item_type = 'product'
+                AND stock_quantity IS NOT NULL
+                AND stock_quantity >= ?"
+        );
+        $stmt->execute([$quantity, $itemId, $quantity]);
+
+        return $stmt->rowCount() === 1;
     }
 
     // --- internals ----------------------------------------------------------

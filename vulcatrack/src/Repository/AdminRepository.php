@@ -29,6 +29,24 @@ final class AdminRepository
         return $row === false ? null : $row;
     }
 
+    /**
+     * Look up an admin by id — used to confirm a still-valid recording admin
+     * before a sale is written (mirrors CustomerRepository::findById).
+     *
+     * @return array{admin_id:int,full_name:string,email:string,password_hash:string,created_at:string}|null
+     */
+    public function findById(int $adminId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT admin_id, full_name, email, password_hash, created_at
+             FROM admins WHERE admin_id = ? LIMIT 1'
+        );
+        $stmt->execute([$adminId]);
+        $row = $stmt->fetch();
+
+        return $row === false ? null : $row;
+    }
+
     /** Insert an admin. Lets a duplicate-email PDOException (SQLSTATE 23000 / 1062) propagate. */
     public function create(string $fullName, string $email, string $passwordHash): int
     {
