@@ -300,6 +300,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <div><dt>Change</dt><dd class="pos-change-final"><?= pos_peso((int) $lastSale['change']) ?></dd></div>
       <div><dt>Customer</dt><dd><?= $lastSale['customer'] !== null ? e($lastSale['customer']) : 'Walk-in' ?></dd></div>
     </dl>
+    <p><a class="btnlink" href="<?= e(vulcatrack_url('/admin/transaction-summary.php?id=' . (int) $lastSale['sale_id'])) ?>">View / print Transaction Summary</a></p>
     <p class="muted">Recorded <?= e($lastSale['sale_date']) ?>. The cart is ready for the next sale.</p>
   </section>
 <?php endif; ?>

@@ -44,7 +44,7 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
     $P = $mk("{$tag} Tire Valve", 'product', '150.00', 10);
     $S = $mk("{$tag} Patching", 'service', '200.50', null);
     $I = $mk("{$tag} Retired Item", 'product', '99.00', 5, 0);
-    $Z = $mk("{$tag} Empty Shelf", 'product', '50.00', 0);
+    $mk("{$tag} Empty Shelf", 'product', '50.00', 0);
     $H = $mk("{$tag} <script>alert(1)</script> Cap", 'product', '10.00', 5);
 
     $q = function (string $sql, array $args = []) use ($pdo) {
@@ -62,7 +62,7 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
     };
 
     $server = new HttpServer(8685);
-    $cleanup = function () use ($pdo, $q, $custId, $adminId, $tag): void {
+    $cleanup = function () use ($q, $custId, $adminId, $tag): void {
         $q('DELETE si FROM sale_items si JOIN sales s ON s.sale_id = si.sale_id WHERE s.admin_id = ?', [$adminId]);
         $q('DELETE FROM sales WHERE admin_id = ?', [$adminId]);
         $q('DELETE FROM items WHERE item_name LIKE ?', [$tag . '%']);
@@ -241,6 +241,12 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
 
         $sale = $q('SELECT * FROM sales WHERE admin_id = ?', [$adminId])->fetch(\PDO::FETCH_ASSOC);
         assert_same(1, $saleCount());
+        $summaryLink = '/vulcatrack/admin/transaction-summary.php?id=' . (int) $sale['sale_id'];
+        assert_contains('href="' . $summaryLink . '"', $body, 'the success card links to this sale\'s Transaction Summary');
+        $summary = $server->request($summaryLink);
+        assert_same(200, $summary['status']);
+        assert_contains('Transaction Summary', $summary['body']);
+        assert_contains('&#8369;820.50', $summary['body'], 'the linked document shows the recorded total');
         assert_same($custId, (int) $sale['customer_id'], 'linked customer recorded');
         assert_same('820.50', $sale['total_amount']);
         $lines = $q('SELECT item_id, quantity, unit_price, subtotal FROM sale_items WHERE sale_id = ? ORDER BY item_id', [$sale['sale_id']])->fetchAll(\PDO::FETCH_ASSOC);

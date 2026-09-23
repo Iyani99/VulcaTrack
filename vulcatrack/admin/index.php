@@ -23,7 +23,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 <div class="cardgrid">
   <section class="card">
     <p class="card__label">Point of Sale</p>
-    <p>Record an in-shop sale and print a receipt.</p>
+    <p>Record an in-shop sale and print its transaction summary.</p>
     <p><a href="<?= e(vulcatrack_url('/admin/pos.php')) ?>">Open POS</a></p>
   </section>
 
@@ -33,7 +33,5 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <p><a href="<?= e(vulcatrack_url('/admin/inventory.php')) ?>">Open Inventory</a></p>
   </section>
 </div>
-
-<p class="muted">Printable receipts are being built in the current development phase.</p>
 
 <?php require __DIR__ . '/../src/Views/partials/admin_bottom.php'; ?>

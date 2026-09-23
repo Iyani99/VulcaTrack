@@ -7,6 +7,7 @@
  * Expects:  string $pageTitle
  * Optional: string $navActive  (dashboard|pos|inventory)
  *           array  $admin       (session actor; only used by the page body)
+ *           string $bodyClass   (page-specific <body> class, e.g. for print styles)
  *
  * The admin session actor is assumed already established — every admin page
  * calls require_admin() before including this partial.
@@ -25,7 +26,7 @@ $nav = [
 <title><?= e($pageTitle ?? 'Admin') ?> &mdash; VulcaTrack</title>
 <link rel="stylesheet" href="<?= e(vulcatrack_asset('/assets/css/app.css')) ?>">
 </head>
-<body>
+<body<?= !empty($bodyClass) ? ' class="' . e($bodyClass) . '"' : '' ?>>
 <header class="appbar">
   <a class="appbar__brand" href="<?= e(vulcatrack_url('/admin/index.php')) ?>">VulcaTrack Admin</a>
   <nav class="appnav">

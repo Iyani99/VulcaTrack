@@ -344,3 +344,39 @@ button.loc-result:hover { background: #eef2fb; }
 .pos-summary dt { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: #555; }
 .pos-summary dd { margin: .1rem 0 0; font-size: 1.1rem; font-weight: 700; }
 #items { margin-top: 1.5rem; }
+
+/* Transaction Summary (admin/transaction-summary.php) — the printable sale
+   document. Screen view reuses the card / datatable look; print view drops the
+   app chrome and prints the document plainly on normal paper. */
+.txn-doc { max-width: 40rem; }
+.txn-head { text-align: center; margin-bottom: 1rem; }
+.txn-head p { margin: 0; }
+.txn-shop { font-weight: 700; font-size: 1.1rem; }
+.txn-address { color: #555; }
+.txn-head h1 { margin: .75rem 0 0; font-size: 1.15rem; letter-spacing: .02em; }
+.txn-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .5rem 1rem; margin: 0 0 .5rem; }
+.txn-meta dt { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: #666; }
+.txn-meta dd { margin: .1rem 0 0; overflow-wrap: anywhere; }
+.table-scroll > .datatable.txn-lines { min-width: 0; } /* 4 narrow columns fit a phone; scroll only if truly needed */
+.datatable .txn-totalrow th,
+.datatable .txn-totalrow td { font-size: 1.05rem; font-weight: 700; color: #1a1a1a; text-transform: none; letter-spacing: 0; border-bottom: 0; }
+.txn-note { margin: 1rem 0 0; font-size: .85rem; color: #555; text-align: center; font-style: italic; }
+@media (max-width: 30rem) { /* phones: keep all four columns + the total in view */
+  .txn-doc { padding: 1rem .8rem; }
+  .datatable.txn-lines th,
+  .datatable.txn-lines td { padding: .45rem .3rem; }
+  .datatable.txn-lines th.num { white-space: normal; }
+}
+
+@media print {
+  body.is-printdoc { background: #fff; }
+  body.is-printdoc .appbar,
+  body.is-printdoc .appfoot,
+  body.is-printdoc .no-print { display: none !important; }
+  body.is-printdoc .app { max-width: none; margin: 0; padding: 0; }
+  body.is-printdoc .txn-doc { max-width: none; margin: 0; border: 0; padding: 0; }
+  body.is-printdoc .table-scroll { overflow: visible; }
+  body.is-printdoc .datatable th,
+  body.is-printdoc .datatable td { border-bottom-color: #999; }
+  body.is-printdoc a { color: inherit; text-decoration: none; }
+}
