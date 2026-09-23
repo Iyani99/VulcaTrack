@@ -2,8 +2,9 @@
 
 **Status:** Authoritative record of CONFIRMED project decisions.
 **Last updated:** 2026-09-23
-**Last revised:** 2026-09-23 — clarified Decision 62 (optional expected-total assertion) and
-Decision 50 (printable sale document is a non-official transaction reference)
+**Last revised:** 2026-09-23 — Phase 5 closed (status only, no decision change); same day:
+clarified Decision 62 (optional expected-total assertion) and Decision 50 (printable sale
+document is a non-official transaction reference)
 (see [Revision History](#revision-history)).
 **Purpose:** This file exists so that anyone new to the project can understand its
 confirmed decisions, scope boundaries, and change-control rules **without** relying on
@@ -576,8 +577,8 @@ Nothing here is implemented yet.
 
 The trusted server-side foundation for recording an in-person sale
 (`SaleRepository` + `SaleService`). **No schema change** — the 8 tables,
-`sales`, and `sale_items` are exactly as approved. The POS UI is a later chunk
-and is a thin caller of this foundation.
+`sales`, and `sale_items` are exactly as approved. The POS UI (built later in Phase 5,
+`admin/pos.php`) is a thin caller of this foundation.
 
 61. **`SaleService` is the single owner of the checkout transaction.** One
     `SaleService::checkout()` call = one database transaction that it begins,
@@ -866,12 +867,17 @@ Do not turn these into confirmed requirements without approval.
 - **Phases 1–4 complete (2026-09-01); Phase 4.5 stabilization pass done
   (2026-09-06).** Application Foundation, Database Schema, Authentication &
   Authorization, Customer-Side Functionality.
-- **Phase 5 (POS & inventory) IN PROGRESS.** Done: the minimal Admin shell, the
-  full Inventory module, the **Sales foundation** — `SaleRepository` +
-  atomic `SaleService` (Decisions 61–63) — and the **POS UI** (`admin/pos.php`:
-  session cart, optional customer link, cash tender/change, checkout through
-  `SaleService`). Remaining Phase 5 work: the printable HTML transaction
-  document (Decision 50). Pre-decisions 49–57 settled.
+- **Phase 5 (POS & inventory) COMPLETE (2026-09-23).** The minimal Admin shell
+  (Decision 53), the full Inventory module (unified `items`, Decisions 15/52/56),
+  integer-centavo `Money` (Decision 55), the **Sales foundation** —
+  `SaleRepository` + atomic `SaleService` (Decisions 61–64) — the **POS**
+  (`admin/pos.php`: session cart (Decision 57), optional existing-customer link
+  or walk-in (Decision 51), cash tender/change never stored (Decision 54),
+  checkout through `SaleService`, product-only stock deduction) and the
+  printable **Transaction Summary** (`admin/transaction-summary.php`,
+  Decision 50 — non-official). Closed after an end-to-end walkthrough through
+  Apache, a phone/LAN check and a documentation pass. **Phase 6 (admin OTG
+  handling, Tireman assignment, reporting — Decision 49) has not started.**
 - Repo on `main` at `C:\IPT102`, pushed to
   `https://github.com/Iyani99/VulcaTrack.git`; app at `C:\IPT102\vulcatrack\`
   served via a Windows junction from `C:\xampp\htdocs\vulcatrack`.
@@ -879,24 +885,26 @@ Do not turn these into confirmed requirements without approval.
   (`vulcatrack/database/schema.sql`); no seed data ships (the owner keeps a
   personal test account).
 - **Test harness (Phase 4.5, extended each chunk):** `vulcatrack/tests/` —
-  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **155 passed, 0
-  failed, 1214 assertions across 24 files** (unit, integration — schema +
+  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **156 passed, 0
+  failed, 1396 assertions across 25 files** (unit, integration — schema +
   repositories + Auth + inventory + sales + DB session, and end-to-end HTTP incl.
-  the POS). All green as of 2026-09-23.
+  the POS and Transaction Summary). All green as of 2026-09-23.
 - Auth (Decisions 41–47): customer + admin login/logout, CLI
   `vulcatrack/database/seed_admin.php`, hardened sessions, guards.
 - Customer side (Decision 48): `vulcatrack/customer/*` — dashboard, profile,
   saved vehicles (soft-delete), OTG rescue submission with a frozen-snapshot
   ETA, request history + customer-facing status. No schema change; OTG requests
   are always created `status = 'pending'`.
+- Admin side (Phase 5): `vulcatrack/admin/*` — dashboard, inventory +
+  item edit, POS, transaction summary. No schema change — still exactly the
+  8 tables.
 - ERD exists (PNG + text schema `docs/ERD/schema.dbml`).
 - Use-case diagram exists (PNG; changes pending — see Required Diagram Changes).
 - Six flowcharts exist.
 - Database Notes exist.
 - Figma prototype exists externally and is the team's primary UI/UX reference.
-- **No finalized requirements / SRS document exists.** There is no `docs/requirements/`
-  folder yet; when a finalized requirements/SRS is created it should be placed under
-  `docs/requirements/`.
+- **No finalized requirements / SRS document exists.** `docs/requirements/` exists but
+  is intentionally empty; a finalized requirements/SRS, if one is produced, goes there.
 
 The next development phase begins only when explicitly instructed. Work proceeds one
 phase at a time; the next phase is never auto-started.
@@ -976,6 +984,23 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-23 — Phase 5 closed (status only; no decision change)
+
+- **Current Project Status** updated: Phase 5 (POS & inventory) is **COMPLETE** —
+  admin shell, Inventory, `Money`, `SaleRepository` / `SaleService`, the POS
+  (session cart, optional customer / walk-in, cash tender / change, atomic
+  checkout, product-only stock deduction) and the printable Transaction Summary.
+  Test harness 156 passed / 1396 assertions / 25 files. Stale
+  "`docs/requirements/` does not exist" wording corrected (it exists, empty).
+- Closing verification: end-to-end walkthrough in a real browser through Apache,
+  database-verified (one sale per checkout, frozen unit prices, product stock
+  deducted, service stock untouched); phone / LAN check at 360–1280 px.
+- Known limitations deferred at close (not decision changes): Transaction Summary
+  names are joined live (no name snapshot in the approved schema — prices, totals
+  and dates are frozen); no sales lookup / history screen until Phase 6
+  (Decision 49). Details in `PROJECT-CONTEXT.md` §16.4.
+- No renumbering, no new decision, no schema change.
 
 ### 2026-09-23 — Clarifications after the POS UI chunk (Decisions 50 and 62; no new decision)
 

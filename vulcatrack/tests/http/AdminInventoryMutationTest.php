@@ -281,6 +281,26 @@ test('admin inventory mutations: guard, CSRF, create, edit, activate/deactivate'
         assert_contains('saved=activated', (string) $r['location']);
         assert_same(1, (int) $row($seedToggle)['is_active'], 'activate restores the item');
 
+        // the admin's list filters survive an activate / deactivate
+        $filtered = $server->request($INV . '?q=' . $tag . '&type=product&status=all&low_stock=1')['body'];
+        assert_contains('name="q" value="' . $tag . '"', $filtered, 'row forms carry the search');
+        assert_contains('name="status" value="all"', $filtered, 'row forms carry the status filter');
+        $r = $server->request($INV, [
+            '_csrf' => HttpServer::csrfToken($filtered), '_action' => 'deactivate', 'item_id' => $seedToggle,
+            'q' => $tag, 'type' => 'product', 'status' => 'all', 'low_stock' => '1',
+        ]);
+        assert_same(302, $r['status']);
+        $loc = (string) $r['location'];
+        foreach (['q=' . $tag, 'type=product', 'status=all', 'low_stock=1', 'saved=deactivated'] as $part) {
+            assert_contains($part, $loc, "redirect keeps {$part}");
+        }
+        $server->request($INV, ['_csrf' => $token($INV), '_action' => 'activate', 'item_id' => $seedToggle]);
+        $r = $server->request($INV, [
+            '_csrf' => $token($INV), '_action' => 'deactivate', 'item_id' => 999999999,
+            'type' => '<script>', 'status' => 'bogus', 'low_stock' => 'yes',
+        ]);
+        assert_same('/vulcatrack/admin/inventory.php?saved=error', (string) $r['location'], 'junk filter values are dropped, never echoed');
+
         // an unknown item id fails safely
         $r = $server->request($INV, ['_csrf' => $token($INV), '_action' => 'deactivate', 'item_id' => 999999999]);
         assert_same(302, $r['status']);

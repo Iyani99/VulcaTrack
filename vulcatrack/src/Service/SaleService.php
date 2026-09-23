@@ -61,7 +61,7 @@ final class SaleService
      *   expected_total_centavos?: int|string|null           // optional stale-display guard
      * }
      * `admin_id` MUST be taken from the authenticated Admin session by the
-     * caller (the future POS endpoint) — it is the recording cashier and the
+     * caller (admin/pos.php) — it is the recording cashier and the
      * browser must never choose it. The service validates that the id still
      * refers to a real admin, but it cannot know whether the caller sourced it
      * correctly.

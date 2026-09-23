@@ -414,6 +414,8 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       </div>
 
       <div class="pos-pay">
+        <!-- repeated beside the cash box: on a phone the table's total column can sit behind the scroll strip -->
+        <p class="pos-change pos-due">Total due: <?= pos_peso((int) $view['total_centavos']) ?></p>
         <div>
           <label for="cash_tendered">Cash received (&#8369;)</label>
           <input type="text" id="cash_tendered" name="cash_tendered" inputmode="decimal" maxlength="14"

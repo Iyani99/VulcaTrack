@@ -172,6 +172,7 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         assert_null($qtyOf($body, $H), 'removed from the cart');
         assert_same(4, $qtyOf($body, $P), 'other lines untouched');
         assert_contains('&#8369;800.50', $body, 'total = 4 x 150.00 + 200.50, shown from DB prices');
+        assert_contains('Total due: &#8369;800.50', $body, 'the total is repeated beside the cash box (visible on phones)');
         $assertClean($body, 'pos (cart)');
 
         // ================= optional customer linking =================

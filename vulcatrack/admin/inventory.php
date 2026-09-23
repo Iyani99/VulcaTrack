@@ -18,21 +18,39 @@ require __DIR__ . '/../includes/auth.php';
 $admin = require_admin();
 $repo  = new ItemRepository(vulcatrack_db());
 
+/**
+ * The list filters, normalised from GET (or carried through an activate /
+ * deactivate POST) — only non-default values are kept, so they can be put
+ * straight back into a URL.
+ */
+function inv_filters(array $src): array
+{
+    $f = [];
+    $q = mb_substr(trim((string) ($src['q'] ?? '')), 0, 150);
+    if ($q !== '') { $f['q'] = $q; }
+    $type = (string) ($src['type'] ?? '');
+    if (in_array($type, ['product', 'service'], true)) { $f['type'] = $type; }
+    $status = (string) ($src['status'] ?? '');
+    if (in_array($status, ['inactive', 'all'], true)) { $f['status'] = $status; }
+    if (($src['low_stock'] ?? '') === '1') { $f['low_stock'] = '1'; }
+    return $f;
+}
+
 // --- activate / deactivate (POST only, CSRF, then redirect) ----------------
+// The redirect returns to the same filtered list the admin was looking at.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['_action'] ?? '');
     $target = (int) ($_POST['item_id'] ?? 0);
+    $back   = inv_filters($_POST);
 
-    if (!Csrf::check($_POST['_csrf'] ?? null)) {
-        header('Location: ' . vulcatrack_url('/admin/inventory.php?saved=error'));
-        exit;
-    }
-    if ($target > 0 && in_array($action, ['activate', 'deactivate'], true) && $repo->findById($target) !== null) {
+    $saved = 'error';
+    if (Csrf::check($_POST['_csrf'] ?? null)
+        && $target > 0 && in_array($action, ['activate', 'deactivate'], true)
+        && $repo->findById($target) !== null) {
         $repo->setActive($target, $action === 'activate');
-        header('Location: ' . vulcatrack_url('/admin/inventory.php?saved=' . $action . 'd'));
-        exit;
+        $saved = $action . 'd';
     }
-    header('Location: ' . vulcatrack_url('/admin/inventory.php?saved=error'));
+    header('Location: ' . vulcatrack_url('/admin/inventory.php?' . http_build_query($back + ['saved' => $saved])));
     exit;
 }
 
@@ -172,6 +190,9 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
           <a href="<?= e(vulcatrack_url('/admin/item-edit.php?id=' . (int) $row['item_id'])) ?>">Edit</a>
           <form method="post" action="<?= e(vulcatrack_url('/admin/inventory.php')) ?>">
             <?= Csrf::field() ?>
+            <?php foreach (inv_filters($_GET) as $fName => $fValue): ?>
+              <input type="hidden" name="<?= e($fName) ?>" value="<?= e($fValue) ?>">
+            <?php endforeach; ?>
             <input type="hidden" name="item_id" value="<?= (int) $row['item_id'] ?>">
             <?php if ((int) $row['is_active'] === 1): ?>
               <input type="hidden" name="_action" value="deactivate">

@@ -39,7 +39,7 @@ We are building it as a **BSIT student project**, so the priorities are maintain
 - In-shop Point of Sale (POS)
 - Walk-in customer sales
 - Registered customer sales
-- Printable sales receipts
+- Printable transaction summaries (for reference only; not an official BIR invoice)
 
 ### On-the-Go Services
 

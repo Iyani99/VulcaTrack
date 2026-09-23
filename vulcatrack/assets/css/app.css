@@ -338,6 +338,7 @@ button.loc-result:hover { background: #eef2fb; }
 .pos-pay { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .5rem 1.5rem; }
 .pos-pay > div { flex: 0 1 14rem; }
 .pos-change { margin: 0 0 .5rem; font-weight: 600; }
+.pos-due { flex-basis: 100%; margin: 0; }
 .pos-cancel { margin: .75rem 0 0; }
 .card--sold { background: #e6f5ec; border-color: #bfe3cc; }
 .pos-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: .5rem 1rem; margin: 0 0 .5rem; }
