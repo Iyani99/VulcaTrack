@@ -62,6 +62,26 @@ test('CustomerRepository::create surfaces the duplicate-email unique violation (
     });
 });
 
+test('CustomerRepository::search matches name / email / contact, escapes LIKE wildcards, hides hashes', function () {
+    $pdo = test_pdo();
+    TestDb::rollback($pdo, function () use ($pdo) {
+        $repo = new CustomerRepository($pdo);
+        $tag = 'Srch' . substr(bin2hex(random_bytes(3)), 0, 6);
+        $a = $repo->create("{$tag} Alpha", TestDb::email('srch-a'), '09995550001', Password::hash('password123'));
+        $b = $repo->create("{$tag} Beta", TestDb::email('srch-b'), '09995550002', Password::hash('password123'));
+
+        $ids = fn (array $rows) => array_map(fn ($r) => (int) $r['customer_id'], $rows);
+
+        assert_same([$a, $b], $ids($repo->search($tag)), 'by name, ordered by name');
+        assert_same([$b], $ids($repo->search('09995550002')), 'by contact number');
+        $row = $repo->search("{$tag} Alpha")[0];
+        assert_false(array_key_exists('password_hash', $row), 'never returns the password hash');
+        assert_same([], $repo->search('   '), 'blank term returns nothing');
+        assert_same([], $repo->search($tag . '%'), 'a % in the term is literal, not a wildcard');
+        assert_count(1, $repo->search($tag, 1), 'limit is honoured');
+    });
+});
+
 test('customers.email and admins.email are independent (Decision 42)', function () {
     $pdo = test_pdo();
     TestDb::rollback($pdo, function () use ($pdo) {

@@ -318,3 +318,29 @@ button.loc-result { display: block; width: 100%; text-align: left; padding: .55r
 button.loc-result:hover { background: #eef2fb; }
 .loc-attribution { font-size: .78rem; margin: .35rem 0 0; }
 .loc-selected { font-size: .9rem; color: #1c6b32; margin: .3rem 0; font-weight: 600; }
+
+/* POS (admin) — reuses the card / datatable / filterbar / badge patterns above.
+   Wide tables sit in .table-scroll like the rest of the admin area. */
+.datatable input.qty-input { width: 4.5rem; padding: .35rem .45rem; font-size: .95rem; }
+.pos-addform { display: flex; gap: .4rem; align-items: center; margin: 0; }
+.pos-customer { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem 1rem; }
+.pos-customer p,
+.pos-customer form { margin: 0; }
+.pos-link { margin: .6rem 0 1rem; }
+.pos-link summary { cursor: pointer; color: #555; font-size: .9rem; }
+.pos-customers { list-style: none; margin: .4rem 0 0; padding: 0; border: 1px solid #e2e4e8; border-radius: 8px; background: #fff; }
+.pos-customers li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .4rem .75rem; padding: .5rem .7rem; }
+.pos-customers li + li { border-top: 1px solid #e8eaed; }
+.pos-customers form { margin: 0; }
+.datatable .pos-totalrow th,
+.datatable .pos-totalrow td { font-size: 1.05rem; font-weight: 700; color: #1a1a1a; text-transform: none; letter-spacing: 0; border-bottom: 0; }
+.pos-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin: .75rem 0; }
+.pos-pay { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .5rem 1.5rem; }
+.pos-pay > div { flex: 0 1 14rem; }
+.pos-change { margin: 0 0 .5rem; font-weight: 600; }
+.pos-cancel { margin: .75rem 0 0; }
+.card--sold { background: #e6f5ec; border-color: #bfe3cc; }
+.pos-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: .5rem 1rem; margin: 0 0 .5rem; }
+.pos-summary dt { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: #555; }
+.pos-summary dd { margin: .1rem 0 0; font-size: 1.1rem; font-weight: 700; }
+#items { margin-top: 1.5rem; }

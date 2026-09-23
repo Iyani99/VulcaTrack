@@ -780,3 +780,62 @@ test('SaleRepository receipt reads expose everything the printable receipt needs
         assert_same('service', $lines[1]['item_type']);
     });
 });
+
+// --- stale-display guard: expected_total_centavos (POS UI) ------------------
+
+test('expected_total_centavos that matches the authoritative total lets the sale commit', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $adminId = $fx->admin();
+        $tube  = $fx->product('Guard Tube', '250.00', 5);
+        $patch = $fx->service('Guard Patch', '120.50');
+
+        $sale = (new SaleService($pdo))->checkout([
+            'admin_id' => $adminId,
+            'lines'    => [['item_id' => $tube, 'quantity' => 2], ['item_id' => $patch, 'quantity' => 1]],
+            'expected_total_centavos' => '62050',   // the POS posts it as a form string
+        ]);
+        assert_same(62050, $sale['total_centavos']);
+        assert_same(3, $fx->stockOf($tube));
+        assert_same(1, $fx->saleCount());
+    });
+});
+
+test('a stale expected_total_centavos (price changed after display) rolls the whole sale back', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $adminId = $fx->admin();
+        $tube = $fx->product('Stale Tube', '250.00', 5);
+        $shownTotal = 50000;                       // 2 x 250.00 as the cashier saw it
+        $fx->setPrice($tube, '275.00');            // price edited in Inventory meanwhile
+
+        assert_throws(function () use ($pdo, $adminId, $tube, $shownTotal) {
+            (new SaleService($pdo))->checkout([
+                'admin_id' => $adminId,
+                'lines'    => [['item_id' => $tube, 'quantity' => 2]],
+                'expected_total_centavos' => $shownTotal,
+            ]);
+        }, SaleException::class, '550.00');
+
+        assert_same(0, $fx->saleCount(), 'no sales row');
+        assert_same(0, $fx->saleItemCount(), 'no sale_items rows');
+        assert_same(5, $fx->stockOf($tube), 'stock untouched');
+        assert_false($pdo->inTransaction(), 'transaction closed');
+    });
+});
+
+test('a malformed expected_total_centavos is rejected before anything is written', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $adminId = $fx->admin();
+        $tube = $fx->product('Malformed Tube', '10.00', 5);
+        foreach (['-1', '12.50', 'abc', 10.5, Money::MAX_CENTAVOS + 1] as $bad) {
+            assert_throws(function () use ($pdo, $adminId, $tube, $bad) {
+                (new SaleService($pdo))->checkout([
+                    'admin_id' => $adminId,
+                    'lines'    => [['item_id' => $tube, 'quantity' => 1]],
+                    'expected_total_centavos' => $bad,
+                ]);
+            }, SaleException::class, 'expected_total_centavos');
+        }
+        assert_same(0, $fx->saleCount());
+        assert_same(5, $fx->stockOf($tube));
+    });
+});

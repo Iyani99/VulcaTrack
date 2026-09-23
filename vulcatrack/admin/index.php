@@ -34,6 +34,6 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   </section>
 </div>
 
-<p class="muted">POS and Inventory are being built in the current development phase.</p>
+<p class="muted">Printable receipts are being built in the current development phase.</p>
 
 <?php require __DIR__ . '/../src/Views/partials/admin_bottom.php'; ?>

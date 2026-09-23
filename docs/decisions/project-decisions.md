@@ -1,9 +1,9 @@
 # VulcaTrack — Project Decision Record
 
 **Status:** Authoritative record of CONFIRMED project decisions.
-**Last updated:** 2026-09-06
-**Last revised:** 2026-09-06 — Phase 4.5 stabilization; Phase 5 pre-decisions 49–57;
-Rescue location selection 58–59; road-routing approved-but-deferred (Decision 60)
+**Last updated:** 2026-09-23
+**Last revised:** 2026-09-23 — clarified Decision 62 (optional expected-total assertion) and
+Decision 50 (printable sale document is a non-official transaction reference)
 (see [Revision History](#revision-history)).
 **Purpose:** This file exists so that anyone new to the project can understand its
 confirmed decisions, scope boundaries, and change-control rules **without** relying on
@@ -360,6 +360,16 @@ when recording them. The Phase 2 schema is still exactly the approved 8 tables.
     **Not** added: a receipt table, TIN / BIR / tax fields, any tax subsystem,
     GCash / online payment / a payment table, or any "official receipt" claim.
     Reaffirms Decisions 12/30/31.
+    *Clarified 2026-09-23 (non-official status):* "receipt" is this record's
+    working term only. The printed document is a simple **transaction reference**
+    generated from the recorded sale — **not** an Official Receipt, **not** a
+    BIR-registered invoice, and VulcaTrack does **not** replace the shop's
+    legally required invoicing method. On screen and in print it carries a
+    neutral title (e.g. "Sales Transaction Slip" / "Transaction Summary") and a
+    short note such as *"For transaction reference only. Not an official BIR
+    invoice."* Using VulcaTrack as an official invoicing POS (TIN / VAT / BIR
+    accreditation or registration) would be a separate compliance requirement
+    **outside the approved project scope**.
 
 51. **Customer linking at the POS is optional and existing-only.** The cashier may
     attach an already-registered customer to a sale; blank means a walk-in and
@@ -592,6 +602,18 @@ and is a thin caller of this foundation.
       are treated as exact strings, converted to centavos for arithmetic, and
       formatted back with `Money::format()` for storage. No `float`, no
       `round()`-to-repair.
+    - **Expected-total assertion (clarified 2026-09-23):** the caller may
+      optionally pass `expected_total_centavos` — the total the cashier was
+      shown. It is **only a consistency / stale-state assertion, never an
+      authoritative price or total**, and is not an exception to the rule
+      above: `SaleService` still calculates the authoritative total itself from
+      the current database prices inside the transaction, and the database /
+      current server state remains authoritative. If the supplied value differs
+      from that authoritative total, checkout fails with a `SaleException` and
+      the whole transaction rolls back (nothing is recorded). It exists so the
+      cashier cannot unknowingly complete a sale whose displayed / cart state has
+      become stale (a price changed, or the cart changed in another window).
+      Omitting it leaves checkout behaviour unchanged.
     - **Sale date:** `sales.sale_date` is set by the application at completion
       (`date('Y-m-d H:i:s')`), never from the client (Decision 35).
     - **Quantity:** must be a whole number between 1 and the largest value the
@@ -845,9 +867,11 @@ Do not turn these into confirmed requirements without approval.
   (2026-09-06).** Application Foundation, Database Schema, Authentication &
   Authorization, Customer-Side Functionality.
 - **Phase 5 (POS & inventory) IN PROGRESS.** Done: the minimal Admin shell, the
-  full Inventory module, and the **Sales foundation** — `SaleRepository` +
-  atomic `SaleService` (Decisions 61–63). Remaining Phase 5 work: the POS UI
-  (cart, checkout screen, printable HTML receipt). Pre-decisions 49–57 settled.
+  full Inventory module, the **Sales foundation** — `SaleRepository` +
+  atomic `SaleService` (Decisions 61–63) — and the **POS UI** (`admin/pos.php`:
+  session cart, optional customer link, cash tender/change, checkout through
+  `SaleService`). Remaining Phase 5 work: the printable HTML transaction
+  document (Decision 50). Pre-decisions 49–57 settled.
 - Repo on `main` at `C:\IPT102`, pushed to
   `https://github.com/Iyani99/VulcaTrack.git`; app at `C:\IPT102\vulcatrack\`
   served via a Windows junction from `C:\xampp\htdocs\vulcatrack`.
@@ -855,10 +879,10 @@ Do not turn these into confirmed requirements without approval.
   (`vulcatrack/database/schema.sql`); no seed data ships (the owner keeps a
   personal test account).
 - **Test harness (Phase 4.5, extended each chunk):** `vulcatrack/tests/` —
-  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **143 passed, 0
-  failed, 1028 assertions across 22 files** (unit, integration — schema +
-  repositories + Auth + inventory + sales + DB session, and end-to-end HTTP). All
-  green as of 2026-09-08.
+  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **155 passed, 0
+  failed, 1214 assertions across 24 files** (unit, integration — schema +
+  repositories + Auth + inventory + sales + DB session, and end-to-end HTTP incl.
+  the POS). All green as of 2026-09-23.
 - Auth (Decisions 41–47): customer + admin login/logout, CLI
   `vulcatrack/database/seed_admin.php`, hardened sessions, guards.
 - Customer side (Decision 48): `vulcatrack/customer/*` — dashboard, profile,
@@ -952,6 +976,24 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-23 — Clarifications after the POS UI chunk (Decisions 50 and 62; no new decision)
+
+- **Decision 62** — added an *Expected-total assertion* bullet: `SaleService::checkout()`
+  accepts an optional `expected_total_centavos` purely as a stale-state check. It
+  is never an authoritative price or total; `SaleService` still computes the total
+  from current database prices, and any mismatch fails the checkout with a full
+  rollback. The existing server-authoritative pricing rule is unchanged.
+- **Decision 50** — added a *non-official status* clarification: the printable
+  document is a transaction reference only (neutral title, "not an official BIR
+  invoice" note); it is not an Official Receipt or BIR-registered invoice and does
+  not replace the shop's legally required invoicing. Official-invoicing / TIN / VAT
+  / BIR accreditation is outside the approved scope. Field list, no-receipt-table
+  and no-TIN/tax rules unchanged.
+- **Current Project Status** refreshed: the POS UI is built (session cart, optional
+  customer link, cash tender/change, checkout through `SaleService`); the printable
+  transaction document is the remaining Phase 5 work; tests 155 / 1214 / 24 files.
+- No renumbering, no schema change, no new table, no code change in this revision.
 
 ### 2026-09-08 — Phase 5: Sales foundation — `SaleRepository` + atomic `SaleService` (Decisions 61–63)
 

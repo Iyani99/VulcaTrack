@@ -39,6 +39,35 @@ final class CustomerRepository
         return $row === false ? null : $row;
     }
 
+    /**
+     * Find customers by part of their name, email or contact number — for the
+     * POS's optional "link an existing customer" lookup (Decision 51). Read
+     * only; never exposes password hashes.
+     *
+     * @return array<int,array{customer_id:int,full_name:string,email:string,contact_number:string}>
+     */
+    public function search(string $term, int $limit = 10): array
+    {
+        $term = trim($term);
+        if ($term === '') {
+            return [];
+        }
+        $limit = max(1, min($limit, 25));
+        $like  = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term) . '%';
+
+        // Native prepares need one placeholder per use.
+        $stmt = $this->pdo->prepare(
+            'SELECT customer_id, full_name, email, contact_number
+             FROM customers
+             WHERE full_name LIKE :q_name OR email LIKE :q_email OR contact_number LIKE :q_contact
+             ORDER BY full_name ASC, customer_id ASC
+             LIMIT ' . $limit
+        );
+        $stmt->execute([':q_name' => $like, ':q_email' => $like, ':q_contact' => $like]);
+
+        return $stmt->fetchAll();
+    }
+
     public function updateProfile(int $customerId, string $fullName, string $contactNumber): void
     {
         $stmt = $this->pdo->prepare(

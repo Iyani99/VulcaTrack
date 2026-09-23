@@ -29,9 +29,9 @@ class SaleRepository
 {
     /**
      * Largest value the approved `sale_items.quantity` column (a signed MySQL
-     * `INT`) can store. The DB runs in a non-strict SQL mode, so a larger value
-     * would be silently clamped on INSERT rather than rejected — SaleService
-     * refuses it up front so a quantity is never quietly corrupted.
+     * `INT`) can store. SaleService refuses a larger value up front with a clear
+     * message; the strict session set in includes/db.php (Decision 64) is the
+     * DB-level backstop that stops it from ever being silently clamped.
      */
     public const MAX_QUANTITY = 2147483647;
 

@@ -57,7 +57,8 @@ final class SaleService
      * @param array $request {
      *   admin_id:    int,                                   // recording admin
      *   customer_id?: int|string|null,                      // absent / null / "" = walk-in
-     *   lines:       array<array{item_id: int, quantity: int}>
+     *   lines:       array<array{item_id: int, quantity: int}>,
+     *   expected_total_centavos?: int|string|null           // optional stale-display guard
      * }
      * `admin_id` MUST be taken from the authenticated Admin session by the
      * caller (the future POS endpoint) — it is the recording cashier and the
@@ -67,6 +68,12 @@ final class SaleService
      *
      * Any other keys (a caller-supplied price, subtotal, total, item_type …)
      * are ignored — the server is authoritative for all of those.
+     *
+     * `expected_total_centavos` is never used as a value. When supplied, it is
+     * the total the cashier was shown (and quoted to the customer); if the
+     * authoritative total computed inside the transaction differs — a price
+     * changed, or the cart changed in another window — the sale is refused and
+     * rolled back instead of silently recording a different amount.
      *
      * @return array{sale_id: int, total_centavos: int, sale_date: string}
      *
@@ -78,6 +85,7 @@ final class SaleService
         $adminId    = $this->requirePositiveInt($request['admin_id'] ?? null, 'admin_id');
         $customerId = $this->normaliseCustomerId($request['customer_id'] ?? null);
         $wanted     = $this->normaliseLines($request['lines'] ?? null); // [item_id => quantity], low id first
+        $expected   = $this->normaliseExpectedTotal($request['expected_total_centavos'] ?? null);
 
         if ($this->pdo->inTransaction()) {
             // Exactly one owner of the checkout transaction — never nest it.
@@ -144,6 +152,14 @@ final class SaleService
                 $totalCentavos += $subtotalCentavos;
             }
 
+            if ($expected !== null && $expected !== $totalCentavos) {
+                throw new SaleException(
+                    'The sale total changed to ₱' . Money::format($totalCentavos)
+                    . ' since it was displayed (prices or the cart were updated). '
+                    . 'Please review the sale and try again.'
+                );
+            }
+
             $saleDate = date('Y-m-d H:i:s');
             $saleId   = $this->sales->createSale($adminId, $customerId, $saleDate, $totalCentavos);
 
@@ -207,6 +223,19 @@ final class SaleService
         $n = $this->parseWholeNumber($value);
         if ($n === null || $n < 1) {
             throw new SaleException('customer_id must be a positive whole number or blank for a walk-in.');
+        }
+        return $n;
+    }
+
+    /** null / "" / absent → no guard; otherwise a whole number of centavos in Money's range. */
+    private function normaliseExpectedTotal($value): ?int
+    {
+        if ($value === null || (is_string($value) && trim($value) === '')) {
+            return null;
+        }
+        $n = $this->parseWholeNumber($value);
+        if ($n === null || $n < 0 || $n > Money::MAX_CENTAVOS) {
+            throw new SaleException('expected_total_centavos must be a whole number of centavos.');
         }
         return $n;
     }
