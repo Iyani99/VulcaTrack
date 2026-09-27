@@ -18,6 +18,8 @@
   var shopLng = parseFloat(el.getAttribute('data-shop-lng'));
   var shopName = el.getAttribute('data-shop-name') || 'Shop';
   var readonly = el.getAttribute('data-readonly') === '1';
+  // Marker label: 'Your location' on customer pages; the admin page passes its own.
+  var custLabel = el.getAttribute('data-cust-label') || 'Your location';
 
   var latInput = document.getElementById('otg-lat');
   var lngInput = document.getElementById('otg-lng');
@@ -64,6 +66,12 @@
   // Called when the user drags the pin or clicks the map after a pick.
   function markAdjusted() {
     if (selectedPlace) { showSelected('Selected: ' + selectedPlace + ' — position adjusted on map'); }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
   }
 
   function inRange(lat, lng) {
@@ -114,7 +122,7 @@
       if (custMarker) { custMarker.setLatLng([lat, lng]); }
       else {
         custMarker = window.L.marker([lat, lng], { draggable: !readonly }).addTo(map);
-        custMarker.bindPopup('Your location');
+        custMarker.bindPopup(escapeHtml(custLabel)); // Leaflet popups render HTML
         if (!readonly) {
           custMarker.on('dragend', function () {
             var p = custMarker.getLatLng();
@@ -151,7 +159,7 @@
     var note = document.createElement('p');
     note.className = 'muted';
     if (readonly && cust) {
-      note.innerHTML = 'Map unavailable. Your location: ' + cust[0].toFixed(5) + ', ' + cust[1].toFixed(5) +
+      note.innerHTML = 'Map unavailable. ' + escapeHtml(custLabel) + ': ' + cust[0].toFixed(5) + ', ' + cust[1].toFixed(5) +
         ' &middot; <a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=' +
         cust[0] + '&mlon=' + cust[1] + '#map=15/' + cust[0] + '/' + cust[1] + '">open map</a>';
     } else {

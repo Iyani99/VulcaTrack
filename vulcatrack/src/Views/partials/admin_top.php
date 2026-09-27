@@ -5,9 +5,10 @@
  * and the same app.css classes.
  *
  * Expects:  string $pageTitle
- * Optional: string $navActive  (dashboard|pos|inventory|tiremen)
+ * Optional: string $navActive  (dashboard|pos|inventory|tiremen|rescue)
  *           array  $admin       (session actor; only used by the page body)
  *           string $bodyClass   (page-specific <body> class, e.g. for print styles)
+ *           bool   $useMap      (load the vendored Leaflet assets — map pages only)
  *
  * The admin session actor is assumed already established — every admin page
  * calls require_admin() before including this partial.
@@ -18,6 +19,7 @@ $nav = [
     'pos'       => ['POS',       '/admin/pos.php'],
     'inventory' => ['Inventory', '/admin/inventory.php'],
     'tiremen'   => ['Tiremen',   '/admin/tiremen.php'],
+    'rescue'    => ['Rescue',    '/admin/rescue.php'],
 ];
 ?><!doctype html>
 <html lang="en">
@@ -26,6 +28,10 @@ $nav = [
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($pageTitle ?? 'Admin') ?> &mdash; VulcaTrack</title>
 <link rel="stylesheet" href="<?= e(vulcatrack_asset('/assets/css/app.css')) ?>">
+<?php if (!empty($useMap)): ?>
+<link rel="stylesheet" href="<?= e(vulcatrack_asset('/assets/lib/leaflet/leaflet.css')) ?>">
+<script defer src="<?= e(vulcatrack_asset('/assets/lib/leaflet/leaflet.js')) ?>"></script>
+<?php endif; ?>
 </head>
 <body<?= !empty($bodyClass) ? ' class="' . e($bodyClass) . '"' : '' ?>>
 <header class="appbar">

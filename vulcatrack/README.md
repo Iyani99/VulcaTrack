@@ -25,10 +25,12 @@ printable Transaction Summary (see *Admin functionality* below).
 
 **Phase 6 is in progress.** Chunk 6.1 added admin **Tireman management**: view,
 Active / Inactive / All filter, add, edit, activate / deactivate (no hard delete).
-Tiremen stay non-login records; no schema change.
+Tiremen stay non-login records. Chunk 6.2 added a **read-only admin Rescue view**:
+request list with a status filter and a detail page with a read-only map. No schema
+change.
 
-Not yet implemented (rest of Phase 6): admin OTG request handling (accept / reject /
-assign a Tireman / complete) and sales reports / history. We add these only when
+Not yet implemented (rest of Phase 6): changing a request's status (accept / reject /
+complete), assigning a Tireman, and sales reports / history. We add these only when
 the relevant chunk is explicitly approved.
 
 ## Design / decision documents
@@ -129,6 +131,8 @@ database table (Decision 37); route/ETA code reads from here.
 | `admin/transaction-summary.php?id=N` | Printable **Transaction Summary** of a recorded sale -- shop name/address, sale no., date/time, cashier, customer or Walk-in, lines with the **frozen** unit price, total. Browser print; *"For transaction reference only. Not an official BIR invoice."* |
 | `admin/tiremen.php` | Phase 6.1. Tiremen (the non-login people who perform OTG jobs): Active / Inactive / All filter; activate / deactivate is POST + CSRF (soft -- never deleted) and returns to the same filter. Assigning a Tireman to a request is not built yet. |
 | `admin/tireman-edit.php` | Add (`?id` absent) / edit (`?id=N`) a Tireman's name and contact number. |
+| `admin/rescue.php` | Phase 6.2, **read-only**. Every customer's OTG requests, filtered by status (Pending by default / Accepted / Rejected / Completed / All), newest first. |
+| `admin/rescue-view.php?id=N` | Phase 6.2, **read-only**. One request: customer (name, contact, email), vehicle, problem, stored coordinates + frozen ETA, assigned Tireman, handling admin, and a read-only straight-line map to the shop. No status actions yet. |
 
 **Sales rules honoured:** checkout goes through one service, `src/Service/SaleService.php`, which owns a
 single database transaction: it re-reads and locks every item (`SELECT … FOR UPDATE`), uses the
@@ -146,13 +150,13 @@ than recorded at a different amount. No payment table, no receipt table, no onli
 | `account.php` | Redirects to `customer/dashboard.php` (back-compat) |
 | `customer/` | Signed-in customer pages (guarded by `require_customer()`) |
 | `admin/login.php`, `admin/logout.php` | Admin auth entry points |
-| `admin/` | Signed-in admin pages (guarded by `require_admin()`): dashboard, inventory, item edit, POS, transaction summary, Tiremen |
+| `admin/` | Signed-in admin pages (guarded by `require_admin()`): dashboard, inventory, item edit, POS, transaction summary, Tiremen, Rescue (read-only) |
 | `health.php` | Environment + DB connectivity check |
 | `config/` | Local configuration -- **not web-accessible** (`config.php` git-ignored) |
 | `config/shop.php` | Fixed shop location (Decision 37) -- the real Baliwag shop coordinates |
 | `includes/` | `bootstrap.php`, `db.php`, `auth.php` -- **not web-accessible** |
 | `src/Auth/` | `Auth.php` (session/actor lifecycle), `Password.php`, `Csrf.php` |
-| `src/Repository/` | `CustomerRepository`, `AdminRepository`, `VehicleRepository`, `ServiceRequestRepository` (customer-scoped), `ItemRepository`, `SaleRepository`, `TiremanRepository` -- prepared statements only |
+| `src/Repository/` | `CustomerRepository`, `AdminRepository`, `VehicleRepository`, `ServiceRequestRepository` (customer-scoped reads + separate read-only admin reads), `ItemRepository`, `SaleRepository`, `TiremanRepository` -- prepared statements only |
 | `src/Service/` | `SaleService` (the one checkout transaction) + `SaleException`, `PosCart` (session cart) + `PosCartException` |
 | `src/Support/` | `Validator.php`, `Money.php` (integer centavos), `Geo.php` (haversine + frozen ETA), `OtgStatus.php` (status→label mapping), `Geocoder.php` + `NominatimGeocoder.php` / `ArrayGeocoder.php` / `GeocoderFactory.php` / `GeocodeResult.php` / `GeocodeException.php`, `GeocodeCache.php` (query cache + ≥1s throttle) |
 | `src/Views/` | Form templates + shared partials (`partials/customer_top.php` / `partials/admin_top.php` app shells) |

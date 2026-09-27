@@ -2,8 +2,8 @@
 
 **Status:** Authoritative record of CONFIRMED project decisions.
 **Last updated:** 2026-09-28
-**Last revised:** 2026-09-28 — Phase 6 in progress: Chunk 6.1 Tireman management done
-(status only, no decision change). Previous: 2026-09-23 — Phase 5 closed; clarified
+**Last revised:** 2026-09-28 — Phase 6 in progress: Chunks 6.1 (Tireman management) and
+6.2 (read-only admin Rescue list + detail) done (status only, no decision change). Previous: 2026-09-23 — Phase 5 closed; clarified
 Decision 62 (optional expected-total assertion) and Decision 50 (printable sale
 document is a non-official transaction reference)
 (see [Revision History](#revision-history)).
@@ -883,7 +883,11 @@ Do not turn these into confirmed requirements without approval.
   (Decision 24) — `admin/tiremen.php` + `admin/tireman-edit.php` on
   `TiremanRepository`: view, Active / Inactive / All filter, add, edit,
   activate / deactivate; no hard delete; `listActive()` ready for assignment.
-  Not yet built: admin OTG request handling, Tireman assignment, sales
+  Chunk 6.2 (2026-09-28): **read-only** admin Rescue view (Decision 9) —
+  `admin/rescue.php` (status filter) + `admin/rescue-view.php` (customer,
+  vehicle, stored location + frozen ETA, Tireman, handling admin, read-only
+  straight-line map — Decision 33); customer reads stay owner-scoped.
+  Not yet built: Rescue status changes, Tireman assignment, sales
   history / reports. No schema change.
 - Repo on `main` at `C:\IPT102`, pushed to
   `https://github.com/Iyani99/VulcaTrack.git`; app at `C:\IPT102\vulcatrack\`
@@ -892,10 +896,11 @@ Do not turn these into confirmed requirements without approval.
   (`vulcatrack/database/schema.sql`); no seed data ships (the owner keeps a
   personal test account).
 - **Test harness (Phase 4.5, extended each chunk):** `vulcatrack/tests/` —
-  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **162 passed, 0
-  failed, 1668 assertions across 27 files** (unit, integration — schema +
-  repositories + Auth + inventory + sales + Tiremen + DB session, and end-to-end
-  HTTP incl. the POS, Transaction Summary and Tiremen pages). All green as of
+  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **168 passed, 0
+  failed, 1980 assertions across 29 files** (unit, integration — schema +
+  repositories + Auth + inventory + sales + Tiremen + admin request reads + DB
+  session, and end-to-end HTTP incl. the POS, Transaction Summary, Tiremen and
+  Rescue pages). All green as of
   2026-09-28.
 - Auth (Decisions 41–47): customer + admin login/logout, CLI
   `vulcatrack/database/seed_admin.php`, hardened sessions, guards.
@@ -903,9 +908,9 @@ Do not turn these into confirmed requirements without approval.
   saved vehicles (soft-delete), OTG rescue submission with a frozen-snapshot
   ETA, request history + customer-facing status. No schema change; OTG requests
   are always created `status = 'pending'`.
-- Admin side (Phase 5; Tiremen added in Phase 6.1): `vulcatrack/admin/*` —
-  dashboard, inventory + item edit, POS, transaction summary, Tiremen. No
-  schema change — still exactly the 8 tables.
+- Admin side (Phase 5; Tiremen + read-only Rescue added in Phase 6):
+  `vulcatrack/admin/*` — dashboard, inventory + item edit, POS, transaction
+  summary, Tiremen, Rescue (read-only). No schema change — still exactly the 8 tables.
 - ERD exists (PNG + text schema `docs/ERD/schema.dbml`).
 - Use-case diagram exists (PNG; changes pending — see Required Diagram Changes).
 - Six flowcharts exist.
@@ -992,6 +997,16 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-28 — Phase 6 Chunk 6.2: read-only admin Rescue view (status only; no decision change)
+
+- **Current Project Status** updated: the admin can now **view** every OTG
+  request (list + detail) as Decision 9 allows — customer, vehicle, problem,
+  stored coordinates, the frozen ETA (Decision 32), the assigned Tireman and
+  handling admin, and a read-only straight-line map (Decision 33; no routing).
+  **Read-only**: no status changes and no Tireman assignment yet. Customer reads
+  remain owner-scoped. Tests **168 passed / 1980 assertions / 29 files**.
+- No renumbering, no new decision, no schema change.
 
 ### 2026-09-28 — Phase 6 Chunk 6.1: Tireman management (status only; no decision change)
 

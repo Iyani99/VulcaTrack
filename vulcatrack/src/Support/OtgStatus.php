@@ -36,6 +36,12 @@ final class OtgStatus
         }
     }
 
+    /** Plain admin-facing label ("Pending", "Accepted", ...) — no customer wording. */
+    public static function adminLabel(string $status): string
+    {
+        return ucfirst($status);
+    }
+
     /** CSS modifier class for the status badge. */
     public static function badgeClass(string $status): string
     {

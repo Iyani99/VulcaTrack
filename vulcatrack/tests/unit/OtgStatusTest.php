@@ -31,6 +31,13 @@ test('OtgStatus::label maps accepted to on-the-way wording only once a Tireman i
     assert_same('Completed', OtgStatus::label('completed'));
 });
 
+test('OtgStatus::adminLabel uses plain labels, never customer wording', function () {
+    assert_same('Pending', OtgStatus::adminLabel('pending'));
+    assert_same('Accepted', OtgStatus::adminLabel('accepted'));
+    assert_same('Rejected', OtgStatus::adminLabel('rejected'));
+    assert_same('Completed', OtgStatus::adminLabel('completed'));
+});
+
 test('OtgStatus::badgeClass returns a class for every value and a safe default', function () {
     assert_same('badge--pending', OtgStatus::badgeClass('pending'));
     assert_same('badge--accepted', OtgStatus::badgeClass('accepted'));
