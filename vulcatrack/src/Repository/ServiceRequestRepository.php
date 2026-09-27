@@ -14,9 +14,16 @@ use VulcaTrack\Support\OtgStatus;
  * `status = 'pending'`) and VIEWS their own requests. Every *ForCustomer read
  * is scoped to the owning customer.
  *
- * Admin side (Phase 6.2): listForAdmin() / findForAdmin() are READ-ONLY and
- * deliberately separate from the customer methods — only admin pages call
- * them. Accept / reject / assign / complete are not implemented yet.
+ * Admin side: listForAdmin() / findForAdmin() (Phase 6.2) are deliberately
+ * separate from the customer methods — only admin pages call them. The admin
+ * mutations (Phase 6.3) — accept(), reassign(), reject(), complete() — are
+ * each ONE guarded UPDATE: the WHERE clause re-checks the expected current
+ * state (and, for assignment, that the Tireman is active), so a request that
+ * changed in another tab is never overwritten. Each returns true only when
+ * exactly one row changed. Every success records the acting admin in
+ * `admin_id` (= last admin who changed status or assignment) and sets
+ * `updated_at` (no ON UPDATE clause on this column). `tireman_id` is kept on
+ * final requests as history.
  *
  * `eta_minutes` is written once, at creation, as a frozen snapshot and is never
  * updated (Decisions 32/33). No route geometry is stored.
@@ -193,5 +200,98 @@ final class ServiceRequestRepository
         $row = $stmt->fetch();
 
         return $row === false ? null : $row;
+    }
+
+    // --- Phase 6.3: admin mutations (guarded, one statement each) ------------
+
+    /**
+     * pending -> accepted, assigning an ACTIVE Tireman in the same statement
+     * (acceptance always has a Tireman). False when the request is no longer
+     * pending or the Tireman is unknown / inactive.
+     */
+    public function accept(int $requestId, int $tiremanId, int $adminId): bool
+    {
+        $stmt = $this->pdo->prepare(
+            "UPDATE service_requests
+                SET status = 'accepted', tireman_id = :tireman, admin_id = :admin,
+                    updated_at = CURRENT_TIMESTAMP
+              WHERE request_id = :id
+                AND status = 'pending'
+                AND EXISTS (SELECT 1 FROM tiremen WHERE tireman_id = :tireman_check AND is_active = 1)"
+        );
+        $stmt->execute([
+            ':tireman' => $tiremanId, ':admin' => $adminId, ':id' => $requestId,
+            ':tireman_check' => $tiremanId,
+        ]);
+
+        return $stmt->rowCount() === 1;
+    }
+
+    /**
+     * Replace the Tireman on an ACCEPTED request (status unchanged) with a
+     * different ACTIVE Tireman. $expectedTiremanId is the assignment the admin
+     * was looking at (null = none); if someone else reassigned meanwhile, this
+     * refuses rather than overwriting their choice.
+     */
+    public function reassign(int $requestId, ?int $expectedTiremanId, int $tiremanId, int $adminId): bool
+    {
+        if ($tiremanId === $expectedTiremanId) {
+            return false; // already assigned — nothing to change
+        }
+        // `<=>` is MySQL's NULL-safe equals, so "no Tireman yet" (NULL) matches too.
+        $stmt = $this->pdo->prepare(
+            "UPDATE service_requests
+                SET tireman_id = :tireman, admin_id = :admin, updated_at = CURRENT_TIMESTAMP
+              WHERE request_id = :id
+                AND status = 'accepted'
+                AND tireman_id <=> :expected
+                AND EXISTS (SELECT 1 FROM tiremen WHERE tireman_id = :tireman_check AND is_active = 1)"
+        );
+        $stmt->execute([
+            ':tireman' => $tiremanId, ':admin' => $adminId, ':id' => $requestId,
+            ':expected' => $expectedTiremanId,
+            ':tireman_check' => $tiremanId,
+        ]);
+
+        return $stmt->rowCount() === 1;
+    }
+
+    /**
+     * $fromStatus -> rejected, where $fromStatus is the status the admin was
+     * looking at (pending or accepted). Any assigned Tireman is kept as
+     * history. False when the request is no longer in $fromStatus.
+     *
+     * @throws InvalidArgumentException when $fromStatus cannot be rejected
+     */
+    public function reject(int $requestId, string $fromStatus, int $adminId): bool
+    {
+        if (!OtgStatus::canTransition($fromStatus, 'rejected')) {
+            throw new InvalidArgumentException("A {$fromStatus} request cannot be rejected.");
+        }
+        $stmt = $this->pdo->prepare(
+            "UPDATE service_requests
+                SET status = 'rejected', admin_id = :admin, updated_at = CURRENT_TIMESTAMP
+              WHERE request_id = :id AND status = :from"
+        );
+        $stmt->execute([':admin' => $adminId, ':id' => $requestId, ':from' => $fromStatus]);
+
+        return $stmt->rowCount() === 1;
+    }
+
+    /**
+     * accepted -> completed, only when a Tireman is assigned (who did the job
+     * is kept on record). The Tireman may since have been deactivated — that
+     * does not block completion. False when no longer accepted or unassigned.
+     */
+    public function complete(int $requestId, int $adminId): bool
+    {
+        $stmt = $this->pdo->prepare(
+            "UPDATE service_requests
+                SET status = 'completed', admin_id = :admin, updated_at = CURRENT_TIMESTAMP
+              WHERE request_id = :id AND status = 'accepted' AND tireman_id IS NOT NULL"
+        );
+        $stmt->execute([':admin' => $adminId, ':id' => $requestId]);
+
+        return $stmt->rowCount() === 1;
     }
 }

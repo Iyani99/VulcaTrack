@@ -1,25 +1,26 @@
 <?php
 /**
- * End-to-end HTTP tests for Phase 6 Chunk 6.2 — the READ-ONLY admin Rescue
- * pages (admin/rescue.php list, admin/rescue-view.php detail).
+ * End-to-end HTTP tests for Phase 6 Chunk 6.2 — viewing the admin Rescue
+ * pages (admin/rescue.php list, admin/rescue-view.php detail). The status
+ * actions added in Chunk 6.3 are covered by AdminRescueActionsTest.
  *
  * Covers: the admin guard and actor separation, the status filter (default
  * pending, every valid value, junk falls back and is never echoed), strict id
  * handling (junk / unknown -> 404), escaping of every customer-controlled and
  * joined value, plain admin status labels, map assets only on the detail page,
- * no state change from any request, and the customer ownership boundary on
- * customer/booking.php.
+ * final requests offering no forms, no state change from GET or from the
+ * read-only list, and the customer ownership boundary on customer/booking.php.
  *
  * Throwaway customers / vehicles / requests / Tireman / admin are seeded via
- * PDO and removed afterwards. The app cannot change a request's status yet, so
- * the non-pending states are set with test-only SQL. The database must be running.
+ * PDO and removed afterwards; the requests are inserted directly in each
+ * status. The database must be running.
  */
 
 namespace VulcaTrack\Tests;
 
 use VulcaTrack\Auth\Password;
 
-test('admin rescue (read-only): guard, filters, detail, escaping, map, no mutation, ownership', function () {
+test('admin rescue (list + detail view): guard, filters, detail, escaping, map, no GET mutation, ownership', function () {
     $pdo = test_pdo();
     assert_not_null($pdo, 'the database must be reachable for the HTTP tests');
 
@@ -128,6 +129,11 @@ test('admin rescue (read-only): guard, filters, detail, escaping, map, no mutati
         assert_same(200, $list['status'], 'the admin can view the request list');
         assert_contains('>Rescue<', $list['body'], 'the Rescue nav entry is present');
         assert_contains('<option value="pending" selected>', $list['body'], 'pending is the default filter');
+        // The filter is a plain GET form: the dropdown submits it on change,
+        // and the Filter button stays as the no-JavaScript fallback.
+        assert_contains('<form class="filterbar" method="get" action="/vulcatrack/admin/rescue.php">', $list['body']);
+        assert_contains('<select name="status" onchange="this.form.submit()">', $list['body']);
+        assert_contains('<button type="submit">Filter</button>', $list['body']);
         assert_contains('rescue-view.php?id=' . $reqPending . '"', $list['body']);
         foreach ([$reqAccepted, $reqRejected, $reqCompleted] as $id) {
             assert_not_contains('rescue-view.php?id=' . $id . '"', $list['body'], 'the default list shows pending only');
@@ -206,10 +212,9 @@ test('admin rescue (read-only): guard, filters, detail, escaping, map, no mutati
         assert_contains('data-readonly="1"', $d['body'], 'the admin map is read-only');
         assert_contains('data-cust-lat="14.9612345"', $d['body'], 'the map uses the stored coordinates');
         assert_contains('data-cust-label="Customer location"', $d['body']);
-        assert_same(1, substr_count($d['body'], 'method="post"'), 'the detail page has no form except logout');
-        foreach (['name="status"', 'name="tireman_id"', 'name="_action"'] as $control) {
-            assert_not_contains($control, $d['body'], "no {$control} control on the read-only page");
-        }
+        // Phase 6.3 added status actions; their behaviour is covered in AdminRescueActionsTest.
+        // The page itself never offers a free-form status field.
+        assert_not_contains('name="status"', $d['body'], 'no free-form status control');
 
         // ============ DETAIL: accepted, assigned + handled ============
         $d = $server->request($VIEW . '?id=' . $reqAccepted);
@@ -226,6 +231,7 @@ test('admin rescue (read-only): guard, filters, detail, escaping, map, no mutati
             $d = $server->request($VIEW . '?id=' . $id);
             assert_same(200, $d['status']);
             assert_contains('">' . $label . '</span>', $d['body'], "{$label} renders its plain label");
+            assert_same(1, substr_count($d['body'], 'method="post"'), "a {$label} (final) request has no form except logout");
             $assertCleanHtml($d['body'], "rescue-view.php ({$label})");
         }
 
@@ -245,12 +251,13 @@ test('admin rescue (read-only): guard, filters, detail, escaping, map, no mutati
             assert_not_contains('leaflet.js', $server->request($path)['body'], "no Leaflet on {$path}");
         }
 
-        // ============ No state change from GET or POST ============
+        // ============ No state change from GET, or from any POST to the (read-only) list ============
+        // (POST actions on the detail page are Phase 6.3 — see AdminRescueActionsTest.)
         $server->request($VIEW . '?id=' . $reqPending . '&status=accepted&tireman_id=' . $tiremanId . '&_action=accept');
         $server->request($LIST . '?status=pending&_action=accept&request_id=' . $reqPending);
         $csrf = HttpServer::csrfToken($server->request($LIST)['body']);
-        $server->request($VIEW . '?id=' . $reqPending, ['_csrf' => (string) $csrf, '_action' => 'accept', 'status' => 'accepted', 'tireman_id' => (string) $tiremanId]);
         $server->request($LIST, ['_csrf' => (string) $csrf, '_action' => 'reject', 'request_id' => (string) $reqPending]);
+        $server->request($LIST, ['_csrf' => (string) $csrf, '_action' => 'accept', 'request_id' => (string) $reqPending, 'tireman_id' => (string) $tiremanId]);
         assert_same($before, $snapshot(), 'no request row changed (status, tireman, admin, updated_at, ETA)');
 
         // ============ server log is clean ============
@@ -261,5 +268,68 @@ test('admin rescue (read-only): guard, filters, detail, escaping, map, no mutati
     } finally {
         $server->stop();
         $cleanup();
+    }
+});
+
+test('admin rescue list: a non-empty status view shows no empty-state quick links', function () {
+    $pdo = test_pdo();
+    assert_not_null($pdo, 'the database must be reachable for the HTTP tests');
+
+    // One seeded request per status guarantees every filtered view is non-empty,
+    // whatever else the database holds. (The empty-view markup itself is
+    // rendered deterministically, without a database, in unit/RescueEmptyStateTest.)
+    $tag = 'RSQ' . substr(bin2hex(random_bytes(4)), 0, 8);
+    $password = 'rsq-password-123';
+    $email = TestDb::email('rsq-admin');
+    $pdo->prepare('INSERT INTO admins (full_name, email, password_hash) VALUES (?,?,?)')
+        ->execute(["{$tag} Admin", $email, \VulcaTrack\Auth\Password::hash($password)]);
+    $adminId = (int) $pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO customers (full_name, email, contact_number, password_hash) VALUES (?,?,?,?)')
+        ->execute(["{$tag} Customer", TestDb::email('rsq'), '0917 000 0000', \VulcaTrack\Auth\Password::hash($password)]);
+    $custId = (int) $pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO vehicles (customer_id, plate_number) VALUES (?,?)')->execute([$custId, 'RSQ-1']);
+    $vehId = (int) $pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO tiremen (name, contact_number) VALUES (?,?)')->execute(["{$tag} Tireman", '0918 000 0000']);
+    $tiremanId = (int) $pdo->lastInsertId();
+
+    $reqIds = [];
+    foreach (\VulcaTrack\Support\OtgStatus::VALUES as $status) {
+        $pdo->prepare(
+            'INSERT INTO service_requests (customer_id, vehicle_id, tireman_id, problem_description, latitude, longitude, eta_minutes, status)
+             VALUES (?,?,?,?,?,?,?,?)'
+        )->execute([$custId, $vehId, $status === 'pending' ? null : $tiremanId, "{$tag} {$status}", 14.95, 120.89, 12, $status]);
+        $reqIds[$status] = (int) $pdo->lastInsertId();
+    }
+
+    $server = new HttpServer(8690);
+    try {
+        $server->start();
+        $al = $server->request('/vulcatrack/admin/login.php');
+        $server->request('/vulcatrack/admin/login.php', ['_csrf' => HttpServer::csrfToken($al['body']), 'email' => $email, 'password' => $password]);
+
+        foreach (array_merge(\VulcaTrack\Support\OtgStatus::VALUES, ['all']) as $status) {
+            $body = $server->request('/vulcatrack/admin/rescue.php?status=' . $status)['body'];
+            if ($status !== 'all') {
+                assert_contains('rescue-view.php?id=' . $reqIds[$status] . '"', $body, "the {$status} view lists its seeded request");
+            }
+            assert_not_contains("No {$status} requests.", $body, "a non-empty {$status} view has no empty-state message");
+            assert_not_contains('No rescue requests yet.', $body);
+            assert_not_contains('>View all</a>', $body, "a non-empty {$status} view has no quick links");
+            foreach (\VulcaTrack\Support\OtgStatus::VALUES as $s) {
+                assert_not_contains('>View ' . $s . '</a>', $body);
+            }
+        }
+
+        $stderr = $server->serverStderr();
+        foreach (['PHP Warning', 'PHP Notice', 'PHP Deprecated', 'PHP Fatal', 'PHP Parse error'] as $bad) {
+            assert_not_contains($bad, $stderr, "php -S stderr contained: {$bad}\n{$stderr}");
+        }
+    } finally {
+        $server->stop();
+        $pdo->exec('DELETE FROM service_requests WHERE request_id IN (' . implode(',', array_map('intval', $reqIds)) . ')');
+        $pdo->prepare('DELETE FROM vehicles WHERE vehicle_id = ?')->execute([$vehId]);
+        $pdo->prepare('DELETE FROM tiremen WHERE tireman_id = ?')->execute([$tiremanId]);
+        $pdo->prepare('DELETE FROM customers WHERE customer_id = ?')->execute([$custId]);
+        $pdo->prepare('DELETE FROM admins WHERE admin_id = ?')->execute([$adminId]);
     }
 });

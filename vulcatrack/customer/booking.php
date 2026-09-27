@@ -3,8 +3,10 @@
  * Customer-facing rescue-request status / detail.
  *
  * Shows the frozen ETA snapshot (never recomputed), the route between the two
- * fixed endpoints (redrawn client-side, not persisted), and -- once an admin
- * has assigned one -- the Tireman's name and contact number.
+ * fixed endpoints (redrawn client-side, not persisted), and -- while the
+ * request is accepted with an assigned Tireman -- "Tireman is on the way" with
+ * the Tireman's name and contact number. A completed request keeps the
+ * Tireman's name as history but never says "on the way".
  * ?new=1 shows the post-submission confirmation banner.
  */
 
@@ -64,7 +66,7 @@ $vehicleBits = array_filter([$request['make'] ?? '', $request['model'] ?? '', $r
   </dl>
 </section>
 
-<?php if ($tiremanAssigned): ?>
+<?php if ($request['status'] === 'accepted' && $tiremanAssigned): ?>
   <section class="card">
     <h2>Tireman is on the way</h2>
     <p><strong><?= e($request['tireman_name']) ?></strong></p>
@@ -82,6 +84,9 @@ $vehicleBits = array_filter([$request['make'] ?? '', $request['model'] ?? '', $r
 <?php elseif ($request['status'] === 'completed'): ?>
   <section class="card">
     <p>This service has been completed. Thank you for using VulcaTrack.</p>
+    <?php if ($tiremanAssigned): ?>
+      <p class="muted">Serviced by <?= e($request['tireman_name']) ?>.</p>
+    <?php endif; ?>
   </section>
 <?php else: ?>
   <section class="card">

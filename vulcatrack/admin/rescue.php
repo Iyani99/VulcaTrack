@@ -3,9 +3,11 @@
  * Admin — Rescue (OTG) requests list (Phase 6, Chunk 6.2). READ-ONLY.
  *
  * Every customer's On-the-Go requests, filtered by status through a GET
- * whitelist (default: pending). Each row links to rescue-view.php. There are
- * no forms that change anything here — accept / reject / assign / complete
- * are later work.
+ * whitelist (default: pending). The status dropdown submits itself on change
+ * (the Filter button stays as the no-JavaScript fallback); an empty view links
+ * to another status and to All. Each row links to rescue-view.php. There are
+ * no forms that change anything here — the status actions (accept / reassign /
+ * reject / complete) live on rescue-view.php (Chunk 6.3).
  */
 
 use VulcaTrack\Repository\ServiceRequestRepository;
@@ -34,7 +36,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 
 <form class="filterbar" method="get" action="<?= e(vulcatrack_url('/admin/rescue.php')) ?>">
   <label>Status
-    <select name="status">
+    <select name="status" onchange="this.form.submit()">
       <?php foreach (array_merge(OtgStatus::VALUES, ['all']) as $option): ?>
         <option value="<?= e($option) ?>"<?= $status === $option ? ' selected' : '' ?>><?= e($option === 'all' ? 'All' : OtgStatus::adminLabel($option)) ?></option>
       <?php endforeach; ?>
@@ -47,7 +49,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 <p class="muted"><?= $n ?> <?= $n === 1 ? 'request' : 'requests' ?>.</p>
 
 <?php if (!$requests): ?>
-  <p class="muted"><?= $status === 'all' ? 'No rescue requests yet.' : 'No ' . e($status) . ' requests.' ?></p>
+  <?php require __DIR__ . '/../src/Views/partials/rescue_empty.php'; ?>
 <?php else: ?>
   <div class="table-scroll">
   <table class="datatable">

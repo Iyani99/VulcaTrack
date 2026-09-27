@@ -196,15 +196,21 @@ CREATE TABLE `sale_items` (
 -- service_requests  (On-the-Go / OTG)
 -- Submitted by an authenticated customer (customer_id NOT NULL — Decisions 1/39)
 -- for one of that customer's vehicles (vehicle_id NOT NULL).
--- admin_id  is NULLABLE — set once an admin picks up the request.
--- tireman_id is NULLABLE — set by an admin on/after 'accepted' (Decision 25);
---            stays NULL while pending / rejected / accepted-but-unassigned.
+-- admin_id  is NULLABLE — the last admin who changed the status or Tireman
+--            assignment (Decision 67); NULL while pending.
+-- tireman_id is NULLABLE — set in the same admin action that accepts the request
+--            (an active Tireman, Decision 66); may be reassigned while accepted;
+--            kept on rejected / completed requests as history (Decision 68).
+--            NULL while pending and on requests rejected while pending.
 -- latitude / longitude — captured ONCE at submission via browser geolocation;
 --            stay NULL until a successful capture. No location history.
 -- eta_minutes — FROZEN snapshot computed once at submission; never recomputed
 --            for display (Decision 32). No route geometry is persisted.
 -- status — exactly four values (Decision 10). "Tireman is on the way" is UI
---            wording for 'accepted', not a status value.
+--            wording for 'accepted', not a status value. Admin transitions
+--            (Decision 65, enforced in the application): pending -> accepted |
+--            rejected; accepted -> completed (Tireman required) | rejected;
+--            rejected and completed are final.
 -- No per-status timestamp columns and no status-history table in v1 (Decision 34).
 -- Shop endpoint for route/ETA comes from config/shop.php (Decision 37) — not a table.
 -- -----------------------------------------------------------------------------

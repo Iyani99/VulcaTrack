@@ -32,7 +32,7 @@ We are building it as a **BSIT student project**, so the priorities are maintain
 - Separate administrator authentication
 - Admin dashboard and management functions
 - Tireman management (add, edit, activate / deactivate; Tiremen have no login)
-- View OTG rescue requests (read-only list and detail with a map)
+- OTG rescue request management: list, detail with map, accept with an active Tireman, reassign, reject, complete
 - Product and service management
 - Inventory management
 - In-shop Point of Sale (POS)
@@ -40,7 +40,7 @@ We are building it as a **BSIT student project**, so the priorities are maintain
 - Registered customer sales
 - Printable transaction summaries (for reference only; not an official BIR invoice)
 
-Still in development (Phase 6): changing OTG request status (accept / reject / complete), assigning a Tireman, and sales history / reports.
+Still in development (Phase 6): sales history / reports.
 
 ### On-the-Go Services
 

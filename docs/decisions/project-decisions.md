@@ -2,8 +2,9 @@
 
 **Status:** Authoritative record of CONFIRMED project decisions.
 **Last updated:** 2026-09-28
-**Last revised:** 2026-09-28 — Phase 6 in progress: Chunks 6.1 (Tireman management) and
-6.2 (read-only admin Rescue list + detail) done (status only, no decision change). Previous: 2026-09-23 — Phase 5 closed; clarified
+**Last revised:** 2026-09-28 — **Decisions 65–68 added** (owner-approved Rescue status rules,
+Phase 6.3; Decision 25 refined, `admin_id` open question resolved) and Phase 6 status updated
+(Chunks 6.1–6.3 done). Previous: 2026-09-23 — Phase 5 closed; clarified
 Decision 62 (optional expected-total assertion) and Decision 50 (printable sale
 document is a non-official transaction reference)
 (see [Revision History](#revision-history)).
@@ -142,6 +143,11 @@ Added during the Decision Review & Documentation Update. These are settled.
     assigns a Tireman to an accepted request. It stays `NULL` while a request is
     `pending`/`rejected` or accepted-but-unassigned. This is independent of
     `service_requests.admin_id` (the admin handling the request).
+    *(Refined 2026-09-28 by **Decisions 66–68**: an admin can no longer create an
+    accepted-but-unassigned request — acceptance assigns an active Tireman in the same
+    action; a Tireman assigned before a later rejection or completion is **kept** as
+    history; `admin_id` is the last admin who changed status or assignment.
+    Accepted-but-unassigned rows from earlier data are still displayed safely.)*
 26. **Tiremen are identity / contact / assignment only.** No technician authentication, no
     live GPS tracking, no location telemetry/history, no schedules, no ratings, no payroll,
     no employee records. "Tireman is on the way" remains status wording for the `accepted`
@@ -486,8 +492,9 @@ The intended end-to-end flow, as the text reference until flowcharts 2 & 5 are r
 8. Customer reviews and submits the request.
 9. Request is saved with `status = pending`, `eta_minutes` frozen.
 10. Admin reviews the request (customer, vehicle, problem, location, route, ETA).
-11. Admin accepts or rejects.
-12. If accepted, the admin assigns a Tireman (`service_requests.tireman_id`).
+11. Admin accepts — choosing an **active** Tireman in the same step (Decision 66) — or rejects.
+12. The Tireman is stored in `service_requests.tireman_id`. While accepted, the admin may
+    reassign another active Tireman, or reject (Decisions 65–66).
 13. Customer now sees: Tireman name, Tireman contact number, "Tireman is on the way", the
     stored ETA, and the route/map.
 14. Customer and shop/Tireman coordinate by phone (no in-app messaging).
@@ -686,6 +693,41 @@ The trusted server-side foundation for recording an in-person sale
       numeric range at the application layer** (the strict session is the
       backstop, not the primary guard) — see [feedback / standing rules].
 
+---
+
+## Confirmed Project Decisions — 2026-09-28 (Phase 6.3: Rescue status rules)
+
+Approved by the owner when starting Phase 6.3 (admin Rescue actions). **No schema
+change** — still exactly 8 tables and the four statuses of Decision 10; no status-history,
+cancellation, rejection-reason or completion-notes column/table.
+
+65. **Allowed OTG status transitions are exactly:** `pending → accepted`,
+    `pending → rejected`, `accepted → completed`, `accepted → rejected`.
+    `accepted → completed` additionally **requires an assigned Tireman**
+    (`tireman_id IS NOT NULL`; that Tireman may since have been deactivated) — a legacy
+    accepted request without one must be assigned a Tireman first.
+    **`rejected` and `completed` are final** — nothing leaves them (no reopening, no
+    `pending → completed`, no same-status "change"). The rule lives in
+    `OtgStatus::canTransition()` and is enforced again at the database by guarded
+    `UPDATE … WHERE status = <expected>` statements (one row or nothing), so a request
+    that changed in another tab / by another admin is refused with "This request
+    changed", never overwritten.
+66. **Accepting a request requires an active Tireman, chosen in the same action.** An
+    admin cannot create an accepted-but-unassigned request. While a request is
+    `accepted`, the admin may **reassign** it to a different active Tireman (status
+    unchanged); reassignment is not possible in any other state. Inactive Tiremen are
+    never offered or accepted for a new assignment (Decision 28).
+67. **`service_requests.admin_id` = the last admin who changed the request's status or
+    Tireman assignment.** Every successful accept / reassign / reject / complete sets it
+    from the authenticated admin session — never from form input. The column stays
+    nullable (a pending request has not been handled yet). *(Resolves the open question
+    on `admin_id`.)*
+68. **The Tireman stays on final requests.** Completing or rejecting an accepted request
+    keeps its `tireman_id` as history; only a reassignment replaces it. A request
+    rejected while pending never had one. The customer sees "Tireman is on the way"
+    only while the request is `accepted` with a Tireman; a completed request shows the
+    Tireman's name as history and never the on-the-way wording.
+
 Unless explicitly approved later, do **not** introduce:
 
 - Live technician / Tireman GPS tracking
@@ -811,8 +853,10 @@ The following are **NOT** confirmed decisions and must not be silently resolved:
   58–59):** landmark / address search is a first-class alternative to browser
   geolocation, with map + draggable-marker confirmation. Both resolve to
   `latitude` / `longitude`; a location is still required to submit.
-- Whether **`service_requests.admin_id`** should remain nullable throughout the workflow or
-  become mandatory once accepted.
+- ~~Whether **`service_requests.admin_id`** should remain nullable throughout the workflow or
+  become mandatory once accepted.~~ **Resolved 2026-09-28 (Decision 67):** it stays
+  nullable (pending = not yet handled) and holds the last admin who changed the
+  request's status or Tireman assignment.
 - Whether **shop location** should eventually become editable through admin settings (i.e.
   move from the `config/shop.php` constant to a `shop_settings` table). Config-value
   treatment is confirmed for v1 (Decision 37); only the *future* editable option is open.
@@ -887,8 +931,11 @@ Do not turn these into confirmed requirements without approval.
   `admin/rescue.php` (status filter) + `admin/rescue-view.php` (customer,
   vehicle, stored location + frozen ETA, Tireman, handling admin, read-only
   straight-line map — Decision 33); customer reads stay owner-scoped.
-  Not yet built: Rescue status changes, Tireman assignment, sales
-  history / reports. No schema change.
+  Chunk 6.3 (2026-09-28): admin Rescue **status actions** on
+  `admin/rescue-view.php` — accept (with an active Tireman), reassign,
+  reject, complete — under **Decisions 65–68**; the customer booking page no
+  longer says "on the way" on a completed request.
+  Not yet built: sales history / reports. No schema change.
 - Repo on `main` at `C:\IPT102`, pushed to
   `https://github.com/Iyani99/VulcaTrack.git`; app at `C:\IPT102\vulcatrack\`
   served via a Windows junction from `C:\xampp\htdocs\vulcatrack`.
@@ -896,11 +943,11 @@ Do not turn these into confirmed requirements without approval.
   (`vulcatrack/database/schema.sql`); no seed data ships (the owner keeps a
   personal test account).
 - **Test harness (Phase 4.5, extended each chunk):** `vulcatrack/tests/` —
-  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **168 passed, 0
-  failed, 1980 assertions across 29 files** (unit, integration — schema +
-  repositories + Auth + inventory + sales + Tiremen + admin request reads + DB
-  session, and end-to-end HTTP incl. the POS, Transaction Summary, Tiremen and
-  Rescue pages). All green as of
+  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **181 passed, 0
+  failed, 2257 assertions across 31 files** (unit, integration — schema +
+  repositories + Auth + inventory + sales + Tiremen + admin request reads and
+  guarded status changes + DB session, and end-to-end HTTP incl. the POS,
+  Transaction Summary, Tiremen and Rescue pages and actions). All green as of
   2026-09-28.
 - Auth (Decisions 41–47): customer + admin login/logout, CLI
   `vulcatrack/database/seed_admin.php`, hardened sessions, guards.
@@ -908,9 +955,9 @@ Do not turn these into confirmed requirements without approval.
   saved vehicles (soft-delete), OTG rescue submission with a frozen-snapshot
   ETA, request history + customer-facing status. No schema change; OTG requests
   are always created `status = 'pending'`.
-- Admin side (Phase 5; Tiremen + read-only Rescue added in Phase 6):
+- Admin side (Phase 5; Tiremen + Rescue added in Phase 6):
   `vulcatrack/admin/*` — dashboard, inventory + item edit, POS, transaction
-  summary, Tiremen, Rescue (read-only). No schema change — still exactly the 8 tables.
+  summary, Tiremen, Rescue (list, detail, status actions). No schema change — still exactly the 8 tables.
 - ERD exists (PNG + text schema `docs/ERD/schema.dbml`).
 - Use-case diagram exists (PNG; changes pending — see Required Diagram Changes).
 - Six flowcharts exist.
@@ -968,6 +1015,7 @@ each item below.
 | N6 | `docs/requirements/` folder referenced but absent | **RESOLVED** | Record wording softened; folder intentionally not created. No requirements/SRS invented. |
 | N7 | `sales.sale_date` vs `sales.created_at` | **RESOLVED** | Decision 35: `sale_date` = system-controlled actual-sale timestamp (no backdating in v1); `created_at` = record creation; reports use `sale_date`. |
 | N8 | Figma not cross-checked | **OPEN (informational)** | Prototype is external and not provided this session. Cross-check needed before frontend work for: POS payment/receipt UI, inventory module layout, OTG map view (customer + admin), saved-vehicle management UI, admin dashboard contents. |
+| C6 | `service_requests.tireman_id` / `admin_id` note wording vs Decisions 65–68 | **RESOLVED** | Logged 2026-09-28 when Decisions 65–68 were added: the notes in `docs/ERD/schema.dbml`, the `vulcatrack/database/schema.sql` comments and `docs/VulcaTrack-Database-Notes_1.md` (§2, §3, §11) still described the older "assign after acceptance / NULL while rejected" wording. Corrected the same day on owner approval — **comment / note wording only**, no table, column, type, constraint, FK, CHECK or index changed. |
 
 ### Remaining conflicts after this update
 
@@ -990,13 +1038,33 @@ PNGs and the Figma prototype were not modified).
 |---|---|---|---|
 | D1 | `docs/ERD/VulcaTrack-ERD_1.png` | POSSIBLY OUTDATED | Regenerate from `docs/ERD/schema.dbml`. Must show: (a) new `tiremen` table (`tireman_id` PK, `name`, `contact_number`, `is_active`, `created_at`, `updated_at`); (b) `service_requests.tireman_id` nullable FK → `tiremen`; (c) `items.is_active` and `vehicles.is_active`; (d) `customers → service_requests` as **`1 : 0..N`** (not `1 : 1..N`). |
 | D2 | `docs/VulcaTrack-Use-Case-Diagram_1.png` | POSSIBLY OUTDATED | (a) Collapse "Manage Inventory" + "Manage Products" into one "Manage Inventory" use case (products + services). (b) Add admin use cases "Manage Tiremen" and "Assign Tireman to Request". (c) Keep "Manage Customer Accounts" flagged as proposed/unresolved. |
-| D3 | `docs/flows/VulcaTrack-2-Customer-Flow.png`, `docs/flows/VulcaTrack-5-OTG-Request-Flow.png` | POSSIBLY OUTDATED | Admin branch: add an "Assign Tireman" step after "Set Status: Accepted". Customer view after acceptance: show assigned Tireman name + contact number, "Tireman is on the way", the stored ETA, and the route/map. |
+| D3 | `docs/flows/VulcaTrack-2-Customer-Flow.png`, `docs/flows/VulcaTrack-5-OTG-Request-Flow.png` | POSSIBLY OUTDATED | Admin branch: add an "Assign Tireman" step after "Set Status: Accepted" *(per Decision 66 the Tireman is chosen in the same step as acceptance; also show accepted → rejected and the final states, Decision 65)*. Customer view after acceptance: show assigned Tireman name + contact number, "Tireman is on the way", the stored ETA, and the route/map. |
 | D4 | `docs/flows/VulcaTrack-4-POS-Flow.png` | CONSISTENT (annotate) | No structural change. Optionally note that "Enter Payment Amount / Payment Sufficient? / Calculate Change" are UI-only (not persisted) and "Generate Receipt" is a printable HTML view with no receipt table. |
 | D5 | `docs/flows/VulcaTrack-6-Inventory-Flow.png` | CONSISTENT | No change. "Deactivate / Delete Item" is now backed by `items.is_active`. |
 
 ---
 
 ## Revision History
+
+### 2026-09-28 — Phase 6.3: Rescue status rules (**decision change: Decisions 65–68 added**) + status
+
+- **Decision change (owner-approved):** added **Decisions 65–68** — the four allowed
+  OTG transitions with `rejected` / `completed` final (65); acceptance requires an
+  active Tireman in the same action, reassignment only while accepted (66);
+  `admin_id` = the last admin who changed status or assignment (67); the Tireman
+  stays on final requests (68). **Decision 25** gained a refinement note (not
+  rewritten). The `admin_id` open question moved to resolved. Intended-flow steps
+  11–12 and diagram change D3 annotated.
+- **Conflict C6** logged and **resolved** the same day: the `tireman_id` / `admin_id`
+  note wording in `schema.dbml` / `schema.sql` / Database Notes predated Decisions
+  65–68 and was corrected on owner approval (comments only — no structural change).
+- **Clarification (owner-approved, same day, before commit):** Decision 65 now states
+  that `accepted → completed` requires an assigned Tireman (it may since have been
+  deactivated); a legacy accepted request without one is assigned first.
+- **Status only:** Phase 6 Chunk 6.3 implemented (admin accept / reassign / reject /
+  complete via guarded updates; customer booking page fixed so a completed request
+  never says "on the way"). Tests **181 passed / 2257 assertions / 31 files**.
+- No renumbering, no schema change.
 
 ### 2026-09-28 — Phase 6 Chunk 6.2: read-only admin Rescue view (status only; no decision change)
 

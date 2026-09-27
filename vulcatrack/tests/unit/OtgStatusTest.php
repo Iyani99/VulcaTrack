@@ -38,6 +38,33 @@ test('OtgStatus::adminLabel uses plain labels, never customer wording', function
     assert_same('Completed', OtgStatus::adminLabel('completed'));
 });
 
+test('OtgStatus::canTransition allows exactly the four approved admin transitions', function () {
+    $allowed = [['pending', 'accepted'], ['pending', 'rejected'], ['accepted', 'completed'], ['accepted', 'rejected']];
+    foreach (OtgStatus::VALUES as $from) {
+        foreach (OtgStatus::VALUES as $to) {
+            $expected = in_array([$from, $to], $allowed, true);
+            assert_same($expected, OtgStatus::canTransition($from, $to), "{$from} -> {$to}");
+        }
+    }
+    // No-ops, unknown values and casing are all refused.
+    foreach ([['pending', 'pending'], ['accepted', 'accepted'], ['', 'accepted'], ['pending', 'cancelled'],
+              ['Pending', 'accepted'], ['dispatched', 'completed']] as [$from, $to]) {
+        assert_false(OtgStatus::canTransition($from, $to), "{$from} -> {$to} must be refused");
+    }
+});
+
+test('OtgStatus::isFinal: rejected and completed are final, nothing leaves them', function () {
+    assert_true(OtgStatus::isFinal('rejected'));
+    assert_true(OtgStatus::isFinal('completed'));
+    assert_false(OtgStatus::isFinal('pending'));
+    assert_false(OtgStatus::isFinal('accepted'));
+    foreach (['rejected', 'completed'] as $final) {
+        foreach (OtgStatus::VALUES as $to) {
+            assert_false(OtgStatus::canTransition($final, $to), "{$final} -> {$to} must be refused");
+        }
+    }
+});
+
 test('OtgStatus::badgeClass returns a class for every value and a safe default', function () {
     assert_same('badge--pending', OtgStatus::badgeClass('pending'));
     assert_same('badge--accepted', OtgStatus::badgeClass('accepted'));

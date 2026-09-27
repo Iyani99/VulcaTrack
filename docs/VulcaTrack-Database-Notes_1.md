@@ -9,6 +9,13 @@ This document explains the database structure and is meant to be read alongside
 
 ---
 
+> **Revision note — 2026-09-28 (Decisions 65–68, wording only):** the `service_requests`
+> `admin_id` / `tireman_id` descriptions (§2, §3) and the status rules (§11) were updated
+> for the owner-approved Rescue workflow: accepting assigns an active Tireman in the same
+> action; reassignment only while accepted; `accepted → rejected` allowed; `rejected` /
+> `completed` final and keep their Tireman; `admin_id` = last admin who changed status or
+> assignment. No structural change.
+
 ## 0. Revision Note — 2026-08-31 (Decision Review & Documentation Update)
 
 Parts of this document predate the Project Decision Record
@@ -162,8 +169,8 @@ An on-the-go request submitted by a logged-in customer.
 | `request_id` **(PK)** | Unique identifier |
 | `customer_id` **(FK → customers, NOT NULL)** | Required — requester must be authenticated |
 | `vehicle_id` **(FK → vehicles)** | Which of the customer's vehicles needs help |
-| `admin_id` **(FK → admins, nullable)** | Which admin is handling the request, once assigned |
-| `tireman_id` **(FK → tiremen, nullable)** | Assigned Tireman; set by an admin on/after acceptance. `NULL` while pending/rejected or accepted-but-unassigned. Independent of `admin_id`. |
+| `admin_id` **(FK → admins, nullable)** | The last admin who changed the request's status or Tireman assignment (Decision 67); `NULL` while pending |
+| `tireman_id` **(FK → tiremen, nullable)** | Assigned Tireman; set in the same admin action that accepts the request (an active Tireman — Decision 66), may be reassigned while accepted, and kept on rejected / completed requests as history (Decision 68). `NULL` while pending and on requests rejected while pending. Independent of `admin_id`. |
 | `problem_description` | What the customer needs |
 | `latitude` / `longitude` | Customer's shared location at request time |
 | `eta_minutes` *(nullable)* | Estimated travel time from the shop to the customer, calculated **once** at submission and then **frozen**. Never recomputed or updated for display afterward. |
@@ -180,8 +187,8 @@ An on-the-go request submitted by a logged-in customer.
 | customers → sales | 1 : 0..N | Optional — walk-in sales have no customer |
 | customers → service_requests | 1 : 0..N | A request needs exactly one customer; a customer may have zero or many. `customer_id` is `NOT NULL`. |
 | admins → sales | 1 : 1..N | Every sale is recorded by exactly one admin |
-| admins → service_requests | 1 : 0..N | Optional — set once an admin picks up the request |
-| tiremen → service_requests | 1 : 0..N | Optional — set once an admin assigns a Tireman to an accepted request |
+| admins → service_requests | 1 : 0..N | Optional — the last admin who changed status / assignment (`NULL` while pending) |
+| tiremen → service_requests | 1 : 0..N | Optional — set when an admin accepts the request (or reassigns it) |
 | vehicles → service_requests | 1 : 0..N | A vehicle can be used across several requests over time |
 | sales → sale_items | 1 : 1..N | A sale needs at least one line item |
 | items → sale_items | 1 : 0..N | An item can appear in many sales |
@@ -248,7 +255,7 @@ An on-the-go request submitted by a logged-in customer.
 
 `service_requests.status` uses four values: `pending`, `accepted`, `rejected`, `completed`. "Tireman is on the way" is UI copy shown while status is `accepted` — it is not a separate status value and doesn't require a schema change. No additional statuses are introduced.
 
-Assigning a Tireman (`tireman_id`) is a separate action from the status transition: an admin may set the status to `accepted` and assign the Tireman together, or assign shortly after. The customer-facing "assigned Tireman" panel (name + contact number) appears once `tireman_id` is set.
+Accepting a request and assigning its Tireman are **one** admin action (Decision 66): a request cannot be accepted without an active Tireman, and while it is accepted the admin may reassign another active Tireman. The allowed transitions are (Decision 65): `pending → accepted`, `pending → rejected`, `accepted → completed` (only with an assigned Tireman), `accepted → rejected`. `rejected` and `completed` are final, and a Tireman assigned before either keeps showing as history (Decision 68). The customer-facing "Tireman is on the way" panel (name + contact number) appears while the request is accepted with a Tireman; a completed request shows the Tireman's name as history. (Older data may still hold an accepted request without a Tireman; it is displayed safely and must be given a Tireman before it can be completed.)
 
 ## 12. Assumptions & Unresolved Decisions
 
@@ -279,6 +286,6 @@ Still open / not yet confirmed:
 - **`category` as a plain field vs. its own table** — currently a plain nullable field.
 - **Whether Admin can manually create customer accounts** — not modeled as a separate flow.
 - **"Manage Customer Accounts" (Admin)** — flagged proposed in the use-case diagram, pending confirmation it is in scope.
-- **Whether `service_requests.admin_id` must become mandatory once accepted** — currently nullable throughout.
+- ~~**Whether `service_requests.admin_id` must become mandatory once accepted**~~ — **resolved 2026-09-28 (Decision 67):** stays nullable; holds the last admin who changed status or assignment.
 - **Whether shop location should later become admin-editable** (move from `config/shop.php` to a `shop_settings` table) — a future consideration only.
 - **Denied-geolocation handling** beyond retry/fallback.
