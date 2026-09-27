@@ -5,7 +5,7 @@
  * Covers what only shows up across a full request: the admin guard on the
  * dashboard and the nav placeholder pages, customer/admin actor separation,
  * the admin logout staying POST + CSRF only, the shell nav containing exactly
- * Dashboard / POS / Inventory, and the rendered pages (plus the server log)
+ * Dashboard / POS / Inventory / Tiremen, and the rendered pages (plus the server log)
  * being free of PHP warnings/notices.
  *
  * A throwaway customer and admin are seeded via PDO before the server starts
@@ -32,7 +32,7 @@ test('admin shell: guards, actor separation, logout CSRF, nav and clean output',
         ->execute(['Shell Admin', $adminEmail, Password::hash($password)]);
     $adminId = (int) $pdo->lastInsertId();
 
-    $adminPages = ['/vulcatrack/admin/index.php', '/vulcatrack/admin/pos.php', '/vulcatrack/admin/inventory.php'];
+    $adminPages = ['/vulcatrack/admin/index.php', '/vulcatrack/admin/pos.php', '/vulcatrack/admin/inventory.php', '/vulcatrack/admin/tiremen.php'];
 
     $assertCleanHtml = function (string $html, string $where): void {
         foreach (['Warning:', 'Notice:', 'Deprecated:', 'Fatal error', 'Parse error', 'Stack trace:', 'Undefined '] as $bad) {
@@ -88,11 +88,15 @@ test('admin shell: guards, actor separation, logout CSRF, nav and clean output',
         assert_contains('Shell Admin', $dash['body'], 'the dashboard greets the signed-in admin by name');
         $assertCleanHtml($dash['body'], 'admin/index.php');
 
-        // 4. The shell nav has exactly Dashboard / POS / Inventory (no Phase 6 items).
+        // 4. The shell nav has exactly Dashboard / POS / Inventory / Tiremen
+        //    (Tiremen added in Phase 6 Chunk 6.1). Features not built yet
+        //    (Rescue, Reports) and unapproved ones stay out of the nav.
         assert_contains('>Dashboard<', $dash['body']);
         assert_contains('>POS<', $dash['body']);
         assert_contains('>Inventory<', $dash['body']);
-        foreach (['Reports', 'Rescue', 'Tiremen', 'Customers', 'Analytics'] as $absent) {
+        assert_contains('>Tiremen<', $dash['body']);
+        assert_contains('/vulcatrack/admin/tiremen.php"', $dash['body'], 'the Tiremen nav entry links to the Tireman list');
+        foreach (['Reports', 'Rescue', 'Customers', 'Analytics', 'Settings', 'Notifications'] as $absent) {
             assert_not_contains('>' . $absent . '<', $dash['body'], "the admin nav must not contain a '{$absent}' link yet");
         }
 

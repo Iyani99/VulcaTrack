@@ -5,7 +5,7 @@
  * and the same app.css classes.
  *
  * Expects:  string $pageTitle
- * Optional: string $navActive  (dashboard|pos|inventory)
+ * Optional: string $navActive  (dashboard|pos|inventory|tiremen)
  *           array  $admin       (session actor; only used by the page body)
  *           string $bodyClass   (page-specific <body> class, e.g. for print styles)
  *
@@ -17,6 +17,7 @@ $nav = [
     'dashboard' => ['Dashboard', '/admin/index.php'],
     'pos'       => ['POS',       '/admin/pos.php'],
     'inventory' => ['Inventory', '/admin/inventory.php'],
+    'tiremen'   => ['Tiremen',   '/admin/tiremen.php'],
 ];
 ?><!doctype html>
 <html lang="en">

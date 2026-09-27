@@ -1,9 +1,10 @@
 # VulcaTrack — Project Decision Record
 
 **Status:** Authoritative record of CONFIRMED project decisions.
-**Last updated:** 2026-09-23
-**Last revised:** 2026-09-23 — Phase 5 closed (status only, no decision change); same day:
-clarified Decision 62 (optional expected-total assertion) and Decision 50 (printable sale
+**Last updated:** 2026-09-28
+**Last revised:** 2026-09-28 — Phase 6 in progress: Chunk 6.1 Tireman management done
+(status only, no decision change). Previous: 2026-09-23 — Phase 5 closed; clarified
+Decision 62 (optional expected-total assertion) and Decision 50 (printable sale
 document is a non-official transaction reference)
 (see [Revision History](#revision-history)).
 **Purpose:** This file exists so that anyone new to the project can understand its
@@ -876,8 +877,14 @@ Do not turn these into confirmed requirements without approval.
   checkout through `SaleService`, product-only stock deduction) and the
   printable **Transaction Summary** (`admin/transaction-summary.php`,
   Decision 50 — non-official). Closed after an end-to-end walkthrough through
-  Apache, a phone/LAN check and a documentation pass. **Phase 6 (admin OTG
-  handling, Tireman assignment, reporting — Decision 49) has not started.**
+  Apache, a phone/LAN check and a documentation pass.
+- **Phase 6 (admin OTG handling, Tireman assignment, reporting — Decision 49)
+  IN PROGRESS.** Chunk 6.1 (2026-09-28): admin **Tireman management**
+  (Decision 24) — `admin/tiremen.php` + `admin/tireman-edit.php` on
+  `TiremanRepository`: view, Active / Inactive / All filter, add, edit,
+  activate / deactivate; no hard delete; `listActive()` ready for assignment.
+  Not yet built: admin OTG request handling, Tireman assignment, sales
+  history / reports. No schema change.
 - Repo on `main` at `C:\IPT102`, pushed to
   `https://github.com/Iyani99/VulcaTrack.git`; app at `C:\IPT102\vulcatrack\`
   served via a Windows junction from `C:\xampp\htdocs\vulcatrack`.
@@ -885,19 +892,20 @@ Do not turn these into confirmed requirements without approval.
   (`vulcatrack/database/schema.sql`); no seed data ships (the owner keeps a
   personal test account).
 - **Test harness (Phase 4.5, extended each chunk):** `vulcatrack/tests/` —
-  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **156 passed, 0
-  failed, 1396 assertions across 25 files** (unit, integration — schema +
-  repositories + Auth + inventory + sales + DB session, and end-to-end HTTP incl.
-  the POS and Transaction Summary). All green as of 2026-09-23.
+  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **162 passed, 0
+  failed, 1668 assertions across 27 files** (unit, integration — schema +
+  repositories + Auth + inventory + sales + Tiremen + DB session, and end-to-end
+  HTTP incl. the POS, Transaction Summary and Tiremen pages). All green as of
+  2026-09-28.
 - Auth (Decisions 41–47): customer + admin login/logout, CLI
   `vulcatrack/database/seed_admin.php`, hardened sessions, guards.
 - Customer side (Decision 48): `vulcatrack/customer/*` — dashboard, profile,
   saved vehicles (soft-delete), OTG rescue submission with a frozen-snapshot
   ETA, request history + customer-facing status. No schema change; OTG requests
   are always created `status = 'pending'`.
-- Admin side (Phase 5): `vulcatrack/admin/*` — dashboard, inventory +
-  item edit, POS, transaction summary. No schema change — still exactly the
-  8 tables.
+- Admin side (Phase 5; Tiremen added in Phase 6.1): `vulcatrack/admin/*` —
+  dashboard, inventory + item edit, POS, transaction summary, Tiremen. No
+  schema change — still exactly the 8 tables.
 - ERD exists (PNG + text schema `docs/ERD/schema.dbml`).
 - Use-case diagram exists (PNG; changes pending — see Required Diagram Changes).
 - Six flowcharts exist.
@@ -984,6 +992,17 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-28 — Phase 6 Chunk 6.1: Tireman management (status only; no decision change)
+
+- **Current Project Status** updated: Phase 6 is **in progress**. Chunk 6.1
+  implements the Tireman management already approved by **Decision 24** (view,
+  add, edit, activate / deactivate; soft only — Decisions 27–29). Tiremen remain
+  non-login records (Decisions 22–26). `TiremanRepository::listActive()` offers
+  only active Tiremen for the future assignment step (Decision 28). No Tireman
+  assignment, no `service_requests` change. Tests **162 passed / 1668
+  assertions / 27 files**.
+- No renumbering, no new decision, no schema change.
 
 ### 2026-09-23 — Phase 5 closed (status only; no decision change)
 

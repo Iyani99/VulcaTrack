@@ -31,15 +31,15 @@ We are building it as a **BSIT student project**, so the priorities are maintain
 
 - Separate administrator authentication
 - Admin dashboard and management functions
-- Customer management
-- Vehicle and service request management
-- Tireman assignment for accepted OTG requests
+- Tireman management (add, edit, activate / deactivate; Tiremen have no login)
 - Product and service management
 - Inventory management
 - In-shop Point of Sale (POS)
 - Walk-in customer sales
 - Registered customer sales
 - Printable transaction summaries (for reference only; not an official BIR invoice)
+
+Still in development (Phase 6): admin handling of OTG requests (accept / reject / complete, assigning a Tireman) and sales history / reports.
 
 ### On-the-Go Services
 
