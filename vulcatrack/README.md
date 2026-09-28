@@ -28,10 +28,12 @@ Active / Inactive / All filter, add, edit, activate / deactivate (no hard delete
 Tiremen stay non-login records. Chunk 6.2 added the **admin Rescue view** (request
 list with a status filter, detail page with a read-only map) and Chunk 6.3 the
 **status actions**: accept (with an active Tireman), reassign, reject, complete --
-rejected / completed are final. No schema change.
+rejected / completed are final. **Sales History** lists every recorded sale, newest
+first, with an optional From / To date filter; each row opens its Transaction Summary.
+No schema change.
 
-Not yet implemented (rest of Phase 6): sales reports / history. We add these only when
-the relevant chunk is explicitly approved.
+Not yet implemented (rest of Phase 6): sales reports. We add these only when the
+relevant chunk is explicitly approved.
 
 ## Design / decision documents
 
@@ -129,6 +131,7 @@ database table (Decision 37); route/ETA code reads from here.
 | `admin/item-edit.php` | Add (`?id` absent) / edit (`?id=N`). Price in pesos (stored exactly, integer-centavo maths). Products carry stock + optional reorder level; services never do. |
 | `admin/pos.php` | Point of Sale: pick active items, session-backed cart (one line per item; max 50 items / 9,999 per item), optional link to an **existing** customer (blank = walk-in; the POS never creates accounts), cash received + change (checked on the server, **never stored**), then **Complete sale**. |
 | `admin/transaction-summary.php?id=N` | Printable **Transaction Summary** of a recorded sale -- shop name/address, sale no., date/time, cashier, customer or Walk-in, lines with the **frozen** unit price, total. Browser print; *"For transaction reference only. Not an official BIR invoice."* |
+| `admin/sales.php` | Phase 6, read-only **Sales History**: every recorded sale, newest first (sale no., date/time, cashier, customer or Walk-in, stored total). Optional From / To filter on the sale date (both inclusive; no filter by default). *View* opens the sale's Transaction Summary. Recorded sales cannot be edited or deleted. |
 | `admin/tiremen.php` | Phase 6.1. Tiremen (the non-login people who perform OTG jobs): Active / Inactive / All filter; activate / deactivate is POST + CSRF (soft -- never deleted) and returns to the same filter. Tiremen are assigned to requests on the Rescue detail page (active ones only). |
 | `admin/tireman-edit.php` | Add (`?id` absent) / edit (`?id=N`) a Tireman's name and contact number. |
 | `admin/rescue.php` | Phase 6.2, read-only list. Every customer's OTG requests, filtered by status (Pending by default / Accepted / Rejected / Completed / All), newest first. |

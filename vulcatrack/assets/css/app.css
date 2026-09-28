@@ -42,7 +42,8 @@ label {
 
 input[type="text"],
 input[type="email"],
-input[type="password"] {
+input[type="password"],
+input[type="date"] {
   width: 100%;
   padding: .5rem .55rem;
   border: 1px solid #c7cbd1;
@@ -261,6 +262,7 @@ button.secondary:hover { background: #e2e4e8; }
 }
 .filterbar label { margin: 0; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: #666; }
 .filterbar input[type="text"],
+.filterbar input[type="date"],
 .filterbar select { margin-top: .25rem; width: auto; min-width: 9rem; font-weight: 400; text-transform: none; letter-spacing: 0; color: #1a1a1a; }
 .filterbar__check { display: flex; align-items: center; gap: .4rem; text-transform: none; letter-spacing: 0; }
 .filterbar__check input { margin: 0; width: auto; }

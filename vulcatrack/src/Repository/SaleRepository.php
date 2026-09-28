@@ -2,6 +2,8 @@
 
 namespace VulcaTrack\Repository;
 
+use DateTimeImmutable;
+use InvalidArgumentException;
 use PDO;
 use VulcaTrack\Support\Money;
 
@@ -112,6 +114,77 @@ class SaleRepository
         $row['total_amount_centavos'] = Money::toCentavos((string) $row['total_amount']);
 
         return $row;
+    }
+
+    /**
+     * Recorded sales for the admin Sales History list, newest first
+     * (sale_date DESC, then sale_id DESC so equal timestamps stay in a fixed
+     * order). One query: each sale joined to its recording admin and, for a
+     * linked sale, its customer (customer_name null → "Walk-in"). Read-only —
+     * sale_items and the current items.price are never touched; the stored
+     * total_amount is the transaction total (+ total_amount_centavos).
+     *
+     * $from / $to are optional calendar days 'YYYY-MM-DD' (see isValidDay()),
+     * both inclusive, applied to sale_date — the reporting date (Decision 35):
+     * sale_date >= from 00:00:00 and sale_date < (to + 1 day) 00:00:00. A
+     * from later than to simply matches nothing; the page reports that case
+     * before calling here.
+     *
+     * @return array<int,array<string,mixed>>
+     * @throws InvalidArgumentException when $from or $to is not a valid day
+     */
+    public function listForHistory(?string $from = null, ?string $to = null): array
+    {
+        $sql = 'SELECT s.sale_id, s.customer_id, s.admin_id, s.sale_date, s.total_amount,
+                       a.full_name AS admin_name,
+                       c.full_name AS customer_name
+                FROM sales s
+                JOIN admins a ON a.admin_id = s.admin_id
+                LEFT JOIN customers c ON c.customer_id = s.customer_id';
+        $where  = [];
+        $params = [];
+        if ($from !== null) {
+            if (!self::isValidDay($from)) {
+                throw new InvalidArgumentException("Invalid from date: {$from}");
+            }
+            $where[]  = 's.sale_date >= ?';
+            $params[] = $from . ' 00:00:00';
+        }
+        if ($to !== null) {
+            if (!self::isValidDay($to)) {
+                throw new InvalidArgumentException("Invalid to date: {$to}");
+            }
+            // 9999-12-31 has no following DATETIME day; every sale is on or before it.
+            if ($to !== '9999-12-31') {
+                $where[]  = 's.sale_date < ?';
+                $params[] = (new DateTimeImmutable($to))->modify('+1 day')->format('Y-m-d') . ' 00:00:00';
+            }
+        }
+        if ($where) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $sql .= ' ORDER BY s.sale_date DESC, s.sale_id DESC';
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        $rows = $stmt->fetchAll();
+        foreach ($rows as $i => $row) {
+            $rows[$i]['total_amount_centavos'] = Money::toCentavos((string) $row['total_amount']);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * True for a real calendar day written exactly 'YYYY-MM-DD' within the
+     * DATETIME year range (1000-9999) — the Sales History date-filter format
+     * (what <input type="date"> submits). '2026-02-31' and '2026-9-8' are not.
+     */
+    public static function isValidDay(string $day): bool
+    {
+        return preg_match('/^([1-9]\d{3})-(\d{2})-(\d{2})$/D', $day, $m) === 1
+            && checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
     }
 
     /**

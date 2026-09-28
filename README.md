@@ -39,8 +39,9 @@ We are building it as a **BSIT student project**, so the priorities are maintain
 - Walk-in customer sales
 - Registered customer sales
 - Printable transaction summaries (for reference only; not an official BIR invoice)
+- Sales history (all recorded sales, newest first, with an optional date filter)
 
-Still in development (Phase 6): sales history / reports.
+Still in development (Phase 6): sales reports.
 
 ### On-the-Go Services
 

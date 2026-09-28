@@ -4,7 +4,7 @@
 **Last updated:** 2026-09-28
 **Last revised:** 2026-09-28 — **Decisions 65–68 added** (owner-approved Rescue status rules,
 Phase 6.3; Decision 25 refined, `admin_id` open question resolved) and Phase 6 status updated
-(Chunks 6.1–6.3 done). Previous: 2026-09-23 — Phase 5 closed; clarified
+(Chunks 6.1–6.3 and Sales History done). Previous: 2026-09-23 — Phase 5 closed; clarified
 Decision 62 (optional expected-total assertion) and Decision 50 (printable sale
 document is a non-official transaction reference)
 (see [Revision History](#revision-history)).
@@ -935,7 +935,10 @@ Do not turn these into confirmed requirements without approval.
   `admin/rescue-view.php` — accept (with an active Tireman), reassign,
   reject, complete — under **Decisions 65–68**; the customer booking page no
   longer says "on the way" on a completed request.
-  Not yet built: sales history / reports. No schema change.
+  Sales History (2026-09-28): read-only `admin/sales.php` — all recorded
+  sales newest first, optional From / To filter on `sale_date` (Decision 35),
+  each row linking to the Transaction Summary (Decision 50).
+  Not yet built: sales reports. No schema change.
 - Repo on `main` at `C:\IPT102`, pushed to
   `https://github.com/Iyani99/VulcaTrack.git`; app at `C:\IPT102\vulcatrack\`
   served via a Windows junction from `C:\xampp\htdocs\vulcatrack`.
@@ -1045,6 +1048,17 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-28 — Phase 6: admin Sales History (status only; no decision change)
+
+- **Current Project Status** updated: the admin can now list every recorded sale
+  (`admin/sales.php`) — read-only, newest first, with an optional From / To
+  filter on `sales.sale_date` (the reporting date, Decision 35), showing the
+  cashier, the customer or "Walk-in" (Decision 14) and the stored total. Each
+  row opens the existing Transaction Summary (Decision 50), which stays the one
+  sale-detail page. Implements the history half of Decision 49; Sales Reports
+  are still to come. Tests **191 passed / 2575 assertions / 34 files**.
+- No renumbering, no new decision, no schema change.
 
 ### 2026-09-28 — Phase 6.3: Rescue status rules (**decision change: Decisions 65–68 added**) + status
 
