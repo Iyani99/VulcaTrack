@@ -244,7 +244,13 @@ test('admin rescue (list + detail view): guard, filters, detail, escaping, map, 
             $d = $server->request($VIEW . '?id=' . $id);
             assert_same(200, $d['status']);
             assert_contains('">' . $label . '</span>', $d['body'], "{$label} renders its plain label");
-            assert_same(1, substr_count($d['body'], 'method="post"'), "a {$label} (final) request has no form except logout");
+            // No status-changing form. Phase 7.3d: a Completed request without a sale also
+            // offers the late-entry "Record sale in POS" POST; a Rejected one never does.
+            $expectForms = $label === 'Completed' ? 2 : 1;
+            assert_same($expectForms, substr_count($d['body'], 'method="post"'), "a {$label} (final) request: no status-changing form");
+            assert_same($expectForms - 1, substr_count($d['body'], 'value="start_rescue"'), "{$label}: the only extra form is Record sale in POS");
+            assert_not_contains('value="reject"', $d['body'], "{$label}: no reject");
+            assert_not_contains('value="accept"', $d['body'], "{$label}: no accept");
             $assertCleanHtml($d['body'], "rescue-view.php ({$label})");
         }
 

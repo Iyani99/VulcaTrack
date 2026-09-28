@@ -18,11 +18,19 @@
  * The rules live in OtgStatus::canTransition() and are enforced again by the
  * repository's guarded UPDATEs, so a request changed in another tab is never
  * overwritten. The acting admin always comes from the session.
+ *
+ * Sale (Phase 7.3d): an accepted or completed request with no sale offers
+ * "Record sale in POS" (a POST to the POS's start_rescue action); once a sale
+ * is linked it is shown here ("Sale recorded" — no payment method is stored)
+ * and Reject is no longer offered (the repository refuses it too).
+ * Recording a sale never changes the request; completing stays separate.
  */
 
 use VulcaTrack\Auth\Csrf;
+use VulcaTrack\Repository\SaleRepository;
 use VulcaTrack\Repository\ServiceRequestRepository;
 use VulcaTrack\Repository\TiremanRepository;
+use VulcaTrack\Support\Money;
 use VulcaTrack\Support\OtgStatus;
 
 require __DIR__ . '/../includes/bootstrap.php';
@@ -33,6 +41,7 @@ $shop     = require VULCATRACK_ROOT . '/config/shop.php';
 $pdo      = vulcatrack_db();
 $requests = new ServiceRequestRepository($pdo);
 $tiremen  = new TiremanRepository($pdo);
+$sales    = new SaleRepository($pdo);
 
 /** A positive whole number that fits a signed INT id column; anything else is 0 ("none"). */
 function rescue_id($raw): int
@@ -110,9 +119,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!OtgStatus::canTransition($from, 'rejected')) {
                         break; // generic error
                     }
-                    $flash = $requests->reject($requestId, $from, $adminId)
-                        ? ['notice', 'Request rejected.']
-                        : $stale;
+                    if ($requests->reject($requestId, $from, $adminId)) {
+                        $flash = ['notice', 'Request rejected.'];
+                    } elseif ($sales->findForServiceRequest($requestId) !== null) {
+                        // The guarded UPDATE refuses a request with a linked sale (Phase 7.3d).
+                        $flash = ['error', 'This Rescue has a recorded sale and can no longer be rejected.'];
+                    } else {
+                        $flash = $stale;
+                    }
                     break;
 
                 case 'complete':
@@ -143,6 +157,7 @@ unset($_SESSION['rescue_flash']);
 $status        = (string) $request['status'];
 $activeTiremen = OtgStatus::isFinal($status) ? [] : $tiremen->listActive();
 $currentTid    = $request['tireman_id'] !== null ? (int) $request['tireman_id'] : null;
+$linkedSale    = $sales->findForServiceRequest($requestId);   // at most one (UNIQUE)
 
 /** A tel: link for a stored phone number (display text escaped as typed). */
 function rescue_tel(string $number): string
@@ -224,6 +239,32 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   </div>
 </section>
 
+<?php /* Phase 7.3d: the sale recorded for this request (at most one), or the way to record it */ ?>
+<?php if ($linkedSale !== null): ?>
+  <section class="card rescue-sale" aria-labelledby="rescue-sale-title">
+    <h2 class="rescue-panel__title" id="rescue-sale-title">Sale</h2>
+    <p class="rescue-sale__state">Sale recorded</p>
+    <dl class="kv">
+      <dt>Sale no.</dt><dd>Sale #<?= (int) $linkedSale['sale_id'] ?></dd>
+      <dt>Total</dt><dd class="rescue-sale__total">&#8369;<?= e(Money::format((int) $linkedSale['total_amount_centavos'])) ?></dd>
+      <dt>Date / time</dt><dd><?= e($linkedSale['sale_date']) ?></dd>
+      <dt>Recorded by</dt><dd><?= e($linkedSale['admin_name']) ?></dd>
+    </dl>
+    <p><a href="<?= e(vulcatrack_url('/admin/transaction-summary.php?id=' . (int) $linkedSale['sale_id'])) ?>">View Transaction Summary</a></p>
+  </section>
+<?php elseif (OtgStatus::canRecordSale($status)): ?>
+  <section class="card rescue-sale" aria-labelledby="rescue-sale-title">
+    <h2 class="rescue-panel__title" id="rescue-sale-title">Sale</h2>
+    <p class="muted">No sale recorded for this request yet.<?= $status === 'completed' ? ' It can still be recorded after the request was completed.' : '' ?></p>
+    <form method="post" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>">
+      <?= Csrf::field() ?>
+      <input type="hidden" name="_action" value="start_rescue">
+      <input type="hidden" name="request_id" value="<?= (int) $request['request_id'] ?>">
+      <button type="submit" class="secondary">Record sale in POS</button>
+    </form>
+  </section>
+<?php endif; ?>
+
 <?php if (!OtgStatus::isFinal($status)): ?>
   <section class="card rescue-actions">
     <h2 class="rescue-panel__title">Actions</h2>
@@ -283,6 +324,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <?php endif; ?>
     <?php endif; ?>
 
+    <?php if ($linkedSale === null): /* a request with a recorded sale cannot be rejected (enforced by the repository) */ ?>
     <form method="post" action="<?= e($formUrl) ?>">
       <?= Csrf::field() ?>
       <input type="hidden" name="_action" value="reject">
@@ -290,6 +332,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <button type="submit" class="linklike"
               onclick="return confirm('Reject this request? This cannot be undone.');">Reject request</button>
     </form>
+    <?php endif; ?>
     </div>
     </div>
   </section>

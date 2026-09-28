@@ -11,6 +11,11 @@
  * current items.price is never read. There are no forms that change anything
  * here — recorded sales cannot be edited or deleted. No reporting / totals
  * (that is Sales Reports) and no pagination.
+ *
+ * Source (Phase 7.3d) is derived from sales.service_request_id only: NULL =
+ * "In-shop" (an ordinary POS sale — including every sale recorded before the
+ * link existed; nothing is guessed), otherwise "Rescue #N" linking to the
+ * request. It is independent of the Customer column.
  */
 
 use VulcaTrack\Repository\SaleRepository;
@@ -68,7 +73,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <div class="table-scroll">
   <table class="datatable">
     <thead>
-      <tr><th>Sale no.</th><th>Date / time</th><th>Cashier</th><th>Customer</th><th class="num">Total</th><th></th></tr>
+      <tr><th>Sale no.</th><th>Date / time</th><th>Cashier</th><th>Customer</th><th>Source</th><th class="num">Total</th><th></th></tr>
     </thead>
     <tbody>
     <?php foreach ($sales as $s): ?>
@@ -80,6 +85,10 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
         <td><?= $s['customer_name'] !== null
             ? '<span class="tag tag--customer">' . e($s['customer_name']) . '</span>'
             : '<span class="tag tag--walkin">Walk-in</span>' ?></td>
+        <?php /* source comes only from the Rescue link, never from the customer (Phase 7.3d) */ ?>
+        <td><?= $s['service_request_id'] !== null
+            ? '<a class="tag tag--rescue" href="' . e(vulcatrack_url('/admin/rescue-view.php?id=' . (int) $s['service_request_id'])) . '">Rescue #' . (int) $s['service_request_id'] . '</a>'
+            : '<span class="tag tag--inshop">In-shop</span>' ?></td>
         <td class="num cell-money">&#8369;<?= e(Money::format((int) $s['total_amount_centavos'])) ?></td>
         <td class="rowactions">
           <a href="<?= e(vulcatrack_url('/admin/transaction-summary.php?id=' . (int) $s['sale_id'])) ?>">View</a>

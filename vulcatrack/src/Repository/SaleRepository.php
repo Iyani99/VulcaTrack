@@ -101,6 +101,38 @@ class SaleRepository
     }
 
     /**
+     * The sale recorded for a Rescue request, for the admin Rescue detail
+     * panel (Phase 7.3d): sale_id, sale_date, total_amount (+ _centavos) and
+     * the recording admin's name. At most one exists (UNIQUE key). A plain
+     * read — no locks. Null when none has been recorded.
+     *
+     * @return array{sale_id: int, sale_date: string, total_amount: string, total_amount_centavos: int, admin_name: string}|null
+     */
+    public function findForServiceRequest(int $serviceRequestId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT s.sale_id, s.sale_date, s.total_amount, a.full_name AS admin_name
+             FROM sales s
+             JOIN admins a ON a.admin_id = s.admin_id
+             WHERE s.service_request_id = ?
+             LIMIT 1'
+        );
+        $stmt->execute([$serviceRequestId]);
+        $row = $stmt->fetch();
+        if ($row === false) {
+            return null;
+        }
+
+        return [
+            'sale_id'               => (int) $row['sale_id'],
+            'sale_date'             => (string) $row['sale_date'],
+            'total_amount'          => (string) $row['total_amount'],
+            'total_amount_centavos' => Money::toCentavos((string) $row['total_amount']),
+            'admin_name'            => (string) $row['admin_name'],
+        ];
+    }
+
+    /**
      * Insert one `sale_items` line. $unitPriceCentavos is the item's price
      * frozen at sale time; $subtotalCentavos must equal quantity * unit price.
      */
@@ -129,14 +161,15 @@ class SaleRepository
     /**
      * Sale header for the printable HTML receipt (Decision 50): shop-independent
      * fields plus the recording admin's name and the linked customer's name
-     * (null → the receipt prints "Walk-in"). Null when the sale id is unknown.
+     * (null → the receipt prints "Walk-in"), and service_request_id (the Rescue
+     * request it was recorded for, or null). Null when the sale id is unknown.
      *
      * @return array<string,mixed>|null
      */
     public function findSaleForReceipt(int $saleId): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT s.sale_id, s.customer_id, s.admin_id, s.sale_date, s.total_amount, s.created_at,
+            'SELECT s.sale_id, s.customer_id, s.service_request_id, s.admin_id, s.sale_date, s.total_amount, s.created_at,
                     a.full_name AS admin_name,
                     c.full_name AS customer_name
              FROM sales s
@@ -158,7 +191,8 @@ class SaleRepository
      * Recorded sales for the admin Sales History list, newest first
      * (sale_date DESC, then sale_id DESC so equal timestamps stay in a fixed
      * order). One query: each sale joined to its recording admin and, for a
-     * linked sale, its customer (customer_name null → "Walk-in"). Read-only —
+     * linked sale, its customer (customer_name null → "Walk-in"); plus
+     * service_request_id (null = an ordinary POS sale, else its Rescue). Read-only —
      * sale_items and the current items.price are never touched; the stored
      * total_amount is the transaction total (+ total_amount_centavos).
      *
@@ -173,7 +207,7 @@ class SaleRepository
      */
     public function listForHistory(?string $from = null, ?string $to = null): array
     {
-        $sql = 'SELECT s.sale_id, s.customer_id, s.admin_id, s.sale_date, s.total_amount,
+        $sql = 'SELECT s.sale_id, s.customer_id, s.service_request_id, s.admin_id, s.sale_date, s.total_amount,
                        a.full_name AS admin_name,
                        c.full_name AS customer_name
                 FROM sales s

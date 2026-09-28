@@ -16,6 +16,10 @@
  * shows the current name.
  *
  * Read-only: GET, admin guard, no form handling.
+ *
+ * A sale recorded for a Rescue request (Phase 7.3d) shows one extra row,
+ * "Rescue request #N" — traceability only; still no payment method or cash
+ * data (none is stored).
  */
 
 use VulcaTrack\Repository\SaleRepository;
@@ -77,6 +81,9 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <div><dt>Date / time</dt><dd><?= e($sale['sale_date']) ?></dd></div>
     <div><dt>Cashier</dt><dd><?= e($sale['admin_name']) ?></dd></div>
     <div><dt>Customer</dt><dd><?= $sale['customer_name'] !== null ? e($sale['customer_name']) : 'Walk-in' ?></dd></div>
+    <?php if ($sale['service_request_id'] !== null): /* Phase 7.3d traceability; prints as plain text */ ?>
+      <div><dt>Rescue request</dt><dd><a href="<?= e(vulcatrack_url('/admin/rescue-view.php?id=' . (int) $sale['service_request_id'])) ?>">#<?= (int) $sale['service_request_id'] ?></a></dd></div>
+    <?php endif; ?>
   </dl>
 
   <div class="table-scroll">

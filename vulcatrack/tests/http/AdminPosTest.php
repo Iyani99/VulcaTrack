@@ -98,7 +98,8 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
 
         $page  = fn (string $qs = '') => $server->request($POS . $qs)['body'];
         $token = fn () => HttpServer::csrfToken($page());
-        $post  = fn (array $fields) => $server->request($POS, $fields + ['_csrf' => $token()], true)['body'];
+        // every cart change carries the context it was rendered for ("" = ordinary sale; Phase 7.3d stale-tab guard)
+        $post  = fn (array $fields) => $server->request($POS, $fields + ['_csrf' => $token(), 'expected_rescue_id' => ''], true)['body'];
         $qtyOf = function (string $html, int $itemId): ?int {
             return preg_match('/name="qty\[' . $itemId . '\]"\s+value="(\d+)"/', $html, $m) ? (int) $m[1] : null;
         };
@@ -106,7 +107,7 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         $checkout = function (string $cash, array $override = []) use ($page, $server, $POS) {
             $html = $page();
             preg_match_all('/name="qty\[(\d+)\]"\s+value="(\d+)"/', $html, $m, PREG_SET_ORDER);
-            $fields = ['_action' => 'checkout', '_csrf' => HttpServer::csrfToken($html), 'cash_tendered' => $cash];
+            $fields = ['_action' => 'checkout', '_csrf' => HttpServer::csrfToken($html), 'cash_tendered' => $cash, 'expected_rescue_id' => ''];
             if (preg_match('/name="expected_total" value="(\d+)"/', $html, $e)) {
                 $fields['expected_total'] = $e[1];
             }
@@ -170,7 +171,7 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         assert_same(1, preg_match_all('/name="qty\[' . $P . '\]"/', $body), 'exactly one cart line for the item');
         assert_contains('Not enough stock', $post(['_action' => 'add', 'item_id' => (string) $P, 'quantity' => '8']), 'cart + new qty checked against stock');
         $post(['_action' => 'add', 'item_id' => (string) $S, 'quantity' => '1', 'q' => $tag, 'type' => 'service']);
-        $r = $server->request($POS, ['_action' => 'add', 'item_id' => (string) $H, 'quantity' => '1', 'q' => $tag, 'type' => 'product', '_csrf' => $token()]);
+        $r = $server->request($POS, ['_action' => 'add', 'item_id' => (string) $H, 'quantity' => '1', 'q' => $tag, 'type' => 'product', '_csrf' => $token(), 'expected_rescue_id' => '']);
         assert_same(302, $r['status'], 'cart changes redirect (PRG)');
         assert_contains('q=' . $tag, (string) $r['location'], 'the item search is kept after adding');
         assert_contains('type=product', (string) $r['location']);
@@ -229,7 +230,7 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         assert_same('80050', $e[1] ?? null, 'the displayed total is carried in integer centavos');
         $q('UPDATE items SET price = ? WHERE item_id = ?', ['155.00', $P]);
         $r = $server->request($POS, [
-            '_action' => 'checkout', '_csrf' => HttpServer::csrfToken($html), 'cash_tendered' => '1000',
+            '_action' => 'checkout', '_csrf' => HttpServer::csrfToken($html), 'cash_tendered' => '1000', 'expected_rescue_id' => '',
             'expected_total' => $e[1], "qty[{$P}]" => '4', "qty[{$S}]" => '1',
         ]);
         assert_contains('total changed to ₱820.50', $r['body'], 'stale display refused; the new DB total is shown');
@@ -300,7 +301,7 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         $body = $post(['_action' => 'clear']);
         assert_contains('Sale cancelled', $body);
         assert_contains('No items yet', $body);
-        assert_contains('no items yet', $server->request($POS, ['_action' => 'checkout', '_csrf' => $token(), 'cash_tendered' => '100'])['body']);
+        assert_contains('no items yet', $server->request($POS, ['_action' => 'checkout', '_csrf' => $token(), 'cash_tendered' => '100', 'expected_rescue_id' => ''])['body']);
         assert_same(2, $saleCount(), 'exactly the two completed sales exist');
 
         $log = $server->serverStderr();

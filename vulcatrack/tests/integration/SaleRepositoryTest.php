@@ -77,6 +77,37 @@ test('SaleRepository::createSale stores the Rescue link when given one (NULL by 
     });
 });
 
+test('SaleRepository::findForServiceRequest returns the linked sale for the Rescue panel; history / receipt reads expose the link', function () {
+    $pdo = test_pdo();
+    TestDb::rollback($pdo, function () use ($pdo) {
+        $adminId = (new AdminRepository($pdo))->create('Panel Cashier', TestDb::email('a'), Password::hash('password123'));
+        $custId  = (new CustomerRepository($pdo))->create('Panel Customer', TestDb::email('c'), '0917', Password::hash('password123'));
+        $pdo->prepare("INSERT INTO vehicles (customer_id, plate_number) VALUES (?, 'SR-2')")->execute([$custId]);
+        $pdo->prepare("INSERT INTO service_requests (customer_id, vehicle_id, problem_description, status) VALUES (?, ?, 'flat', 'completed')")
+            ->execute([$custId, (int) $pdo->lastInsertId()]);
+        $requestId = (int) $pdo->lastInsertId();
+        $repo = new SaleRepository($pdo);
+
+        assert_null($repo->findForServiceRequest($requestId), 'no sale yet');
+        $saleId = $repo->createSale($adminId, $custId, '2001-02-03 04:05:06', 31050, $requestId);
+        $plain  = $repo->createSale($adminId, null, '2001-02-03 05:00:00', 100);
+
+        assert_same([
+            'sale_id' => $saleId, 'sale_date' => '2001-02-03 04:05:06', 'total_amount' => '310.50',
+            'total_amount_centavos' => 31050, 'admin_name' => 'Panel Cashier',
+        ], $repo->findForServiceRequest($requestId));
+
+        assert_same($requestId, (int) $repo->findSaleForReceipt($saleId)['service_request_id']);
+        assert_null($repo->findSaleForReceipt($plain)['service_request_id']);
+        $hist = [];
+        foreach ($repo->listForHistory('2001-02-03', '2001-02-03') as $row) {
+            $hist[(int) $row['sale_id']] = $row['service_request_id'];
+        }
+        assert_same($requestId, (int) $hist[$saleId], 'Sales History can derive "Rescue #N"');
+        assert_null($hist[$plain], 'and "In-shop" for an unlinked sale');
+    });
+});
+
 test('SaleRepository::addSaleItem freezes unit price and stores the passed subtotal', function () {
     $pdo = test_pdo();
     TestDb::rollback($pdo, function () use ($pdo) {

@@ -24,16 +24,28 @@
  * Layout (Phase 7.3c): a catalogue of item cards on the left and the Current
  * sale panel on the right (stacked on narrow screens). Presentation only —
  * the forms, field names, form owners and Enter-key behaviour are unchanged.
+ *
+ * Rescue sales (Phase 7.3d): the Rescue detail page POSTs `start_rescue`,
+ * which puts the session cart into Rescue mode for that request (only from a
+ * clean cart) and locks the customer to the request's customer. Checkout then
+ * passes the request id FROM THE SESSION to SaleService, which re-validates
+ * everything and links the sale. Because every tab shares the one session
+ * cart, every cart-changing form carries `expected_rescue_id` (the context it
+ * was rendered for: "" = ordinary sale) and is refused if the cart's context
+ * has changed since.
  */
 
 use VulcaTrack\Auth\Csrf;
 use VulcaTrack\Repository\CustomerRepository;
 use VulcaTrack\Repository\ItemRepository;
+use VulcaTrack\Repository\SaleRepository;
+use VulcaTrack\Repository\ServiceRequestRepository;
 use VulcaTrack\Service\PosCart;
 use VulcaTrack\Service\PosCartException;
 use VulcaTrack\Service\SaleException;
 use VulcaTrack\Service\SaleService;
 use VulcaTrack\Support\Money;
+use VulcaTrack\Support\OtgStatus;
 
 require __DIR__ . '/../includes/bootstrap.php';
 require __DIR__ . '/../includes/auth.php';
@@ -42,6 +54,8 @@ $admin     = require_admin();
 $pdo       = vulcatrack_db();
 $items     = new ItemRepository($pdo);
 $customers = new CustomerRepository($pdo);
+$sales     = new SaleRepository($pdo);
+$requests  = new ServiceRequestRepository($pdo);
 $cart      = new PosCart($_SESSION);
 
 /** The item-list filters (search + type), read from GET or carried through a POST. */
@@ -70,6 +84,12 @@ function pos_filter_fields(array $filters): string
         $html .= '<input type="hidden" name="' . e($name) . '" value="' . e($value) . '">';
     }
     return $html;
+}
+
+/** The context this page was rendered for, carried by every cart-changing form (stale-tab guard). */
+function pos_context_field(PosCart $cart): string
+{
+    return '<input type="hidden" name="expected_rescue_id" value="' . e($cart->contextToken()) . '">';
 }
 
 /** A plain run of digits (no sign, no decimals) with at most $maxDigits digits → int, else null. */
@@ -125,6 +145,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // --- start_rescue (posted by the Rescue detail page) -------------------
+    // The request is re-checked here (the page's button is only a convenience);
+    // SaleService checks it again, under a lock, at checkout.
+    if ($action === 'start_rescue') {
+        $requestId = pos_digits($_POST['request_id'] ?? null, 10) ?? 0;
+        $rescue    = ($requestId > 0 && $requestId <= 2147483647) ? $requests->findForAdmin($requestId) : null;
+        try {
+            if ($rescue === null) {
+                throw new PosCartException('That Rescue request was not found.');
+            }
+            if (!OtgStatus::canRecordSale((string) $rescue['status'])) {
+                throw new PosCartException(
+                    "A sale can only be recorded for an accepted or completed Rescue request; request #{$requestId} is {$rescue['status']}."
+                );
+            }
+            $linked = $sales->findForServiceRequest($requestId);
+            if ($linked !== null) {
+                throw new PosCartException("Rescue request #{$requestId} already has a recorded sale (Sale #{$linked['sale_id']}).");
+            }
+            if ($customers->findById((int) $rescue['customer_id']) === null) {
+                throw new PosCartException("The customer of Rescue request #{$requestId} could not be found.");
+            }
+            $started = $cart->startRescue($requestId, (int) $rescue['customer_id']);
+            pos_flash('notice', $started
+                ? "Recording a sale for Rescue request #{$requestId} ({$rescue['customer_name']}). Add the items and services actually used."
+                : "Rescue request #{$requestId} is already open in the POS.");
+        } catch (PosCartException $e) {
+            pos_flash('error', $e->getMessage());
+        }
+        header('Location: ' . pos_url(['q' => '', 'type' => '']));
+        exit;
+    }
+
+    // --- stale-tab guard: the form must have been rendered for the cart's current context
+    if (!$cart->matchesContext($_POST['expected_rescue_id'] ?? null)) {
+        pos_flash('error', 'This sale changed in another window (a Rescue sale was started or ended). '
+            . 'Nothing was changed — review the sale below and try again.');
+        header('Location: ' . pos_url($filters));
+        exit;
+    }
+
     if ($action !== 'checkout') {
         try {
             switch ($action) {
@@ -176,8 +237,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
 
                 case 'clear':
+                    $wasRescue = $cart->serviceRequestId();
                     $cart->clear();
-                    pos_flash('notice', 'Sale cancelled. The cart is empty.');
+                    pos_flash('notice', $wasRescue !== null
+                        ? "Rescue sale for request #{$wasRescue} cancelled. Nothing was recorded; the POS is back to a walk-in sale."
+                        : 'Sale cancelled. The cart is empty.');
                     break;
 
                 case 'link_customer':
@@ -250,11 +314,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($errors === []) {
         try {
+            $rescueId = $cart->serviceRequestId();                  // from the session, never the form
             $result = (new SaleService($pdo))->checkout([
                 'admin_id'                => (int) $admin['id'],   // from the session, never the form
                 'customer_id'             => $cart->customerId(),
                 'lines'                   => $cart->toSaleLines(),
                 'expected_total_centavos' => $expected,
+                'service_request_id'      => $rescueId,
             ]);
 
             $linked = $cart->customerId() !== null ? $customers->findById($cart->customerId()) : null;
@@ -267,6 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'tender'         => $tender,
                 'change'         => $tender - (int) $result['total_centavos'],
                 'customer'       => $linked['full_name'] ?? null,
+                'rescue_id'      => $rescueId,
             ];
             $cart->clear();
             header('Location: ' . pos_url($filters));
@@ -288,12 +355,32 @@ unset($_SESSION['pos_flash']);
 $lastSale = is_array($_SESSION['pos_last_sale'] ?? null) ? $_SESSION['pos_last_sale'] : null;
 unset($_SESSION['pos_last_sale']);
 
+// Rescue mode: re-read the request on every page load. If it can no longer
+// take a sale, say so and hide Complete sale (SaleService would refuse anyway);
+// the cart is kept and Cancel sale leaves Rescue mode.
+$rescueId      = $cart->serviceRequestId();
+$rescue        = $rescueId !== null ? $requests->findForAdmin($rescueId) : null;
+$rescueProblem = null;
+if ($rescueId !== null) {
+    if ($rescue === null) {
+        $rescueProblem = "Rescue request #{$rescueId} no longer exists.";
+    } elseif (!OtgStatus::canRecordSale((string) $rescue['status'])) {
+        $rescueProblem = "Rescue request #{$rescueId} is now {$rescue['status']}, so a sale can no longer be recorded for it.";
+    } elseif (($recorded = $sales->findForServiceRequest($rescueId)) !== null) {
+        $rescueProblem = "Rescue request #{$rescueId} already has a recorded sale (Sale #{$recorded['sale_id']}).";
+    } elseif ((int) $rescue['customer_id'] !== $cart->customerId()) {
+        $rescueProblem = "This sale's customer is not the customer of Rescue request #{$rescueId}.";
+    }
+}
+
 $linkedCustomer = null;
 if ($cart->customerId() !== null) {
     $linkedCustomer = $customers->findById($cart->customerId());
-    if ($linkedCustomer === null) {
+    if ($linkedCustomer === null && $rescueId === null) {
         $cart->setCustomer(null);
         $errors[] = 'The linked customer no longer exists; the sale is now a walk-in sale.';
+    } elseif ($linkedCustomer === null) {
+        $rescueProblem = $rescueProblem ?? "The customer of Rescue request #{$rescueId} could not be found.";
     }
 }
 
@@ -332,8 +419,16 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <div><dt>Cash received</dt><dd><?= pos_peso((int) $lastSale['tender']) ?></dd></div>
       <div><dt>Change</dt><dd class="pos-change-final"><?= pos_peso((int) $lastSale['change']) ?></dd></div>
       <div><dt>Customer</dt><dd><?= $lastSale['customer'] !== null ? e($lastSale['customer']) : 'Walk-in' ?></dd></div>
+      <?php if (!empty($lastSale['rescue_id'])): ?>
+        <div><dt>Rescue</dt><dd>#<?= (int) $lastSale['rescue_id'] ?></dd></div>
+      <?php endif; ?>
     </dl>
-    <p><a class="btnlink" href="<?= e(vulcatrack_url('/admin/transaction-summary.php?id=' . (int) $lastSale['sale_id'])) ?>">View / print Transaction Summary</a></p>
+    <p class="pos-sold-links">
+      <a class="btnlink" href="<?= e(vulcatrack_url('/admin/transaction-summary.php?id=' . (int) $lastSale['sale_id'])) ?>">View / print Transaction Summary</a>
+      <?php if (!empty($lastSale['rescue_id'])): ?>
+        <a class="btnlink btnlink--outline" href="<?= e(vulcatrack_url('/admin/rescue-view.php?id=' . (int) $lastSale['rescue_id'])) ?>">Back to Rescue #<?= (int) $lastSale['rescue_id'] ?></a>
+      <?php endif; ?>
+    </p>
     <p class="muted">Recorded <?= e($lastSale['sale_date']) ?>. The cart is ready for the next sale.</p>
   </section>
 <?php endif; ?>
@@ -349,6 +444,26 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
    stacked catalogue-then-sale below the breakpoint. Every form below is the
    same as before — same fields, same form ids / owners, none nested; only
    the presentation around them changed. */ ?>
+<?php if ($rescueId !== null): /* Phase 7.3d: this cart is recording a Rescue sale */ ?>
+  <section class="pos-rescue<?= $rescueProblem !== null ? ' pos-rescue--problem' : '' ?>" aria-labelledby="pos-rescue-title">
+    <div class="pos-rescue__main">
+      <p class="pos-rescue__label">Rescue sale</p>
+      <h2 class="pos-rescue__title" id="pos-rescue-title">Request #<?= (int) $rescueId ?></h2>
+      <?php if ($rescue !== null): ?>
+        <dl class="pos-rescue__meta">
+          <div><dt>Customer</dt><dd><?= e($rescue['customer_name']) ?></dd></div>
+          <div><dt>Status</dt><dd><?= e(OtgStatus::adminLabel((string) $rescue['status'])) ?></dd></div>
+        </dl>
+      <?php endif; ?>
+    </div>
+    <?php if ($rescue !== null): ?>
+      <a class="pos-rescue__link" href="<?= e(vulcatrack_url('/admin/rescue-view.php?id=' . (int) $rescueId)) ?>">View request #<?= (int) $rescueId ?></a>
+    <?php endif; ?>
+    <?php if ($rescueProblem !== null): ?>
+      <p class="pos-rescue__problem" role="alert"><?= e($rescueProblem) ?> The sale cannot be completed — use <strong>Cancel sale</strong> to leave Rescue mode.</p>
+    <?php endif; ?>
+  </section>
+<?php endif; ?>
 <div class="pos-layout">
 
 <!-- ================= catalogue ================= -->
@@ -402,7 +517,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
           <p class="pos-item__unavailable"><span class="badge badge--low">Out of stock</span></p>
         <?php else: ?>
           <form class="pos-addform" method="post" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>">
-            <?= Csrf::field() ?><?= pos_filter_fields($filters) ?>
+            <?= Csrf::field() ?><?= pos_context_field($cart) ?><?= pos_filter_fields($filters) ?>
             <input type="hidden" name="_action" value="add">
             <input type="hidden" name="item_id" value="<?= (int) $row['item_id'] ?>">
             <input type="text" class="qty-input" name="quantity" value="1" inputmode="numeric" maxlength="4"
@@ -431,15 +546,18 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
         <strong>Walk-in</strong>
       <?php endif; ?>
     </p>
-    <?php if ($linkedCustomer !== null): ?>
+    <?php if ($rescueId !== null): /* customer locked to the Rescue's (the server refuses changes too) */ ?>
+      <p class="pos-customer__lock">Locked to Rescue request #<?= (int) $rescueId ?></p>
+    <?php elseif ($linkedCustomer !== null): ?>
       <form method="post" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>">
-        <?= Csrf::field() ?><?= pos_filter_fields($filters) ?>
+        <?= Csrf::field() ?><?= pos_context_field($cart) ?><?= pos_filter_fields($filters) ?>
         <input type="hidden" name="_action" value="unlink_customer">
         <button type="submit" class="linklike">Make walk-in</button>
       </form>
     <?php endif; ?>
   </div>
 
+  <?php if ($rescueId === null): ?>
   <details class="pos-link"<?= $customerQuery !== '' ? ' open' : '' ?>>
     <summary>Link a registered customer (optional)</summary>
     <form class="filterbar" method="get" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>">
@@ -459,7 +577,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
           <li>
             <span><strong><?= e($c['full_name']) ?></strong> <span class="muted"><?= e($c['email']) ?> · <?= e($c['contact_number']) ?></span></span>
             <form method="post" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>">
-              <?= Csrf::field() ?><?= pos_filter_fields($filters) ?>
+              <?= Csrf::field() ?><?= pos_context_field($cart) ?><?= pos_filter_fields($filters) ?>
               <input type="hidden" name="_action" value="link_customer">
               <input type="hidden" name="customer_id" value="<?= (int) $c['customer_id'] ?>">
               <button type="submit" class="secondary">Link</button>
@@ -469,13 +587,14 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       </ul>
     <?php endif; ?>
   </details>
+  <?php endif; ?>
 
   <?php if (!$view['rows']): ?>
     <p class="muted pos-empty">No items yet. Add products or services from the catalogue.</p>
   <?php else: ?>
     <form id="pos-sale" method="post" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>"
           data-total="<?= (int) $view['total_centavos'] ?>">
-      <?= Csrf::field() ?><?= pos_filter_fields($filters) ?>
+      <?= Csrf::field() ?><?= pos_context_field($cart) ?><?= pos_filter_fields($filters) ?>
       <input type="hidden" name="expected_total" value="<?= (int) $view['total_centavos'] ?>">
 
       <div class="table-scroll">
@@ -533,18 +652,24 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       </div>
       <p class="muted pos-note">Change is shown for convenience; the server re-checks the cash against the total. Cash received is not stored.</p>
 
-      <button type="submit" name="_action" value="checkout" class="btnlink pos-complete">Complete sale</button>
+      <?php if ($rescueProblem === null): ?>
+        <button type="submit" name="_action" value="checkout" class="btnlink pos-complete">Complete sale</button>
+      <?php else: ?>
+        <p class="error pos-blocked">This Rescue sale cannot be completed (see the notice above).</p>
+      <?php endif; ?>
     </form>
 
     <form id="pos-remove" method="post" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>">
-      <?= Csrf::field() ?><?= pos_filter_fields($filters) ?>
+      <?= Csrf::field() ?><?= pos_context_field($cart) ?><?= pos_filter_fields($filters) ?>
       <input type="hidden" name="_action" value="remove">
     </form>
+  <?php endif; ?>
 
+  <?php if ($view['rows'] || $rescueId !== null): /* in Rescue mode Cancel is also the way out of an empty Rescue sale */ ?>
     <form class="pos-cancel" method="post" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>">
-      <?= Csrf::field() ?><?= pos_filter_fields($filters) ?>
+      <?= Csrf::field() ?><?= pos_context_field($cart) ?><?= pos_filter_fields($filters) ?>
       <input type="hidden" name="_action" value="clear">
-      <button type="submit" class="linklike" onclick="return confirm('Cancel this sale and empty the cart?');">Cancel sale</button>
+      <button type="submit" class="linklike" onclick="return confirm('<?= $rescueId !== null ? 'Cancel this Rescue sale? Nothing is recorded and the POS returns to a walk-in sale.' : 'Cancel this sale and empty the cart?' ?>');">Cancel sale</button>
     </form>
   <?php endif; ?>
   </div>

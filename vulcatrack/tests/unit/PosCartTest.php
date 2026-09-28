@@ -106,3 +106,84 @@ test('PosCart drops malformed session data instead of trusting it', function () 
     $session = ['pos_cart' => 'garbage'];
     assert_true((new PosCart($session))->isEmpty());
 });
+
+// --- Rescue sale context (Phase 7.3d-c) --------------------------------------
+
+test('PosCart::startRescue stores the request and its customer in the session (only from a clean cart)', function () {
+    $session = [];
+    $cart = new PosCart($session);
+    assert_null($cart->serviceRequestId(), 'an ordinary sale by default');
+    assert_same('', $cart->contextToken());
+
+    assert_true($cart->startRescue(25, 7), 'a fresh start');
+    assert_same(25, $cart->serviceRequestId());
+    assert_same(7, $cart->customerId(), "the Rescue's customer becomes the cart customer");
+    assert_same('25', $cart->contextToken());
+    assert_same(25, $session['pos_cart']['service_request_id'], 'kept in the session');
+    assert_same(25, (new PosCart($session))->serviceRequestId(), 'a later request sees the same context');
+
+    assert_false($cart->startRescue(25, 7), 'starting the same Rescue again changes nothing');
+    $cart->add(3, 2);
+    assert_false($cart->startRescue(25, 7), 'the same Rescue with items in it: still no change');
+    assert_same([3 => 2], $cart->lines(), 'the Rescue cart is kept');
+});
+
+test('PosCart::startRescue refuses a cart that is not clean and never overwrites it', function () {
+    $refuse = function (array $session, string $why) {
+        $cart = new PosCart($session);
+        $before = $session['pos_cart'];
+        assert_throws(fn () => $cart->startRescue(30, 9), PosCartException::class, 'Finish or cancel the current sale first.', $why);
+        assert_same($before, $session['pos_cart'], "{$why}: cart untouched");
+    };
+    $refuse(['pos_cart' => ['lines' => [4 => 1], 'customer_id' => null, 'service_request_id' => null]], 'items in an ordinary sale');
+    $refuse(['pos_cart' => ['lines' => [], 'customer_id' => 12, 'service_request_id' => null]], 'a registered customer already chosen');
+    $refuse(['pos_cart' => ['lines' => [], 'customer_id' => 5, 'service_request_id' => 25]], 'another Rescue already active');
+
+    $session = [];
+    $cart = new PosCart($session);
+    assert_throws(fn () => $cart->startRescue(0, 9), PosCartException::class);
+    assert_throws(fn () => $cart->startRescue(30, 0), PosCartException::class);
+    assert_null($cart->serviceRequestId());
+});
+
+test('PosCart locks the customer during a Rescue sale; clear() returns to an ordinary walk-in sale', function () {
+    $session = [];
+    $cart = new PosCart($session);
+    $cart->startRescue(25, 7);
+    assert_throws(fn () => $cart->setCustomer(8), PosCartException::class, "Rescue's customer", 'another customer');
+    assert_throws(fn () => $cart->setCustomer(null), PosCartException::class, "Rescue's customer", 'make walk-in');
+    assert_same(7, $cart->customerId(), 'still the Rescue customer');
+
+    $cart->add(3, 1);
+    $cart->clear();
+    assert_true($cart->isEmpty());
+    assert_null($cart->customerId(), 'walk-in');
+    assert_null($cart->serviceRequestId(), 'Rescue context gone');
+    assert_same('', $cart->contextToken());
+    $cart->setCustomer(8);
+    assert_same(8, $cart->customerId(), 'customer linking works again after leaving Rescue mode');
+});
+
+test('PosCart::matchesContext compares the rendered context strictly with the current one', function () {
+    $session = [];
+    $cart = new PosCart($session);
+    assert_true($cart->matchesContext(''), 'ordinary page, ordinary cart');
+    foreach ([null, '0', '25', ' ', 'abc', '-1', '25 ', 25, ['25']] as $bad) {
+        assert_false($cart->matchesContext($bad), 'ordinary cart must reject ' . var_export($bad, true));
+    }
+    $cart->startRescue(25, 7);
+    assert_true($cart->matchesContext('25'), 'page rendered for Rescue #25');
+    foreach (['', '26', '025', '25.0', null, 25] as $bad) {
+        assert_false($cart->matchesContext($bad), 'Rescue #25 cart must reject ' . var_export($bad, true));
+    }
+});
+
+test('PosCart drops a malformed Rescue context, or one without a customer', function () {
+    foreach ([['service_request_id' => '25', 'customer_id' => 7], ['service_request_id' => -3, 'customer_id' => 7],
+              ['service_request_id' => 25, 'customer_id' => null]] as $raw) {
+        $session = ['pos_cart' => $raw + ['lines' => []]];
+        assert_null((new PosCart($session))->serviceRequestId(), 'dropped: ' . json_encode($raw));
+    }
+    $session = ['pos_cart' => ['lines' => [], 'customer_id' => 7, 'service_request_id' => 25]];
+    assert_same(25, (new PosCart($session))->serviceRequestId(), 'a well-formed context is kept');
+});

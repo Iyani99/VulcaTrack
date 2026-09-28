@@ -764,6 +764,12 @@ body.admin .tag {
 }
 body.admin .tag--walkin   { background: #fff; color: #777; border-color: #c9c9c9; }
 body.admin .tag--customer { background: #e3e3e3; color: var(--adm-ink); border-color: #bdbdbd; }
+/* sale source (Phase 7.3d): in-shop quiet, a Rescue link in the brand red */
+body.admin .tag--inshop,
+body.admin a.tag--rescue  { white-space: nowrap; } /* short labels: keep whole; the table scrolls on phones */
+body.admin .tag--inshop   { background: #fff; color: #777; border-color: #c9c9c9; }
+body.admin a.tag--rescue  { background: #fff; color: var(--adm-red-dark); border-color: var(--adm-red); text-decoration: none; }
+body.admin a.tag--rescue:hover { background: var(--adm-red); color: #fff; }
 
 /* white panels with a header bar (Reports tables, Dashboard lists) */
 body.admin .panelgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr)); gap: 1.25rem; align-items: start; margin: 0 0 1.5rem; }
@@ -827,6 +833,11 @@ body.admin .rescue-pick label { grid-column: 1 / -1; margin: 0 0 .15rem; }
 body.admin .rescue-pick select { min-width: 0; }
 body.admin .rescue-actions__close { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .75rem 1.5rem; }
 body.admin .rescue-actions__close > * { margin: 0; }
+/* Rescue detail: the linked sale (Phase 7.3d) */
+body.admin .rescue-sale { margin: 0 0 1.25rem; }
+body.admin .rescue-sale form { margin: .5rem 0 0; }
+body.admin .rescue-sale__state { margin: 0 0 .6rem; font-size: 1.2rem; font-weight: 800; }
+body.admin .rescue-sale__total { font-weight: 800; color: var(--adm-red); }
 body.admin .rescue-actions__assign > p,
 body.admin .rescue-actions__close > p { margin: 0; }
 
@@ -920,6 +931,26 @@ body.admin .pos-sale .pos-change { font-size: 1.05rem; }
 body.admin .pos-sale .pos-note { margin: .4rem 0 1rem; font-size: .8rem; }
 body.admin .pos-complete { display: block; width: 100%; padding: .9rem 1rem; font-size: .95rem; text-align: center; }
 body.admin .pos-sale .pos-cancel { margin: .9rem 0 0; text-align: center; }
+
+/* Rescue sale context (Phase 7.3d): a dark strip above the POS, red edge */
+body.admin .pos-rescue {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: .75rem 2rem;
+  margin: 0 0 1.25rem; padding: 1rem 1.3rem; background: var(--adm-side); color: #fff; border-left: 5px solid var(--adm-red);
+}
+body.admin .pos-rescue__main { min-width: 0; }
+body.admin .pos-rescue p { margin: 0; }
+body.admin .pos-rescue__label { font-family: var(--adm-mono); font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #ff8a8a; }
+body.admin .pos-rescue__title { margin: .15rem 0 .4rem; font-size: 1.4rem; font-weight: 800; color: #fff; }
+body.admin .pos-rescue__meta { display: flex; flex-wrap: wrap; gap: .3rem 2rem; margin: 0; }
+body.admin .pos-rescue__meta dt { font-family: var(--adm-mono); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: #a3a5a9; }
+body.admin .pos-rescue__meta dd { margin: .1rem 0 0; font-weight: 700; overflow-wrap: anywhere; }
+body.admin .pos-rescue__link { color: #fff; font-weight: 700; }
+body.admin .pos-rescue__problem { flex: 1 1 100%; padding: .6rem .8rem; background: #fff; color: var(--adm-red-dark); border-left: 4px solid var(--adm-red); }
+body.admin .pos-customer__lock { font-family: var(--adm-mono); font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--adm-red-dark); }
+body.admin .pos-blocked { margin: 0; }
+body.admin .pos-sold-links { display: flex; flex-wrap: wrap; gap: .6rem; }
+body.admin .btnlink--outline { background: #fff; color: var(--adm-ink); border-color: var(--adm-ink); }
+body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: var(--adm-ink); color: #fff; }
 
 @media (min-width: 68rem) {
   body.admin .pos-layout { grid-template-columns: minmax(0, 1fr) minmax(22rem, 26rem); }

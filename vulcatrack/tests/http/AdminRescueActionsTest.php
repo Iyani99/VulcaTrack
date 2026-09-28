@@ -232,7 +232,13 @@ test('admin rescue actions: accept/reassign/reject/complete rules, stale guards,
         $d = $view($r1);
         assert_contains('badge--completed">Completed<', $d);
         assert_contains('It is final and cannot be changed.', $d);
-        assert_same(1, substr_count($d, 'method="post"'), 'a completed request offers no form except logout');
+        // No status-changing form. Phase 7.3d: the only other form is the late-entry
+        // "Record sale in POS" POST (the request has no sale yet), which targets the POS.
+        assert_same(2, substr_count($d, 'method="post"'), 'a completed request: logout + Record sale in POS only');
+        assert_same(1, substr_count($d, 'name="_action" value="start_rescue"'), 'the one extra form is the POS start_rescue action');
+        assert_not_contains('value="reject"', $d, 'no reject on a final request');
+        assert_not_contains('value="complete"', $d);
+        assert_not_contains('value="reassign"', $d);
         assert_contains("{$tag} Tireman Bravo", $d, 'the historical Tireman is still shown');
 
         // Crafted POSTs cannot move a final request.
