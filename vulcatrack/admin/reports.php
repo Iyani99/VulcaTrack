@@ -63,84 +63,91 @@ $navActive = 'reports';
 require __DIR__ . '/../src/Views/partials/admin_top.php';
 ?>
 <div class="pagehead">
-  <h1>Sales Reports</h1>
+  <div>
+    <h1>Sales Reports</h1>
+    <p class="pagehead__meta">Totals from recorded sales, by sale date. Individual transactions are in Sales History.</p>
+  </div>
+  <form class="filterbar filterbar--head" method="get" action="<?= e(vulcatrack_url('/admin/reports.php')) ?>">
+    <label>From
+      <input type="date" name="from" value="<?= e($from) ?>">
+    </label>
+    <label>To
+      <input type="date" name="to" value="<?= e($to) ?>">
+    </label>
+    <button type="submit">Filter</button>
+    <?php if ($filtered): ?>
+      <a href="<?= e(vulcatrack_url('/admin/reports.php')) ?>">Clear</a>
+    <?php endif; ?>
+  </form>
 </div>
-<p class="muted">Totals from recorded sales, by sale date. Individual transactions are in Sales History.</p>
-
-<form class="filterbar" method="get" action="<?= e(vulcatrack_url('/admin/reports.php')) ?>">
-  <label>From
-    <input type="date" name="from" value="<?= e($from) ?>">
-  </label>
-  <label>To
-    <input type="date" name="to" value="<?= e($to) ?>">
-  </label>
-  <button type="submit">Filter</button>
-  <?php if ($filtered): ?>
-    <a href="<?= e(vulcatrack_url('/admin/reports.php')) ?>">Clear</a>
-  <?php endif; ?>
-</form>
 
 <?php if ($rangeError): ?>
   <p class="error">The From date cannot be later than the To date.</p>
 <?php else: ?>
-  <p>Range: <strong><?= e($rangeLabel) ?></strong></p>
+  <p class="report-range">Range: <strong><?= e($rangeLabel) ?></strong></p>
 
   <div class="cardgrid">
-    <section class="card">
+    <section class="card card--stat">
       <p class="card__label">Transactions</p>
       <p class="card__num"><?= (int) $summary['count'] ?></p>
     </section>
-    <section class="card">
+    <section class="card card--stat card--accent">
       <p class="card__label">Total Sales</p>
       <p class="card__num"><?= reports_peso((int) $summary['total_centavos']) ?></p>
     </section>
   </div>
 
-  <h2>Daily Sales</h2>
-  <?php if (!$daily): ?>
-    <p class="muted"><?= e($empty) ?></p>
-  <?php else: ?>
-    <p class="muted">Days without sales are not listed.</p>
-    <div class="table-scroll">
-    <table class="datatable">
-      <thead>
-        <tr><th>Date</th><th class="num">Transactions</th><th class="num">Total Sales</th></tr>
-      </thead>
-      <tbody>
-      <?php foreach ($daily as $d): ?>
-        <tr>
-          <td><?= e($d['day']) ?></td>
-          <td class="num"><?= (int) $d['transaction_count'] ?></td>
-          <td class="num"><?= reports_peso((int) $d['total_centavos']) ?></td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-    </div>
-  <?php endif; ?>
+  <div class="panelgrid">
+  <section class="panel">
+    <header class="panel__head"><h2>Daily Sales</h2></header>
+    <?php if (!$daily): ?>
+      <p class="panel__note muted"><?= e($empty) ?></p>
+    <?php else: ?>
+      <p class="panel__note muted">Days without sales are not listed.</p>
+      <div class="table-scroll">
+      <table class="datatable">
+        <thead>
+          <tr><th>Date</th><th class="num">Transactions</th><th class="num">Total Sales</th></tr>
+        </thead>
+        <tbody>
+        <?php foreach ($daily as $d): ?>
+          <tr>
+            <td><?= e($d['day']) ?></td>
+            <td class="num"><?= (int) $d['transaction_count'] ?></td>
+            <td class="num"><?= reports_peso((int) $d['total_centavos']) ?></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+      </div>
+    <?php endif; ?>
+  </section>
 
-  <h2>Items Sold</h2>
-  <?php if (!$items): ?>
-    <p class="muted"><?= e($empty) ?></p>
-  <?php else: ?>
-    <p class="muted">Revenue uses the price recorded at the time of each sale.</p>
-    <div class="table-scroll">
-    <table class="datatable">
-      <thead>
-        <tr><th>Item</th><th class="num">Qty Sold</th><th class="num">Revenue</th></tr>
-      </thead>
-      <tbody>
-      <?php foreach ($items as $it): ?>
-        <tr>
-          <td><?= e($it['item_name']) ?></td>
-          <td class="num"><?= (int) $it['quantity'] ?></td>
-          <td class="num"><?= reports_peso((int) $it['revenue_centavos']) ?></td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-    </div>
-  <?php endif; ?>
+  <section class="panel">
+    <header class="panel__head"><h2>Items Sold</h2></header>
+    <?php if (!$items): ?>
+      <p class="panel__note muted"><?= e($empty) ?></p>
+    <?php else: ?>
+      <p class="panel__note muted">Revenue uses the price recorded at the time of each sale.</p>
+      <div class="table-scroll">
+      <table class="datatable">
+        <thead>
+          <tr><th>Item</th><th class="num">Qty Sold</th><th class="num">Revenue</th></tr>
+        </thead>
+        <tbody>
+        <?php foreach ($items as $it): ?>
+          <tr>
+            <td><?= e($it['item_name']) ?></td>
+            <td class="num"><?= (int) $it['quantity'] ?></td>
+            <td class="num"><?= reports_peso((int) $it['revenue_centavos']) ?></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+      </div>
+    <?php endif; ?>
+  </section>
+  </div>
 <?php endif; ?>
 
 <?php require __DIR__ . '/../src/Views/partials/admin_bottom.php'; ?>

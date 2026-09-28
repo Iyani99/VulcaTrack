@@ -3,11 +3,12 @@
  * Admin — Rescue (OTG) requests list (Phase 6, Chunk 6.2). READ-ONLY.
  *
  * Every customer's On-the-Go requests, filtered by status through a GET
- * whitelist (default: pending). The status dropdown submits itself on change
- * (the Filter button stays as the no-JavaScript fallback); an empty view links
- * to another status and to All. Each row links to rescue-view.php. There are
- * no forms that change anything here — the status actions (accept / reassign /
- * reject / complete) live on rescue-view.php (Chunk 6.3).
+ * whitelist (default: pending). Since Phase 7.3b the filter is a row of status
+ * tabs — plain links carrying the same ?status= values, so it needs no
+ * JavaScript; an empty view links to another status and to All. Each row
+ * links to rescue-view.php. There are no forms that change anything here — the
+ * status actions (accept / reassign / reject / complete) live on
+ * rescue-view.php (Chunk 6.3).
  */
 
 use VulcaTrack\Repository\ServiceRequestRepository;
@@ -30,27 +31,26 @@ $navActive = 'rescue';
 require __DIR__ . '/../src/Views/partials/admin_top.php';
 ?>
 <div class="pagehead">
-  <h1>Rescue requests</h1>
+  <div>
+    <h1>Rescue requests</h1>
+    <p class="pagehead__meta">On-the-Go service requests from customers. Open a request to accept, assign, complete or reject it.</p>
+  </div>
 </div>
-<p class="muted">On-the-Go service requests from customers. This view is read-only.</p>
 
-<form class="filterbar" method="get" action="<?= e(vulcatrack_url('/admin/rescue.php')) ?>">
-  <label>Status
-    <select name="status" onchange="this.form.submit()">
-      <?php foreach (array_merge(OtgStatus::VALUES, ['all']) as $option): ?>
-        <option value="<?= e($option) ?>"<?= $status === $option ? ' selected' : '' ?>><?= e($option === 'all' ? 'All' : OtgStatus::adminLabel($option)) ?></option>
-      <?php endforeach; ?>
-    </select>
-  </label>
-  <button type="submit">Filter</button>
-</form>
+<?php // Status tabs: the four real statuses + All, in workflow order. aria-current="true"
+      // (not "page") marks the chosen filter — "page" belongs to the sidebar nav. ?>
+<nav class="tabs" aria-label="Filter by status">
+  <?php foreach (['pending', 'accepted', 'completed', 'rejected', 'all'] as $option): ?>
+    <a class="tab<?= $status === $option ? ' is-active' : '' ?>" href="<?= e(vulcatrack_url('/admin/rescue.php?status=' . $option)) ?>"<?= $status === $option ? ' aria-current="true"' : '' ?>><?= e($option === 'all' ? 'All' : OtgStatus::adminLabel($option)) ?></a>
+  <?php endforeach; ?>
+</nav>
 
 <?php $n = count($requests); ?>
-<p class="muted"><?= $n ?> <?= $n === 1 ? 'request' : 'requests' ?>.</p>
 
 <?php if (!$requests): ?>
   <?php require __DIR__ . '/../src/Views/partials/rescue_empty.php'; ?>
 <?php else: ?>
+  <div class="tablepanel">
   <div class="table-scroll">
   <table class="datatable">
     <thead>
@@ -59,14 +59,14 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <tbody>
     <?php foreach ($requests as $r): ?>
       <tr>
-        <td><?= (int) $r['request_id'] ?></td>
+        <td class="cell-strong"><?= (int) $r['request_id'] ?></td>
         <td class="muted"><?= e($r['requested_at']) ?></td>
-        <td><?= e($r['customer_name']) ?></td>
+        <td class="cell-strong"><?= e($r['customer_name']) ?></td>
         <td><?= e($r['plate_number']) ?></td>
         <td>
           <span class="badge <?= e(OtgStatus::badgeClass($r['status'])) ?>"><?= e(OtgStatus::adminLabel($r['status'])) ?></span>
         </td>
-        <td><?= $r['tireman_name'] !== null ? e($r['tireman_name']) : '<span class="muted">—</span>' ?></td>
+        <td><?= $r['tireman_name'] !== null ? e($r['tireman_name']) : '<span class="muted">Unassigned</span>' ?></td>
         <td class="rowactions">
           <a href="<?= e(vulcatrack_url('/admin/rescue-view.php?id=' . (int) $r['request_id'])) ?>">View</a>
         </td>
@@ -74,6 +74,8 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
+  <p class="tablepanel__foot"><?= $n ?> <?= $n === 1 ? 'request' : 'requests' ?>.</p>
   </div>
 <?php endif; ?>
 

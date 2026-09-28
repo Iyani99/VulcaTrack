@@ -90,6 +90,9 @@ test('admin rescue (list + detail view): guard, filters, detail, escaping, map, 
 
     $LIST = '/vulcatrack/admin/rescue.php';
     $VIEW = '/vulcatrack/admin/rescue-view.php';
+    // the current status tab on the list (Phase 7.3b tabs replaced the dropdown)
+    $tab = fn (string $status): string =>
+        '<a class="tab is-active" href="/vulcatrack/admin/rescue.php?status=' . $status . '" aria-current="true">';
 
     try {
         $server->start();
@@ -128,12 +131,16 @@ test('admin rescue (list + detail view): guard, filters, detail, escaping, map, 
         $list = $server->request($LIST);
         assert_same(200, $list['status'], 'the admin can view the request list');
         assert_contains('>Rescue<', $list['body'], 'the Rescue nav entry is present');
-        assert_contains('<option value="pending" selected>', $list['body'], 'pending is the default filter');
-        // The filter is a plain GET form: the dropdown submits it on change,
-        // and the Filter button stays as the no-JavaScript fallback.
-        assert_contains('<form class="filterbar" method="get" action="/vulcatrack/admin/rescue.php">', $list['body']);
-        assert_contains('<select name="status" onchange="this.form.submit()">', $list['body']);
-        assert_contains('<button type="submit">Filter</button>', $list['body']);
+        assert_contains($tab('pending'), $list['body'], 'pending is the default filter');
+        // The filter is a row of status tabs (Phase 7.3b): plain GET links, so it
+        // needs no JavaScript. Exactly the four real statuses + All, in workflow
+        // order, one of them current — no invented status (e.g. "in progress").
+        assert_true(preg_match('#<nav class="tabs" aria-label="Filter by status">(.*?)</nav>#s', $list['body'], $tabsNav) === 1, 'the status tabs');
+        preg_match_all('#href="/vulcatrack/admin/rescue\.php\?status=([a-z]+)"#', $tabsNav[1], $tabValues);
+        assert_same(['pending', 'accepted', 'completed', 'rejected', 'all'], $tabValues[1], 'the tabs are the real statuses + All');
+        assert_same(1, substr_count($tabsNav[1], 'aria-current="true"'), 'exactly one tab is current');
+        assert_not_contains('in-progress', strtolower($list['body']), 'no invented in-progress status');
+        assert_not_contains('in progress', strtolower($list['body']));
         assert_contains('rescue-view.php?id=' . $reqPending . '"', $list['body']);
         foreach ([$reqAccepted, $reqRejected, $reqCompleted] as $id) {
             assert_not_contains('rescue-view.php?id=' . $id . '"', $list['body'], 'the default list shows pending only');
@@ -152,7 +159,7 @@ test('admin rescue (list + detail view): guard, filters, detail, escaping, map, 
         foreach ($expect as $status => $id) {
             $r = $server->request($LIST . '?status=' . $status);
             assert_same(200, $r['status']);
-            assert_contains('<option value="' . $status . '" selected>', $r['body'], "{$status} is selected");
+            assert_contains($tab($status), $r['body'], "{$status} is the current tab");
             assert_contains('rescue-view.php?id=' . $id . '"', $r['body'], "{$status} shows its request");
             foreach (array_diff($allReqs, [$id]) as $other) {
                 assert_not_contains('rescue-view.php?id=' . $other . '"', $r['body'], "{$status} hides other statuses");
@@ -165,7 +172,7 @@ test('admin rescue (list + detail view): guard, filters, detail, escaping, map, 
         assert_not_contains('Tireman is on the way', $r['body'], 'no customer wording on admin screens');
 
         $r = $server->request($LIST . '?status=all');
-        assert_contains('<option value="all" selected>', $r['body']);
+        assert_contains($tab('all'), $r['body']);
         foreach ($allReqs as $id) {
             assert_contains('rescue-view.php?id=' . $id . '"', $r['body'], 'all shows every status');
         }
@@ -174,7 +181,7 @@ test('admin rescue (list + detail view): guard, filters, detail, escaping, map, 
         foreach (['"><script>alert(1)</script>', 'cancelled', 'ALL', "pending' OR '1'='1"] as $junk) {
             $r = $server->request($LIST . '?status=' . rawurlencode($junk));
             assert_same(200, $r['status'], "junk filter '{$junk}' is handled safely");
-            assert_contains('<option value="pending" selected>', $r['body'], "junk filter '{$junk}' falls back to pending");
+            assert_contains($tab('pending'), $r['body'], "junk filter '{$junk}' falls back to pending");
             assert_not_contains('<script>alert(1)</script>', $r['body']);
             assert_not_contains('cancelled', $r['body']);
             assert_not_contains('rescue-view.php?id=' . $reqAccepted . '"', $r['body']);
@@ -201,6 +208,12 @@ test('admin rescue (list + detail view): guard, filters, detail, escaping, map, 
         assert_contains('No Tireman assigned.', $d['body']);
         assert_contains('Not yet handled by an admin.', $d['body']);
         assert_contains('23 minutes', $d['body'], 'the stored ETA is shown');
+        // Phase 7.3b Assigned Tireman strip: the ETA there is the stored request-time
+        // snapshot and says so; no invented dispatch status.
+        assert_contains('<p class="rescue-assign__value">23 minutes</p>', $d['body'], 'the strip shows the stored ETA');
+        assert_contains('ETA at request time', $d['body']);
+        assert_contains('Stored when the customer submitted; it does not change.', $d['body']);
+        assert_not_contains('in-progress', strtolower($d['body']), 'no invented in-progress status');
         assert_contains('14.96123, 120.90543', $d['body'], 'the stored coordinates are shown');
         $assertCleanHtml($d['body'], 'rescue-view.php (pending)');
 

@@ -97,6 +97,31 @@ function inv_is_product(array $row): bool
     return $row['item_type'] === 'product';
 }
 
+/**
+ * The stock chip for a row: [modifier, label]. Presentation only — derived
+ * from the stored stock + the existing low-stock rule ($isLow comes from
+ * lowStockProducts()); no new stock state exists anywhere else.
+ *   service                       -> n/a
+ *   product, stock 0              -> Out: 0   (red when it is also a live low-stock alert)
+ *   low by the existing rule      -> Low: N
+ *   active, not low               -> OK: N    (above the reorder level, or none set)
+ *   inactive, not zero            -> N        (not a live alert, so no status word)
+ */
+function inv_stock_chip(array $row, bool $isLow): array
+{
+    if (!inv_is_product($row)) {
+        return ['na', 'n/a'];
+    }
+    $stock = (int) $row['stock_quantity'];
+    if ($stock === 0) {
+        return [$isLow ? 'low' : 'out', 'Out: 0'];
+    }
+    if ($isLow) {
+        return ['low', 'Low: ' . $stock];
+    }
+    return (int) $row['is_active'] === 1 ? ['ok', 'OK: ' . $stock] : ['plain', (string) $stock];
+}
+
 $hasFilters = $search !== '' || $type !== '' || $status !== 'active' || $lowStockOnly;
 
 $pageTitle = 'Inventory';
@@ -104,10 +129,12 @@ $navActive = 'inventory';
 require __DIR__ . '/../src/Views/partials/admin_top.php';
 ?>
 <div class="pagehead">
-  <h1>Inventory</h1>
+  <div>
+    <h1>Inventory</h1>
+    <p class="pagehead__meta">Products and services in one list.</p>
+  </div>
   <a class="btnlink" href="<?= e(vulcatrack_url('/admin/item-edit.php')) ?>">Add item</a>
 </div>
-<p class="muted">Products and services in one list.</p>
 
 <?php if ($flash !== null): ?>
   <p class="<?= $flash[0] === 'error' ? 'error' : 'notice' ?>"><?= e($flash[1]) ?></p>
@@ -142,38 +169,35 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 </form>
 
 <?php $n = count($items); ?>
-<p class="muted"><?= $n ?> <?= $n === 1 ? 'item' : 'items' ?><?= $hasFilters ? ($n === 1 ? ' matches your filters' : ' match your filters') : '' ?>.</p>
+<?php $countText = $n . ' ' . ($n === 1 ? 'item' : 'items') . ($hasFilters ? ($n === 1 ? ' matches your filters' : ' match your filters') : '') . '.'; ?>
 
 <?php if (!$items): ?>
+  <p class="muted"><?= e($countText) ?></p>
   <p class="muted">No items to show.</p>
 <?php else: ?>
+  <div class="tablepanel">
   <div class="table-scroll">
   <table class="datatable">
     <thead>
       <tr>
         <th>Name</th><th>Type</th><th>Category</th><th class="num">Price</th>
-        <th class="num">Stock</th><th class="num">Reorder</th><th>State</th><th></th>
+        <th>Stock</th><th class="num">Reorder</th><th>State</th><th></th>
       </tr>
     </thead>
     <tbody>
     <?php foreach ($items as $row): ?>
       <?php $isProduct = inv_is_product($row); $isLow = isset($lowStockIds[(int) $row['item_id']]); ?>
+      <?php [$chip, $chipLabel] = inv_stock_chip($row, $isLow); ?>
       <tr>
-        <td><?= e($row['item_name']) ?></td>
+        <td class="cell-strong"><?= e($row['item_name']) ?></td>
         <td>
           <span class="badge badge--<?= $isProduct ? 'product' : 'service' ?>">
             <?= $isProduct ? 'Product' : 'Service' ?>
           </span>
         </td>
         <td><?= $row['category'] !== null && $row['category'] !== '' ? e($row['category']) : '<span class="muted">—</span>' ?></td>
-        <td class="num">&#8369;<?= e(Money::format((int) $row['price_centavos'])) ?></td>
-        <td class="num">
-          <?php if ($isProduct): ?>
-            <?= (int) $row['stock_quantity'] ?><?php if ($isLow): ?> <span class="badge badge--low">Low</span><?php endif; ?>
-          <?php else: ?>
-            <span class="muted">n/a</span>
-          <?php endif; ?>
-        </td>
+        <td class="num cell-money">&#8369;<?= e(Money::format((int) $row['price_centavos'])) ?></td>
+        <td><span class="stock stock--<?= $chip ?>"><?= e($chipLabel) ?></span></td>
         <td class="num">
           <?php if ($isProduct && $row['reorder_level'] !== null): ?>
             <?= (int) $row['reorder_level'] ?>
@@ -200,7 +224,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
                       onclick="return confirm('Deactivate this item? It is hidden from the POS and active inventory but stays on past sales.');">Deactivate</button>
             <?php else: ?>
               <input type="hidden" name="_action" value="activate">
-              <button type="submit" class="linklike">Activate</button>
+              <button type="submit" class="linklike linklike--neutral">Activate</button>
             <?php endif; ?>
           </form>
         </td>
@@ -208,6 +232,8 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
+  <p class="tablepanel__foot"><?= e($countText) ?></p>
   </div>
 <?php endif; ?>
 

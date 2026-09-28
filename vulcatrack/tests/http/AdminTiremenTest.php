@@ -109,12 +109,17 @@ test('admin tiremen: guard, CSRF, list/filter, add, edit, activate/deactivate', 
         assert_contains("{$tag} Seed Active", $list['body'], 'default filter shows active Tiremen');
         assert_not_contains("{$tag} Seed Inactive", $list['body'], 'default filter hides inactive Tiremen');
         assert_contains('<option value="active" selected>', $list['body']);
+        // Active / Inactive badges follow is_active (Phase 7.3b: black = active, outlined = inactive).
+        assert_contains('badge--active', $list['body'], 'active Tiremen carry the Active badge');
+        assert_not_contains('badge--inactive', $list['body'], 'the active-only list shows no Inactive badge');
         $assertCleanHtml($list['body'], 'tiremen.php');
 
         $r = $server->request($LIST . '?status=inactive');
         assert_contains("{$tag} Seed Inactive", $r['body']);
         assert_not_contains("{$tag} Seed Active", $r['body'], 'inactive filter hides active Tiremen');
         assert_contains('<option value="inactive" selected>', $r['body']);
+        assert_contains('badge--inactive', $r['body'], 'inactive Tiremen carry the Inactive badge');
+        assert_not_contains('badge--active', $r['body'], 'the inactive-only list shows no Active badge');
 
         $r = $server->request($LIST . '?status=all');
         assert_contains("{$tag} Seed Active", $r['body']);

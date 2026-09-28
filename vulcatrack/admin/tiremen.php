@@ -65,10 +65,12 @@ $navActive = 'tiremen';
 require __DIR__ . '/../src/Views/partials/admin_top.php';
 ?>
 <div class="pagehead">
-  <h1>Tiremen</h1>
+  <div>
+    <h1>Tiremen</h1>
+    <p class="pagehead__meta">The people who perform On-the-Go services. Only active Tiremen can be given new assignments.</p>
+  </div>
   <a class="btnlink" href="<?= e(vulcatrack_url('/admin/tireman-edit.php')) ?>">Add Tireman</a>
 </div>
-<p class="muted">The people who perform On-the-Go services. Only active Tiremen can be given new assignments.</p>
 
 <?php foreach ($flashes as [$type, $message]): ?>
   <p class="<?= $type === 'error' ? 'error' : 'notice' ?>"><?= e($message) ?></p>
@@ -86,11 +88,13 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 </form>
 
 <?php $n = count($tiremen); ?>
-<p class="muted"><?= $n ?> <?= $n === 1 ? 'Tireman' : 'Tiremen' ?>.</p>
+<?php $countText = $n . ' ' . ($n === 1 ? 'Tireman' : 'Tiremen') . '.'; ?>
 
 <?php if (!$tiremen): ?>
+  <p class="muted"><?= e($countText) ?></p>
   <p class="muted">No Tiremen to show.</p>
 <?php else: ?>
+  <div class="tablepanel">
   <div class="table-scroll">
   <table class="datatable">
     <thead>
@@ -100,7 +104,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php foreach ($tiremen as $row): ?>
       <?php $isActive = $row['is_active'] === 1; ?>
       <tr>
-        <td><?= e($row['name']) ?></td>
+        <td class="cell-strong"><?= e($row['name']) ?></td>
         <td><?= e($row['contact_number']) ?></td>
         <td>
           <span class="badge badge--<?= $isActive ? 'active' : 'inactive' ?>">
@@ -121,7 +125,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
                       onclick="return confirm('Deactivate this Tireman? They cannot be given new assignments but stay on past requests.');">Deactivate</button>
             <?php else: ?>
               <input type="hidden" name="_action" value="activate">
-              <button type="submit" class="linklike">Activate</button>
+              <button type="submit" class="linklike linklike--neutral">Activate</button>
             <?php endif; ?>
           </form>
         </td>
@@ -129,6 +133,8 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
+  <p class="tablepanel__foot"><?= e($countText) ?></p>
   </div>
 <?php endif; ?>
 

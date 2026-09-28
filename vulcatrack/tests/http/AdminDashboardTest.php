@@ -129,6 +129,26 @@ test('admin dashboard: guards, sales-today / low-stock / pending cards, links', 
         assert_contains('href="/vulcatrack/admin/rescue.php?status=pending"', $html);
         assert_not_contains('<form method="post" action="/vulcatrack/admin/index.php"', $html, 'read-only');
 
+        // Needs Attention (Phase 7.3b): rendered from the same two reads as the
+        // cards — pending requests only (newest first, so the seeded ones lead),
+        // low-stock items only, at most 5 rows each, then a link to the full page.
+        assert_contains('<h2 class="dash-section">Needs Attention</h2>', $html);
+        foreach ([$requestIds[0], $requestIds[1]] as $id) {
+            assert_contains('href="/vulcatrack/admin/rescue-view.php?id=' . $id . '"', $html, 'a pending request is listed');
+        }
+        foreach ([$requestIds[2], $requestIds[3], $requestIds[4]] as $id) {
+            assert_not_contains('rescue-view.php?id=' . $id . '"', $html, 'accepted / rejected / completed requests are not listed');
+        }
+        foreach (['Plenty', 'Low Inactive', 'No Reorder', 'Service'] as $other) {
+            assert_not_contains("{$tag} {$other}", $html, "{$other} is not a low-stock item");
+        }
+        if ($baseLow + 1 <= 5) {
+            assert_contains(e("{$tag} Low Active"), $html, 'the seeded low-stock product is listed');
+        } else {
+            assert_contains('View all ' . ($baseLow + 1) . ' low-stock items', $html, 'a longer list links to Inventory');
+        }
+        assert_true(substr_count($html, '<li>') <= 10, 'at most 5 rows per list');
+
         // the Inventory low-stock view lists the seeded low product and not the others
         $inv = $server->request('/vulcatrack/admin/inventory.php?low_stock=1&q=' . $tag)['body'];
         assert_contains("{$tag} Low Active", $inv);

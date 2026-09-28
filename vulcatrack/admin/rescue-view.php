@@ -5,7 +5,9 @@
  * Shows the request, its customer, vehicle, stored location + frozen ETA
  * (never recomputed — Decision 32), the assigned Tireman and the last admin
  * who handled it, and a read-only straight-line map to the shop (Decisions
- * 9/33 — no routing, no live tracking).
+ * 9/33 — no routing, no live tracking). Phase 7.3b laid it out as a "ticket"
+ * (customer / problem panels + an Assigned Tireman strip); the ETA there is
+ * the request-time snapshot, labelled as such — never a live estimate.
  *
  * Actions (Phase 6.3, owner-approved rules): POST + CSRF, then redirect back
  * here (PRG) with a one-time session flash.
@@ -156,24 +158,81 @@ $navActive = 'rescue';
 $useMap    = $hasLocation;
 require __DIR__ . '/../src/Views/partials/admin_top.php';
 ?>
-<div class="pagehead">
-  <h1>Request #<?= (int) $request['request_id'] ?></h1>
+<?php /* Phase 7.3b layout (Figma "ticket" composition, truthful to the real model):
+   header -> request meta -> customer | problem & vehicle panels -> dark
+   "Assigned Tireman" strip with the FROZEN request-time ETA -> actions ->
+   location + map. Forms, field names and transition rules are unchanged. */ ?>
+<header class="pagehead">
+  <div>
+    <p class="eyebrow">Rescue request</p>
+    <h1>Request #<?= (int) $request['request_id'] ?></h1>
+  </div>
   <span class="badge <?= e(OtgStatus::badgeClass($request['status'])) ?>"><?= e(OtgStatus::adminLabel($request['status'])) ?></span>
-</div>
+</header>
+
+<dl class="rescue-meta">
+  <div><dt>Requested</dt><dd><?= e($request['requested_at']) ?></dd></div>
+  <div><dt>Last updated</dt><dd><?= e($request['updated_at']) ?></dd></div>
+  <div><dt>Handled by</dt><dd><?= $request['admin_id'] !== null ? e($request['admin_name']) : '<span class="muted">Not yet handled by an admin.</span>' ?></dd></div>
+</dl>
+
 <?php foreach ($flashes as [$type, $message]): ?>
   <p class="<?= $type === 'error' ? 'error' : 'notice' ?>"><?= e($message) ?></p>
 <?php endforeach; ?>
 
 <?php if (OtgStatus::isFinal($status)): ?>
   <p class="muted">This request is <?= e(strtolower(OtgStatus::adminLabel($status))) ?>. It is final and cannot be changed.</p>
-<?php else: ?>
-  <section class="card rescue-actions">
-    <h2>Actions</h2>
-    <?php $formUrl = vulcatrack_url('/admin/rescue-view.php?id=' . (int) $request['request_id']); ?>
+<?php endif; ?>
 
+<div class="rescue-panels">
+  <section class="card rescue-panel">
+    <h2 class="rescue-panel__title">Customer</h2>
+    <p class="rescue-panel__lead"><?= e($request['customer_name']) ?></p>
+    <dl class="kv">
+      <dt>Contact number</dt><dd><?= rescue_tel((string) $request['customer_contact']) ?></dd>
+      <dt>Email</dt><dd><?= e($request['customer_email']) ?></dd>
+    </dl>
+  </section>
+
+  <section class="card rescue-panel">
+    <h2 class="rescue-panel__title">Problem &amp; vehicle</h2>
+    <p class="rescue-panel__lead rescue-problem"><?= nl2br(e($request['problem_description'])) ?></p>
+    <dl class="kv">
+      <dt>Vehicle</dt><dd><?= $vehicleBits ? e(implode(' ', $vehicleBits)) : '<span class="muted">—</span>' ?></dd>
+      <dt>Plate number</dt><dd><?= e($request['plate_number']) ?></dd>
+    </dl>
+    <?php if ((int) $request['vehicle_active'] !== 1): ?>
+      <p class="muted">The customer has since removed this vehicle from their active list.</p>
+    <?php endif; ?>
+  </section>
+</div>
+
+<section class="rescue-assign" aria-label="Assigned Tireman">
+  <div class="rescue-assign__who">
+    <p class="rescue-assign__label">Assigned Tireman</p>
+    <?php if ($request['tireman_id'] !== null): ?>
+      <p class="rescue-assign__name"><?= e($request['tireman_name']) ?><?= (int) $request['tireman_active'] !== 1 ? ' <span class="badge badge--inactive">Inactive</span>' : '' ?></p>
+      <p class="rescue-assign__sub"><?= rescue_tel((string) $request['tireman_contact']) ?></p>
+    <?php else: ?>
+      <p class="rescue-assign__name rescue-assign__name--none">No Tireman assigned.</p>
+    <?php endif; ?>
+  </div>
+  <div class="rescue-assign__eta">
+    <p class="rescue-assign__label">ETA at request time</p>
+    <p class="rescue-assign__value"><?= $request['eta_minutes'] !== null ? (int) $request['eta_minutes'] . ' minutes' : 'not available' ?></p>
+    <p class="rescue-assign__sub">Stored when the customer submitted; it does not change.</p>
+  </div>
+</section>
+
+<?php if (!OtgStatus::isFinal($status)): ?>
+  <section class="card rescue-actions">
+    <h2 class="rescue-panel__title">Actions</h2>
+    <?php $formUrl = vulcatrack_url('/admin/rescue-view.php?id=' . (int) $request['request_id']); ?>
+    <div class="rescue-actions__grid">
+    <div class="rescue-actions__assign">
     <?php if ($status === 'pending'): ?>
       <?php if ($activeTiremen): ?>
-        <form method="post" action="<?= e($formUrl) ?>">
+        <form class="rescue-pick" method="post" action="<?= e($formUrl) ?>">
           <?= Csrf::field() ?>
           <input type="hidden" name="_action" value="accept">
           <label for="accept-tireman">Accept and assign a Tireman</label>
@@ -183,7 +242,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
               <option value="<?= (int) $t['tireman_id'] ?>"><?= e($t['name']) ?> — <?= e($t['contact_number']) ?></option>
             <?php endforeach; ?>
           </select>
-          <button type="submit">Accept request</button>
+          <button type="submit" class="btnlink">Accept request</button>
         </form>
       <?php else: ?>
         <p class="muted">No active Tiremen. <a href="<?= e(vulcatrack_url('/admin/tiremen.php')) ?>">Add or activate one</a> before accepting this request.</p>
@@ -192,7 +251,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php else: /* accepted */ ?>
       <?php $others = array_values(array_filter($activeTiremen, fn ($t) => $t['tireman_id'] !== $currentTid)); ?>
       <?php if ($others): ?>
-        <form method="post" action="<?= e($formUrl) ?>">
+        <form class="rescue-pick" method="post" action="<?= e($formUrl) ?>">
           <?= Csrf::field() ?>
           <input type="hidden" name="_action" value="reassign">
           <input type="hidden" name="expected_tireman_id" value="<?= $currentTid !== null ? $currentTid : '' ?>">
@@ -203,17 +262,21 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
               <option value="<?= (int) $t['tireman_id'] ?>"><?= e($t['name']) ?> — <?= e($t['contact_number']) ?></option>
             <?php endforeach; ?>
           </select>
-          <button type="submit"><?= $currentTid !== null ? 'Change Tireman' : 'Assign Tireman' ?></button>
+          <button type="submit" class="secondary"><?= $currentTid !== null ? 'Change Tireman' : 'Assign Tireman' ?></button>
         </form>
       <?php else: ?>
         <p class="muted"><?= $currentTid !== null ? 'No other active Tireman to reassign to.' : 'No active Tireman to assign.' ?></p>
       <?php endif; ?>
+    <?php endif; ?>
+    </div>
 
+    <div class="rescue-actions__close">
+    <?php if ($status === 'accepted'): ?>
       <?php if ($currentTid !== null): ?>
         <form method="post" action="<?= e($formUrl) ?>">
           <?= Csrf::field() ?>
           <input type="hidden" name="_action" value="complete">
-          <button type="submit" onclick="return confirm('Mark this request as completed? This cannot be undone.');">Mark as completed</button>
+          <button type="submit" class="btnlink" onclick="return confirm('Mark this request as completed? This cannot be undone.');">Mark as completed</button>
         </form>
       <?php else: ?>
         <p class="muted">A Tireman must be assigned before this request can be completed.</p>
@@ -227,72 +290,18 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <button type="submit" class="linklike"
               onclick="return confirm('Reject this request? This cannot be undone.');">Reject request</button>
     </form>
+    </div>
+    </div>
   </section>
 <?php endif; ?>
 
 <section class="card">
-  <h2>Request</h2>
-  <dl class="kv">
-    <dt>Status</dt><dd><?= e(OtgStatus::adminLabel($request['status'])) ?></dd>
-    <dt>Problem</dt><dd><?= nl2br(e($request['problem_description'])) ?></dd>
-    <dt>Requested</dt><dd><?= e($request['requested_at']) ?></dd>
-    <dt>Last updated</dt><dd><?= e($request['updated_at']) ?></dd>
-  </dl>
-</section>
-
-<section class="card">
-  <h2>Customer</h2>
-  <dl class="kv">
-    <dt>Name</dt><dd><?= e($request['customer_name']) ?></dd>
-    <dt>Contact number</dt><dd><?= rescue_tel((string) $request['customer_contact']) ?></dd>
-    <dt>Email</dt><dd><?= e($request['customer_email']) ?></dd>
-  </dl>
-</section>
-
-<section class="card">
-  <h2>Vehicle</h2>
-  <dl class="kv">
-    <dt>Plate number</dt><dd><?= e($request['plate_number']) ?></dd>
-    <dt>Details</dt><dd><?= $vehicleBits ? e(implode(' ', $vehicleBits)) : '<span class="muted">—</span>' ?></dd>
-  </dl>
-  <?php if ((int) $request['vehicle_active'] !== 1): ?>
-    <p class="muted">The customer has since removed this vehicle from their active list.</p>
-  <?php endif; ?>
-</section>
-
-<section class="card">
-  <h2>Tireman</h2>
-  <?php if ($request['tireman_id'] !== null): ?>
+  <h2 class="rescue-panel__title">Location</h2>
+  <?php if ($hasLocation): ?>
     <dl class="kv">
-      <dt>Name</dt><dd><?= e($request['tireman_name']) ?><?= (int) $request['tireman_active'] !== 1 ? ' <span class="badge badge--inactive">Inactive</span>' : '' ?></dd>
-      <dt>Contact number</dt><dd><?= rescue_tel((string) $request['tireman_contact']) ?></dd>
-    </dl>
-  <?php else: ?>
-    <p class="muted">No Tireman assigned.</p>
-  <?php endif; ?>
-</section>
-
-<section class="card">
-  <h2>Handled by</h2>
-  <?php if ($request['admin_id'] !== null): ?>
-    <p><?= e($request['admin_name']) ?></p>
-  <?php else: ?>
-    <p class="muted">Not yet handled by an admin.</p>
-  <?php endif; ?>
-</section>
-
-<section class="card">
-  <h2>Location</h2>
-  <dl class="kv">
-    <dt>ETA (snapshot at request time)</dt>
-    <dd><?= $request['eta_minutes'] !== null ? (int) $request['eta_minutes'] . ' minutes' : 'not available' ?>
-      <span class="muted">— stored when the customer submitted; it does not change.</span></dd>
-    <?php if ($hasLocation): ?>
       <dt>Coordinates</dt>
       <dd><?= e(number_format((float) $request['latitude'], 5)) ?>, <?= e(number_format((float) $request['longitude'], 5)) ?></dd>
-    <?php endif; ?>
-  </dl>
-  <?php if ($hasLocation): ?>
+    </dl>
     <div class="mapwrap">
       <div id="otg-map" class="otg-map" data-readonly="1"
            data-shop-lat="<?= e((string) $shop['latitude']) ?>"

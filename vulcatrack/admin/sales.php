@@ -40,22 +40,23 @@ $navActive = 'sales';
 require __DIR__ . '/../src/Views/partials/admin_top.php';
 ?>
 <div class="pagehead">
-  <h1>Sales History</h1>
+  <div>
+    <h1>Sales History</h1>
+    <p class="pagehead__meta">Recorded sales, newest first. Open a sale to view or print its Transaction Summary.</p>
+  </div>
+  <form class="filterbar filterbar--head" method="get" action="<?= e(vulcatrack_url('/admin/sales.php')) ?>">
+    <label>From
+      <input type="date" name="from" value="<?= e($from) ?>">
+    </label>
+    <label>To
+      <input type="date" name="to" value="<?= e($to) ?>">
+    </label>
+    <button type="submit">Filter</button>
+    <?php if ($filtered): ?>
+      <a href="<?= e(vulcatrack_url('/admin/sales.php')) ?>">Clear</a>
+    <?php endif; ?>
+  </form>
 </div>
-<p class="muted">Recorded sales, newest first. Open a sale to view or print its Transaction Summary.</p>
-
-<form class="filterbar" method="get" action="<?= e(vulcatrack_url('/admin/sales.php')) ?>">
-  <label>From
-    <input type="date" name="from" value="<?= e($from) ?>">
-  </label>
-  <label>To
-    <input type="date" name="to" value="<?= e($to) ?>">
-  </label>
-  <button type="submit">Filter</button>
-  <?php if ($filtered): ?>
-    <a href="<?= e(vulcatrack_url('/admin/sales.php')) ?>">Clear</a>
-  <?php endif; ?>
-</form>
 
 <?php if ($rangeError): ?>
   <p class="error">The From date cannot be later than the To date.</p>
@@ -63,8 +64,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <p class="muted"><?= $filtered ? 'No sales in this date range.' : 'No sales recorded yet.' ?></p>
 <?php else: ?>
   <?php $n = count($sales); ?>
-  <p class="muted"><?= $n ?> <?= $n === 1 ? 'sale' : 'sales' ?>.</p>
-
+  <div class="tablepanel">
   <div class="table-scroll">
   <table class="datatable">
     <thead>
@@ -76,8 +76,11 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
         <td><?= (int) $s['sale_id'] ?></td>
         <td class="muted"><?= e($s['sale_date']) ?></td>
         <td><?= e($s['admin_name']) ?></td>
-        <td><?= $s['customer_name'] !== null ? e($s['customer_name']) : 'Walk-in' ?></td>
-        <td class="num">&#8369;<?= e(Money::format((int) $s['total_amount_centavos'])) ?></td>
+        <?php /* walk-in vs registered customer: a quiet tag vs a stronger neutral one (presentation only) */ ?>
+        <td><?= $s['customer_name'] !== null
+            ? '<span class="tag tag--customer">' . e($s['customer_name']) . '</span>'
+            : '<span class="tag tag--walkin">Walk-in</span>' ?></td>
+        <td class="num cell-money">&#8369;<?= e(Money::format((int) $s['total_amount_centavos'])) ?></td>
         <td class="rowactions">
           <a href="<?= e(vulcatrack_url('/admin/transaction-summary.php?id=' . (int) $s['sale_id'])) ?>">View</a>
         </td>
@@ -85,6 +88,8 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
+  <p class="tablepanel__foot"><?= $n ?> <?= $n === 1 ? 'sale' : 'sales' ?>.</p>
   </div>
 <?php endif; ?>
 

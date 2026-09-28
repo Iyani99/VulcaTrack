@@ -109,10 +109,12 @@ test('sales history: guards, newest-first list, walk-in/customer, escaping, date
         assert_contains('2001-03-15 10:00:00', $html, 'recorded sale date/time');
         // in its table cell: the signed-in admin (this cashier) is also named in the sidebar
         assert_contains('<td>' . e("{$tag} Cashier <i>Jo</i>") . '</td>', $html, 'cashier name, escaped');
-        assert_contains(e("{$tag} <b>Ana</b> & Co"), $html, 'linked customer name, escaped');
+        // Phase 7.3b: a registered customer is a stronger neutral tag, walk-in a quiet one.
+        assert_contains('<td><span class="tag tag--customer">' . e("{$tag} <b>Ana</b> & Co") . '</span></td>', $html, 'linked customer name, escaped, on a customer tag');
         assert_not_contains('<i>Jo</i>', $html);
         assert_not_contains('<b>Ana</b>', $html);
-        assert_contains('<td>Walk-in</td>', $html, 'a sale without a customer shows Walk-in');
+        assert_contains('<td><span class="tag tag--walkin">Walk-in</span></td>', $html, 'a sale without a customer shows Walk-in');
+        assert_not_contains('tag--customer">Walk-in', $html, 'Walk-in is never shown as a registered customer');
         assert_contains('&#8369;286.50', $html, 'stored total');
         assert_contains('&#8369;1234.05', $html, 'stored total, no thousands separator (existing convention)');
 

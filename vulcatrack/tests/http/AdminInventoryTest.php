@@ -105,10 +105,16 @@ test('admin inventory: guard, actor separation, filters, low-stock and escaping'
         assert_contains('badge--product', $r['body']);
         assert_contains('badge--service', $r['body']);
         assert_contains('n/a', $r['body'], 'a service has no stock cell value');
+        assert_contains('<span class="stock stock--na">n/a</span>', $r['body'], 'a service gets the neutral n/a stock chip');
 
-        // 5. Low-stock flag: present in the default view (Low Widget qualifies),
-        //    and the OK widget alone does not trigger it.
-        assert_contains('badge--low', $r['body']);
+        // 5. Low-stock flag (Phase 7.3b stock chips, same rule as before): the Low
+        //    Widget (3 <= reorder 5) is flagged, the OK widget (50 > 5) is not.
+        assert_contains('stock--low', $r['body']);
+        assert_contains('<span class="stock stock--low">Low: 3</span>', $r['body'], 'the low product shows its stock on a low chip');
+        assert_contains('<span class="stock stock--ok">OK: 50</span>', $r['body'], 'a product above its reorder level is OK');
+        // Active / Inactive badges follow is_active: the default (active-only) view has no Inactive badge.
+        assert_contains('badge--active', $r['body']);
+        assert_not_contains('badge--inactive', $r['body'], 'the active-only view shows no Inactive badge');
         $productsOnly = $server->request($base . '?type=product&q=' . $tag);
         assert_same(200, $productsOnly['status']);
         assert_not_contains('n/a', $productsOnly['body'], 'a product view never shows the service placeholder');
@@ -117,16 +123,19 @@ test('admin inventory: guard, actor separation, filters, low-stock and escaping'
         $svc = $server->request($base . '?type=service&q=' . $tag);
         assert_contains("{$tag} Labor", $svc['body']);
         assert_not_contains("{$tag} Low Widget", $svc['body']);
-        assert_not_contains('badge--low', $svc['body'], 'services are never flagged low-stock');
+        assert_not_contains('stock--low', $svc['body'], 'services are never flagged low-stock');
         $assertCleanHtml($svc['body'], 'inventory?type=service');
 
         // 7. status=inactive + search -> only the inactive product, and it is NOT
-        //    flagged low-stock even though its numbers would qualify.
+        //    flagged low-stock even though its numbers would qualify (stock 0 shows
+        //    as a plain Out chip, not an alert).
         $inactive = $server->request($base . '?status=inactive&q=' . $tag);
         assert_contains("{$tag} Retired", $inactive['body']);
         assert_not_contains("{$tag} Low Widget", $inactive['body']);
-        assert_not_contains('badge--low', $inactive['body'], 'an inactive product is not a live low-stock alert');
+        assert_not_contains('stock--low', $inactive['body'], 'an inactive product is not a live low-stock alert');
+        assert_contains('<span class="stock stock--out">Out: 0</span>', $inactive['body']);
         assert_contains('badge--inactive', $inactive['body']);
+        assert_not_contains('badge--active', $inactive['body'], 'the inactive-only view shows no Active badge');
 
         // 8. text search narrows by name.
         $q = $server->request($base . '?q=' . $tag . '%20Labor');

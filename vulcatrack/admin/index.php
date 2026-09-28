@@ -17,6 +17,10 @@
  * - Pending Rescues — ServiceRequestRepository::listForAdmin('pending'), the
  *   Rescue list's default view → Rescue.
  *
+ * Needs Attention (Phase 7.3b): the first few low-stock items and pending
+ * requests, rendered from those same two reads (no extra query), each list
+ * linking to its full page. No activity feed or comparisons (not in scope).
+ *
  * Read-only: GET, admin guard, no forms.
  */
 
@@ -33,8 +37,13 @@ $pdo   = vulcatrack_db();
 
 $today      = date('Y-m-d'); // app timezone (config app.timezone), same as sale_date
 $salesToday = (new SaleRepository($pdo))->summarize($today, $today);
-$lowStock   = count((new ItemRepository($pdo))->lowStockProducts());
-$pending    = count((new ServiceRequestRepository($pdo))->listForAdmin('pending'));
+// The same two reads feed both the card counts and the Needs Attention lists
+// below (Phase 7.3b) — no extra query.
+$lowItems   = (new ItemRepository($pdo))->lowStockProducts();          // by item name
+$pendingReq = (new ServiceRequestRepository($pdo))->listForAdmin('pending'); // newest first
+$lowStock   = count($lowItems);
+$pending    = count($pendingReq);
+const DASH_LIST_MAX = 5; // rows per Needs Attention list; the rest are one link away
 
 $pageTitle = 'Dashboard';
 $navActive = 'dashboard';
@@ -77,6 +86,48 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <p class="dash-card__value"><?= $pending ?></p>
     <p class="dash-card__note">Waiting to be accepted or rejected</p>
     <a class="dash-card__link" href="<?= e(vulcatrack_url('/admin/rescue.php?status=pending')) ?>">Open Rescue requests</a>
+  </section>
+</div>
+
+<h2 class="dash-section">Needs Attention</h2>
+<div class="panelgrid">
+  <section class="panel">
+    <header class="panel__head"><h3>Low stock items</h3></header>
+    <?php if (!$lowItems): ?>
+      <p class="panel__note muted">No products are at or below their reorder level.</p>
+    <?php else: ?>
+      <ul class="attn-list">
+        <?php foreach (array_slice($lowItems, 0, DASH_LIST_MAX) as $it): ?>
+          <li>
+            <span class="attn-list__main"><?= e($it['item_name']) ?></span>
+            <span class="stock stock--low"><?= (int) $it['stock_quantity'] === 0 ? 'Out: 0' : 'Low: ' . (int) $it['stock_quantity'] ?></span>
+            <span class="attn-list__meta">reorder at <?= (int) $it['reorder_level'] ?></span>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
+    <p class="panel__foot">
+      <a href="<?= e(vulcatrack_url('/admin/inventory.php?low_stock=1')) ?>"><?= $lowStock > DASH_LIST_MAX ? 'View all ' . $lowStock . ' low-stock items' : 'View in Inventory' ?></a>
+    </p>
+  </section>
+
+  <section class="panel">
+    <header class="panel__head"><h3>Pending rescues</h3></header>
+    <?php if (!$pendingReq): ?>
+      <p class="panel__note muted">No pending rescue requests.</p>
+    <?php else: ?>
+      <ul class="attn-list">
+        <?php foreach (array_slice($pendingReq, 0, DASH_LIST_MAX) as $rq): ?>
+          <li>
+            <a class="attn-list__main" href="<?= e(vulcatrack_url('/admin/rescue-view.php?id=' . (int) $rq['request_id'])) ?>">#<?= (int) $rq['request_id'] ?> &middot; <?= e($rq['customer_name']) ?></a>
+            <span class="attn-list__meta"><?= e($rq['plate_number']) ?> &middot; <?= e($rq['requested_at']) ?></span>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
+    <p class="panel__foot">
+      <a href="<?= e(vulcatrack_url('/admin/rescue.php?status=pending')) ?>"><?= $pending > DASH_LIST_MAX ? 'View all ' . $pending . ' pending requests' : 'View in Rescue' ?></a>
+    </p>
   </section>
 </div>
 
