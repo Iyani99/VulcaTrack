@@ -84,7 +84,7 @@ test('admin shell: guards, actor separation, logout CSRF, nav and clean output',
 
         $dash = $server->request('/vulcatrack/admin/index.php');
         assert_same(200, $dash['status'], 'the signed-in admin can open the dashboard');
-        assert_contains('Admin Dashboard', $dash['body']);
+        assert_contains('<h1>Dashboard Overview</h1>', $dash['body']);
         assert_contains('Shell Admin', $dash['body'], 'the dashboard greets the signed-in admin by name');
         $assertCleanHtml($dash['body'], 'admin/index.php');
 

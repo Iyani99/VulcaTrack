@@ -962,7 +962,10 @@ Do not turn these into confirmed requirements without approval.
 - **Phase 7 (integration, testing, bug fixing, presentation readiness) IN
   PROGRESS.** Chunk 7.1 (2026-09-28): inventory edit integrity — a sold item's
   type is fixed (**Decision 69**) and a stale item edit cannot overwrite stock a
-  sale has changed. Its deferred-item backlog is consolidated in
+  sale has changed. Chunk 7.2 (2026-09-28): the public landing page was rebuilt
+  (accurate copy — request status and a one-time ETA, no live tracking) and the
+  Admin Dashboard shows total sales today, low-stock alerts and pending rescues.
+  Its deferred-item backlog is consolidated in
   `docs/PROJECT-CONTEXT.md` §16.5.
 - Repo on `main` at `C:\IPT102`, pushed to
   `https://github.com/Iyani99/VulcaTrack.git`; app at `C:\IPT102\vulcatrack\`
@@ -1074,6 +1077,16 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-28 — Phase 7.2: landing page + Admin Dashboard cards (status only; no decision change)
+
+- **Current Project Status** updated. The public landing page follows the approved
+  Figma layout but describes only approved behavior: request status, the assigned
+  Tireman and a one-time ETA (Decisions 32/48), with no live tracking. The Admin
+  Dashboard's three cards reuse existing reads (Decision 35 for "today's" sales; the
+  Inventory low-stock rule; pending = `status = 'pending'`). Tests **206 passed / 2958
+  assertions / 40 files**.
+- No renumbering, no new decision, no schema change.
 
 ### 2026-09-28 — Phase 7.1: inventory edit integrity (**decision change: Decision 69 added**)
 
