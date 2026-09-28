@@ -17,7 +17,10 @@ No payment table, no receipt table, no `shop_settings` table, no
 status-history / audit table, no location-history table, no separate
 Staff / Tireman login table — by explicit decision.
 
-## Load / rebuild (local MariaDB, XAMPP)
+A sale may be linked to at most one Rescue request through the nullable
+`sales.service_request_id` (Phase 7.3d-a) — a column, not a new table.
+
+## Fresh install (local MariaDB, XAMPP)
 
 1. Start **MySQL** from the XAMPP Control Panel.
 2. From `C:\IPT102\vulcatrack\`:
@@ -28,9 +31,32 @@ Staff / Tireman login table — by explicit decision.
 
    or import `database\schema.sql` through phpMyAdmin.
 
-`schema.sql` begins with `CREATE DATABASE IF NOT EXISTS vulcatrack` and
-`DROP TABLE IF EXISTS …`, so it is safe to re-run to rebuild a clean schema
-during development. The database holds no seed/application data in v1.
+`schema.sql` always builds the **current** schema (it already includes every
+migration below), so a fresh install never needs the migration files.
+
+**Warning — re-running `schema.sql` wipes the database.** It begins with
+`CREATE DATABASE IF NOT EXISTS vulcatrack` and `DROP TABLE IF EXISTS …` for every
+table, so running it against a database that already has customers, sales or
+rescue requests deletes all of that data and recreates empty tables. Only do
+that when you mean to start over.
+
+## Updating an existing database (migrations)
+
+A database built from an older `schema.sql` is brought up to date — without
+losing data — by applying the one-off files in `database/migrations/`, oldest
+first, **once each**. Each file explains how to check whether it is already
+applied and how to roll it back.
+
+| File | Change |
+|---|---|
+| `migrations/2026-09-28-sales-service-request.sql` | Phase 7.3d-a: adds nullable `sales.service_request_id` (UNIQUE, FK → `service_requests.request_id`, RESTRICT). Existing sales stay `NULL`. |
+
+```
+C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-28-sales-service-request.sql
+```
+
+Running a migration a second time fails with a clear error (e.g. `Duplicate
+column name`) and changes nothing.
 
 ## Creating an admin account
 

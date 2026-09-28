@@ -2,8 +2,8 @@
 /**
  * Integration tests -- the live database schema (Phase 2).
  *
- * Read-only (the one write is a CHECK probe wrapped in a rolled-back
- * transaction). Confirms the eight locked application tables exist with the
+ * Read-only (the only writes are constraint probes wrapped in rolled-back
+ * transactions). Confirms the eight locked application tables exist with the
  * columns, nullability, unique keys and CHECK constraints the decision record
  * and schema.dbml require -- so Phase 5 starts from a known-good schema and any
  * accidental drift is caught immediately.
@@ -42,6 +42,91 @@ test('sales supports walk-in (customer_id nullable) and requires a recording adm
     assert_same('NO', $cols['sale_date']['IS_NULLABLE']);
     assert_null($cols['sale_date']['COLUMN_DEFAULT'], 'sale_date has no default -- the app supplies it (Decision 35)');
     assert_same('NO', $cols['total_amount']['IS_NULLABLE']);
+});
+
+test('sales.service_request_id is a nullable, UNIQUE, RESTRICT foreign key to service_requests (Phase 7.3d-a)', function () {
+    $pdo = test_pdo();
+    $cols = schema_columns($pdo, 'sales');
+    assert_true(isset($cols['service_request_id']), 'sales.service_request_id must exist (run database/migrations/ on an older database)');
+    assert_same('YES', $cols['service_request_id']['IS_NULLABLE'], 'NULL = an ordinary POS sale not linked to a Rescue');
+
+    // Same column type as the key it references (INT, signed).
+    $type = $pdo->prepare(
+        'SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+    );
+    $type->execute(['sales', 'service_request_id']);
+    $linkType = (string) $type->fetchColumn();
+    $type->execute(['service_requests', 'request_id']);
+    assert_same('int', $cols['service_request_id']['DATA_TYPE']);
+    assert_same((string) $type->fetchColumn(), $linkType, 'must match service_requests.request_id exactly');
+
+    // A single-column UNIQUE key: zero-or-one sale per request.
+    $idx = $pdo->prepare(
+        "SELECT COLUMN_NAME, NON_UNIQUE FROM information_schema.STATISTICS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sales' AND INDEX_NAME = 'uq_sales_service_request'"
+    );
+    $idx->execute();
+    $rows = $idx->fetchAll();
+    assert_count(1, $rows, 'uq_sales_service_request must cover exactly one column');
+    assert_same('service_request_id', $rows[0]['COLUMN_NAME']);
+    assert_same(0, (int) $rows[0]['NON_UNIQUE'], 'the key must be UNIQUE');
+
+    // Exactly one FK on the column, to service_requests.request_id, RESTRICT both ways.
+    $fk = $pdo->prepare(
+        "SELECT k.CONSTRAINT_NAME, k.REFERENCED_TABLE_NAME, k.REFERENCED_COLUMN_NAME, r.DELETE_RULE, r.UPDATE_RULE
+         FROM information_schema.KEY_COLUMN_USAGE k
+         JOIN information_schema.REFERENTIAL_CONSTRAINTS r
+           ON r.CONSTRAINT_SCHEMA = k.CONSTRAINT_SCHEMA AND r.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+          AND r.TABLE_NAME = k.TABLE_NAME
+         WHERE k.TABLE_SCHEMA = DATABASE() AND k.TABLE_NAME = 'sales'
+           AND k.COLUMN_NAME = 'service_request_id' AND k.REFERENCED_TABLE_NAME IS NOT NULL"
+    );
+    $fk->execute();
+    $fks = $fk->fetchAll();
+    assert_count(1, $fks, 'sales.service_request_id needs exactly one foreign key');
+    assert_same('fk_sales_service_request', $fks[0]['CONSTRAINT_NAME']);
+    assert_same('service_requests', $fks[0]['REFERENCED_TABLE_NAME']);
+    assert_same('request_id', $fks[0]['REFERENCED_COLUMN_NAME']);
+    assert_same('RESTRICT', $fks[0]['DELETE_RULE'], 'never cascade-delete a sale or its link');
+    assert_same('RESTRICT', $fks[0]['UPDATE_RULE']);
+});
+
+test('the database enforces the sale -> Rescue link: many unlinked sales, one sale per request, RESTRICT', function () {
+    $pdo = test_pdo();
+    TestDb::rollback($pdo, function () use ($pdo) {
+        $pdo->prepare("INSERT INTO customers (full_name, email, contact_number, password_hash) VALUES ('Schema Probe', ?, '09170000000', 'x')")
+            ->execute([TestDb::email('schema-probe')]);
+        $customerId = (int) $pdo->lastInsertId();
+        $pdo->prepare("INSERT INTO admins (full_name, email, password_hash) VALUES ('Schema Probe Admin', ?, 'x')")
+            ->execute([TestDb::email('schema-probe-admin')]);
+        $adminId = (int) $pdo->lastInsertId();
+        $pdo->prepare("INSERT INTO vehicles (customer_id, plate_number) VALUES (?, 'PROBE-1')")->execute([$customerId]);
+        $vehicleId = (int) $pdo->lastInsertId();
+        $pdo->prepare("INSERT INTO service_requests (customer_id, vehicle_id, problem_description, status) VALUES (?, ?, 'probe', 'accepted')")
+            ->execute([$customerId, $vehicleId]);
+        $requestId = (int) $pdo->lastInsertId();
+
+        $sale = $pdo->prepare(
+            "INSERT INTO sales (customer_id, service_request_id, admin_id, sale_date, total_amount)
+             VALUES (?, ?, ?, '2001-01-01 10:00:00', '1.00')"
+        );
+        // Any number of unlinked (NULL) sales — every ordinary POS sale.
+        $sale->execute([null, null, $adminId]);
+        $sale->execute([$customerId, null, $adminId]);
+        // One linked sale per request.
+        $sale->execute([$customerId, $requestId, $adminId]);
+        assert_throws(fn () => $sale->execute([$customerId, $requestId, $adminId]),
+            \PDOException::class, 'uq_sales_service_request', 'a second sale for the same request must be refused');
+        assert_throws(fn () => $sale->execute([$customerId, 2147483646, $adminId]),
+            \PDOException::class, 'fk_sales_service_request', 'a link to a request that does not exist must be refused');
+
+        // RESTRICT: a request with a sale can be neither deleted nor re-keyed.
+        assert_throws(fn () => $pdo->prepare('DELETE FROM service_requests WHERE request_id = ?')->execute([$requestId]),
+            \PDOException::class, 'fk_sales_service_request', 'ON DELETE RESTRICT');
+        assert_throws(fn () => $pdo->prepare('UPDATE service_requests SET request_id = 2147483645 WHERE request_id = ?')->execute([$requestId]),
+            \PDOException::class, 'fk_sales_service_request', 'ON UPDATE RESTRICT');
+    });
 });
 
 test('sale_items carries a frozen unit_price and a subtotal, all NOT NULL', function () {

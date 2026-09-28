@@ -16,11 +16,11 @@ namespace VulcaTrack\Tests;
 
 final class TestDb
 {
-    /** FK-safe teardown order (children first). */
+    /** FK-safe teardown order (children first; sales references service_requests). */
     public const TABLES_CHILD_FIRST = [
-        'service_requests',
         'sale_items',
         'sales',
+        'service_requests',
         'vehicles',
         'items',
         'tiremen',

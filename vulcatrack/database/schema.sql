@@ -1,6 +1,8 @@
 -- =============================================================================
 -- VulcaTrack: Sales and Inventory with On-the-Go Services
 -- Phase 2 — Database Schema (v1)
+-- Structural revision: Phase 7.3d-a (2026-09-28) — sales.service_request_id
+--   (optional link from a sale to one Rescue request; see the sales table).
 --
 -- Source of truth : docs/ERD/schema.dbml               (structure)
 -- Rationale       : docs/VulcaTrack-Database-Notes_1.md (field-by-field)
@@ -15,10 +17,18 @@
 -- audit table, NO location-history / live-tracking table, and NO separate
 -- Staff / Tireman login table — by explicit decision (see the decision record).
 --
--- Reproducible: run this file against a local MariaDB to (re)create the schema
--- on another machine:  mysql -u root vulcatrack < database/schema.sql
--- The DROP statements make it safe to re-run during development. The database
--- holds no real data in v1, so a rebuild is non-destructive.
+-- Use this file for a FRESH install:  mysql -u root vulcatrack < database/schema.sql
+--
+-- WARNING — DESTRUCTIVE ON AN EXISTING DATABASE: the DROP TABLE statements
+-- below delete every application table AND ALL OF ITS DATA (customers, admins,
+-- sales, rescue requests, …) before recreating them empty. Re-run it only when
+-- you intend to wipe the database. To bring an EXISTING database up to date
+-- without losing data, apply the one-off files in database/migrations/ instead
+-- (see database/README.md).
+--
+-- Order: tables are dropped children-first and created parents-first, so every
+-- foreign key's target exists when it is created and no table is dropped while
+-- another still references it.
 -- =============================================================================
 
 CREATE DATABASE IF NOT EXISTS `vulcatrack`
@@ -27,10 +37,12 @@ CREATE DATABASE IF NOT EXISTS `vulcatrack`
 
 USE `vulcatrack`;
 
--- Drop in reverse dependency order so foreign keys never block the rebuild.
-DROP TABLE IF EXISTS `service_requests`;
+-- Drop in reverse dependency order so foreign keys never block the rebuild:
+-- sale_items -> sales -> service_requests (sales references service_requests
+-- since Phase 7.3d-a) -> vehicles -> items / tiremen / admins -> customers.
 DROP TABLE IF EXISTS `sale_items`;
 DROP TABLE IF EXISTS `sales`;
+DROP TABLE IF EXISTS `service_requests`;
 DROP TABLE IF EXISTS `vehicles`;
 DROP TABLE IF EXISTS `items`;
 DROP TABLE IF EXISTS `tiremen`;
@@ -136,63 +148,6 @@ CREATE TABLE `vehicles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
--- sales
--- One completed in-shop transaction, recorded by an admin.
--- customer_id is NULLABLE — walk-in sales are supported (Decision 14).
--- admin_id is REQUIRED — every sale has exactly one recording admin.
--- total_amount is the ONLY monetary value stored per sale (Decision 30):
--- amount tendered / change due are UI-only and never persisted.
--- sale_date = actual-sale timestamp, system-controlled, set by the app on
--- completion; no default here so it is always an explicit application value
--- (Decision 35 — no backdating in v1). created_at = DB record-creation time.
--- -----------------------------------------------------------------------------
-CREATE TABLE `sales` (
-  `sale_id`      INT            NOT NULL AUTO_INCREMENT,
-  `customer_id`  INT                NULL,
-  `admin_id`     INT            NOT NULL,
-  `sale_date`    DATETIME       NOT NULL,
-  `total_amount` DECIMAL(10,2)  NOT NULL,
-  `created_at`   DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`sale_id`),
-  KEY `ix_sales_customer` (`customer_id`),
-  KEY `ix_sales_admin` (`admin_id`),
-  CONSTRAINT `fk_sales_customer`
-    FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`)
-    ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_sales_admin`
-    FOREIGN KEY (`admin_id`) REFERENCES `admins` (`admin_id`)
-    ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- -----------------------------------------------------------------------------
--- sale_items
--- Line items for a sale — the join between sales and items. One sale may mix
--- product and service lines.
--- unit_price is FROZEN at time of sale (Decision 17) — independent of
--- items.price, so later price changes do not rewrite history.
--- subtotal = quantity * unit_price.
--- Product lines decrease items.stock_quantity (application logic); service
--- lines do not (Decision 16).
--- -----------------------------------------------------------------------------
-CREATE TABLE `sale_items` (
-  `sale_item_id` INT            NOT NULL AUTO_INCREMENT,
-  `sale_id`      INT            NOT NULL,
-  `item_id`      INT            NOT NULL,
-  `quantity`     INT            NOT NULL,
-  `unit_price`   DECIMAL(10,2)  NOT NULL,
-  `subtotal`     DECIMAL(10,2)  NOT NULL,
-  PRIMARY KEY (`sale_item_id`),
-  KEY `ix_sale_items_sale` (`sale_id`),
-  KEY `ix_sale_items_item` (`item_id`),
-  CONSTRAINT `fk_sale_items_sale`
-    FOREIGN KEY (`sale_id`) REFERENCES `sales` (`sale_id`)
-    ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_sale_items_item`
-    FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`)
-    ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- -----------------------------------------------------------------------------
 -- service_requests  (On-the-Go / OTG)
 -- Submitted by an authenticated customer (customer_id NOT NULL — Decisions 1/39)
 -- for one of that customer's vehicles (vehicle_id NOT NULL).
@@ -213,6 +168,7 @@ CREATE TABLE `sale_items` (
 --            rejected and completed are final.
 -- No per-status timestamp columns and no status-history table in v1 (Decision 34).
 -- Shop endpoint for route/ETA comes from config/shop.php (Decision 37) — not a table.
+-- Created before `sales`, which references it (sales.service_request_id).
 -- -----------------------------------------------------------------------------
 CREATE TABLE `service_requests` (
   `request_id`          INT            NOT NULL AUTO_INCREMENT,
@@ -246,6 +202,73 @@ CREATE TABLE `service_requests` (
     ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `chk_service_requests_status`
     CHECK (`status` IN ('pending','accepted','rejected','completed'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+-- sales
+-- One completed transaction, recorded by an admin at the POS.
+-- customer_id is NULLABLE — walk-in sales are supported (Decision 14).
+-- admin_id is REQUIRED — every sale has exactly one recording admin.
+-- service_request_id is NULLABLE — the Rescue (OTG) request this sale was
+--   recorded for (Phase 7.3d); NULL = an ordinary POS sale not linked to a
+--   Rescue. UNIQUE: at most one sale per request (zero-or-one). Sales recorded
+--   before this column existed stay NULL (no backfill). ON DELETE / UPDATE
+--   RESTRICT like every other foreign key here.
+-- total_amount is the ONLY monetary value stored per sale (Decision 30):
+-- amount tendered / change due are UI-only and never persisted.
+-- sale_date = actual-sale timestamp, system-controlled, set by the app on
+-- completion; no default here so it is always an explicit application value
+-- (Decision 35 — no backdating in v1). created_at = DB record-creation time.
+-- -----------------------------------------------------------------------------
+CREATE TABLE `sales` (
+  `sale_id`            INT            NOT NULL AUTO_INCREMENT,
+  `customer_id`        INT                NULL,
+  `service_request_id` INT                NULL,
+  `admin_id`           INT            NOT NULL,
+  `sale_date`          DATETIME       NOT NULL,
+  `total_amount`       DECIMAL(10,2)  NOT NULL,
+  `created_at`         DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`sale_id`),
+  UNIQUE KEY `uq_sales_service_request` (`service_request_id`),
+  KEY `ix_sales_customer` (`customer_id`),
+  KEY `ix_sales_admin` (`admin_id`),
+  CONSTRAINT `fk_sales_customer`
+    FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`)
+    ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_sales_admin`
+    FOREIGN KEY (`admin_id`) REFERENCES `admins` (`admin_id`)
+    ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_sales_service_request`
+    FOREIGN KEY (`service_request_id`) REFERENCES `service_requests` (`request_id`)
+    ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+-- sale_items
+-- Line items for a sale — the join between sales and items. One sale may mix
+-- product and service lines.
+-- unit_price is FROZEN at time of sale (Decision 17) — independent of
+-- items.price, so later price changes do not rewrite history.
+-- subtotal = quantity * unit_price.
+-- Product lines decrease items.stock_quantity (application logic); service
+-- lines do not (Decision 16).
+-- -----------------------------------------------------------------------------
+CREATE TABLE `sale_items` (
+  `sale_item_id` INT            NOT NULL AUTO_INCREMENT,
+  `sale_id`      INT            NOT NULL,
+  `item_id`      INT            NOT NULL,
+  `quantity`     INT            NOT NULL,
+  `unit_price`   DECIMAL(10,2)  NOT NULL,
+  `subtotal`     DECIMAL(10,2)  NOT NULL,
+  PRIMARY KEY (`sale_item_id`),
+  KEY `ix_sale_items_sale` (`sale_id`),
+  KEY `ix_sale_items_item` (`item_id`),
+  CONSTRAINT `fk_sale_items_sale`
+    FOREIGN KEY (`sale_id`) REFERENCES `sales` (`sale_id`)
+    ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_sale_items_item`
+    FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`)
+    ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================================================

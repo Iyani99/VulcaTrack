@@ -15,6 +15,9 @@
 // Last revised: 2026-08-31 (Decision Review & Documentation Update).
 // Note wording updated 2026-09-28 for Decisions 65-68 (service_requests admin_id /
 // tireman_id / status notes) — no structural change.
+// Structural change 2026-09-28 (Phase 7.3d-a, owner-approved): sales gains the
+// nullable, UNIQUE service_request_id -> service_requests.request_id (zero-or-one
+// sale per Rescue request). Existing databases: vulcatrack/database/migrations/.
 // v1 scope reminder — NOT modeled: online/gateway payment, payment-transaction
 // tables, GPS telemetry / route polylines, Tireman authentication, technician
 // scheduling / ratings / payroll, status-history / audit tables.
@@ -97,16 +100,18 @@ Table items {
 }
 
 // -----------------------------------------------------------------------------
-// In-shop sales (recorded by an admin; walk-in supported)
+// Sales (recorded by an admin at the POS; walk-in supported; optionally linked
+// to one Rescue request)
 // -----------------------------------------------------------------------------
 
 Table sales {
-  sale_id         int           [pk, increment]
-  customer_id     int           [null, ref: > customers.customer_id, note: 'NULL for walk-in sales (Decision 14)']
-  admin_id        int           [not null, ref: > admins.admin_id, note: 'recording admin — always required']
-  sale_date       datetime      [not null, note: 'actual-sale timestamp; system-controlled, not manually editable in v1; reporting date (Decision 35)']
-  total_amount    decimal(10,2) [not null, note: 'equals SUM(sale_items.subtotal); ONLY monetary value persisted — no amount-tendered / change (Decision 30)']
-  created_at      datetime      [not null, default: `CURRENT_TIMESTAMP`, note: 'DB record-creation timestamp']
+  sale_id            int           [pk, increment]
+  customer_id        int           [null, ref: > customers.customer_id, note: 'NULL for walk-in sales (Decision 14)']
+  service_request_id int           [null, unique, ref: - service_requests.request_id, note: 'the Rescue (OTG) request this sale was recorded for; NULL = ordinary POS sale not linked to a Rescue. UNIQUE = zero-or-one sale per request. FK ON DELETE / UPDATE RESTRICT. Sales recorded before Phase 7.3d stay NULL (no backfill).']
+  admin_id           int           [not null, ref: > admins.admin_id, note: 'recording admin — always required']
+  sale_date          datetime      [not null, note: 'actual-sale timestamp; system-controlled, not manually editable in v1; reporting date (Decision 35)']
+  total_amount       decimal(10,2) [not null, note: 'equals SUM(sale_items.subtotal); ONLY monetary value persisted — no amount-tendered / change / payment method (Decision 30)']
+  created_at         datetime      [not null, default: `CURRENT_TIMESTAMP`, note: 'DB record-creation timestamp']
 }
 
 Table sale_items {
@@ -150,6 +155,7 @@ Table service_requests {
 //   admins    1 : 0..N service_requests     (admin_id nullable)
 //   tiremen   1 : 0..N service_requests     (tireman_id nullable)
 //   vehicles  1 : 0..N service_requests
+//   service_requests 1 : 0..1 sales         (sales.service_request_id nullable + UNIQUE)
 //   sales     1 : 1..N sale_items
 //   items     1 : 0..N sale_items
 // -----------------------------------------------------------------------------
