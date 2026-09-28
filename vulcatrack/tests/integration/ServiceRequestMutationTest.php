@@ -9,6 +9,8 @@
  * accepted -> completed; rejected / completed are final; admin_id = the last
  * admin who changed the request; the Tireman stays on final requests; and a
  * guarded UPDATE never overwrites a request that changed elsewhere.
+ * Phase 7.3d-b: a request with a linked sale can no longer be rejected (but
+ * can still be reassigned and completed).
  */
 
 namespace VulcaTrack\Tests;
@@ -58,6 +60,16 @@ function srm_request(\PDO $pdo, array $ids, string $status, ?int $tireman = null
 function srm_row(\PDO $pdo, int $id): array
 {
     return $pdo->query('SELECT * FROM service_requests WHERE request_id = ' . $id)->fetch(\PDO::FETCH_ASSOC);
+}
+
+/** A sale row linked to the request (Phase 7.3d) — only the link matters to these tests. */
+function srm_link_sale(\PDO $pdo, array $ids, int $requestId): int
+{
+    $pdo->prepare(
+        "INSERT INTO sales (customer_id, service_request_id, admin_id, sale_date, total_amount)
+         VALUES (?, ?, ?, '2001-01-01 10:00:00', '100.00')"
+    )->execute([$ids['cust'], $requestId, $ids['admin1']]);
+    return (int) $pdo->lastInsertId();
 }
 
 test('accept: pending + active Tireman -> accepted, Tireman + acting admin stored, updated_at set', function () {
@@ -191,6 +203,53 @@ test('reject: a stale expected status (request changed elsewhere) changes nothin
         $snap = srm_row($pdo, $rid);
         assert_false($repo->reject($rid, 'pending', $ids['admin1']));
         assert_same($snap, srm_row($pdo, $rid), 'the newer accepted state is not overwritten');
+    });
+});
+
+test('reject: refused once a sale is linked to the request (Phase 7.3d); without a sale it works exactly as before', function () {
+    $pdo = test_pdo();
+    TestDb::rollback($pdo, function () use ($pdo) {
+        $ids = srm_seed($pdo);
+        $repo = new ServiceRequestRepository($pdo);
+
+        // No linked sale: both approved rejections still succeed.
+        $p = srm_request($pdo, $ids, 'pending');
+        assert_true($repo->reject($p, 'pending', $ids['admin1']), 'pending -> rejected (no sale)');
+        $a = srm_request($pdo, $ids, 'accepted', $ids['tA'], $ids['admin2']);
+        assert_true($repo->reject($a, 'accepted', $ids['admin1']), 'accepted -> rejected (no sale)');
+
+        // A linked sale blocks rejection, and the guarded UPDATE changes nothing.
+        $sold = srm_request($pdo, $ids, 'accepted', $ids['tA'], $ids['admin2']);
+        srm_link_sale($pdo, $ids, $sold);
+        $snap = srm_row($pdo, $sold);
+        assert_false($repo->reject($sold, 'accepted', $ids['admin1']), 'an accepted request with a sale cannot be rejected');
+        assert_same($snap, srm_row($pdo, $sold), 'status, Tireman, admin and updated_at unchanged');
+
+        // Inconsistent historical data (a pending request with a sale) is guarded the same way.
+        $legacy = srm_request($pdo, $ids, 'pending');
+        srm_link_sale($pdo, $ids, $legacy);
+        $snap = srm_row($pdo, $legacy);
+        assert_false($repo->reject($legacy, 'pending', $ids['admin1']), 'a pending request with a sale cannot be rejected');
+        assert_same($snap, srm_row($pdo, $legacy));
+    });
+});
+
+test('a linked sale does not block reassigning the Tireman or completing the request', function () {
+    $pdo = test_pdo();
+    TestDb::rollback($pdo, function () use ($pdo) {
+        $ids = srm_seed($pdo);
+        $repo = new ServiceRequestRepository($pdo);
+        $rid = srm_request($pdo, $ids, 'accepted', $ids['tA'], $ids['admin2']);
+        $saleId = srm_link_sale($pdo, $ids, $rid);
+
+        assert_true($repo->reassign($rid, $ids['tA'], $ids['tB'], $ids['admin2']), 'Tireman rules unchanged');
+        assert_true($repo->complete($rid, $ids['admin1']), 'accepted -> completed with a linked sale');
+        $row = srm_row($pdo, $rid);
+        assert_same('completed', $row['status']);
+        assert_same($ids['tB'], (int) $row['tireman_id']);
+        assert_same($ids['admin1'], (int) $row['admin_id']);
+        assert_same($rid, (int) $pdo->query('SELECT service_request_id FROM sales WHERE sale_id = ' . $saleId)->fetchColumn(),
+            'the sale stays linked');
     });
 });
 

@@ -53,6 +53,14 @@ test('OtgStatus::canTransition allows exactly the four approved admin transition
     }
 });
 
+test('OtgStatus::canRecordSale: a sale may be recorded only for an accepted or completed request', function () {
+    assert_true(OtgStatus::canRecordSale('accepted'), 'the normal case');
+    assert_true(OtgStatus::canRecordSale('completed'), 'a late entry after the request was closed');
+    foreach (['pending', 'rejected', '', 'Accepted', 'in_progress', 'paid'] as $s) {
+        assert_false(OtgStatus::canRecordSale($s), "{$s} must not allow a sale");
+    }
+});
+
 test('OtgStatus::isFinal: rejected and completed are final, nothing leaves them', function () {
     assert_true(OtgStatus::isFinal('rejected'));
     assert_true(OtgStatus::isFinal('completed'));

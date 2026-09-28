@@ -23,7 +23,9 @@ use VulcaTrack\Support\OtgStatus;
  * exactly one row changed. Every success records the acting admin in
  * `admin_id` (= last admin who changed status or assignment) and sets
  * `updated_at` (no ON UPDATE clause on this column). `tireman_id` is kept on
- * final requests as history.
+ * final requests as history. Phase 7.3d: reject() also refuses a request
+ * that has a linked sale; lockForUpdate() is SaleService's read-only lock on
+ * the request while it records a Rescue sale.
  *
  * `eta_minutes` is written once, at creation, as a frozen snapshot and is never
  * updated (Decisions 32/33). No route geometry is stored.
@@ -202,6 +204,37 @@ final class ServiceRequestRepository
         return $row === false ? null : $row;
     }
 
+    /**
+     * The request's id, customer and status, read with SELECT … FOR UPDATE —
+     * for SaleService, which calls it inside its checkout transaction before
+     * recording a Rescue sale (Phase 7.3d). The row stays locked until that
+     * transaction ends, so the status and customer it validated cannot change
+     * (e.g. a concurrent reject) before the sale is committed. Read-only: it
+     * never modifies the request. Null when the request does not exist.
+     *
+     * @return array{request_id: int, customer_id: int, status: string}|null
+     */
+    public function lockForUpdate(int $requestId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT request_id, customer_id, status
+             FROM service_requests
+             WHERE request_id = ?
+             FOR UPDATE'
+        );
+        $stmt->execute([$requestId]);
+        $row = $stmt->fetch();
+        if ($row === false) {
+            return null;
+        }
+
+        return [
+            'request_id'  => (int) $row['request_id'],
+            'customer_id' => (int) $row['customer_id'],
+            'status'      => (string) $row['status'],
+        ];
+    }
+
     // --- Phase 6.3: admin mutations (guarded, one statement each) ------------
 
     /**
@@ -259,7 +292,11 @@ final class ServiceRequestRepository
     /**
      * $fromStatus -> rejected, where $fromStatus is the status the admin was
      * looking at (pending or accepted). Any assigned Tireman is kept as
-     * history. False when the request is no longer in $fromStatus.
+     * history. False when the request is no longer in $fromStatus, or when a
+     * sale has been recorded for it (Phase 7.3d: a rejected request with a
+     * recorded, unchangeable sale would be a contradictory final state). The
+     * sale check is part of the same guarded UPDATE, so it also holds for a
+     * sale recorded after the admin loaded the page.
      *
      * @throws InvalidArgumentException when $fromStatus cannot be rejected
      */
@@ -271,7 +308,8 @@ final class ServiceRequestRepository
         $stmt = $this->pdo->prepare(
             "UPDATE service_requests
                 SET status = 'rejected', admin_id = :admin, updated_at = CURRENT_TIMESTAMP
-              WHERE request_id = :id AND status = :from"
+              WHERE request_id = :id AND status = :from
+                AND NOT EXISTS (SELECT 1 FROM sales WHERE sales.service_request_id = service_requests.request_id)"
         );
         $stmt->execute([':admin' => $adminId, ':id' => $requestId, ':from' => $fromStatus]);
 

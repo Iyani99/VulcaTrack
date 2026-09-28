@@ -12,6 +12,14 @@
  * integer-centavo money, product-only stock deduction, quantity validation,
  * walk-in vs linked customer, overselling protection (SELECT ... FOR UPDATE),
  * and full rollback on any mid-checkout failure.
+ *
+ * Phase 7.3d-b — Rescue sales (sales.service_request_id): eligible statuses
+ * (accepted / completed), the Rescue's customer is authoritative, one sale per
+ * Rescue (friendly pre-check + the UNIQUE key, and only that key's duplicate is
+ * translated), rollback of a linked sale, the request row is never modified,
+ * the request-row lock, the current-read pre-check, and reject-vs-sale races.
+ * Rescue rows are seeded by the fixture and deleted after their linked sales
+ * (the FK is ON DELETE RESTRICT).
  */
 
 namespace VulcaTrack\Tests;
@@ -21,6 +29,7 @@ use VulcaTrack\Repository\AdminRepository;
 use VulcaTrack\Repository\CustomerRepository;
 use VulcaTrack\Repository\ItemRepository;
 use VulcaTrack\Repository\SaleRepository;
+use VulcaTrack\Repository\ServiceRequestRepository;
 use VulcaTrack\Service\SaleException;
 use VulcaTrack\Service\SaleService;
 use VulcaTrack\Support\Money;
@@ -31,6 +40,9 @@ final class SalesFixture
     /** @var array<int,int> */ public array $adminIds = [];
     /** @var array<int,int> */ public array $customerIds = [];
     /** @var array<int,int> */ public array $itemIds = [];
+    /** @var array<int,int> */ public array $requestIds = [];
+    /** @var array<int,int> */ public array $vehicleIds = [];
+    /** @var array<int,int> */ public array $tiremanIds = [];
 
     public function __construct(private \PDO $pdo)
     {
@@ -94,13 +106,70 @@ final class SalesFixture
         );
     }
 
+    public function tireman(): int
+    {
+        $this->pdo->prepare('INSERT INTO tiremen (name, contact_number) VALUES (?, ?)')->execute(['Fixture Tireman', '0918 000 0000']);
+        $id = (int) $this->pdo->lastInsertId();
+        $this->tiremanIds[] = $id;
+        return $id;
+    }
+
+    /**
+     * A Rescue request for $customerId (on a fresh vehicle) in $status, last
+     * handled by $handlerAdminId, with a fixed old updated_at so any later
+     * change to the row is observable.
+     */
+    public function rescue(int $customerId, string $status, ?int $handlerAdminId = null, ?int $tiremanId = null): int
+    {
+        $this->pdo->prepare('INSERT INTO vehicles (customer_id, plate_number) VALUES (?, ?)')
+            ->execute([$customerId, 'SFX-' . (count($this->vehicleIds) + 1)]);
+        $vehicleId = (int) $this->pdo->lastInsertId();
+        $this->vehicleIds[] = $vehicleId;
+
+        $this->pdo->prepare(
+            "INSERT INTO service_requests
+                 (customer_id, vehicle_id, admin_id, tireman_id, problem_description, latitude, longitude, eta_minutes, status, updated_at)
+             VALUES (?, ?, ?, ?, 'Fixture flat tire', 14.95, 120.89, 12, ?, '2001-01-01 00:00:00')"
+        )->execute([$customerId, $vehicleId, $handlerAdminId, $tiremanId, $status]);
+        $id = (int) $this->pdo->lastInsertId();
+        $this->requestIds[] = $id;
+        return $id;
+    }
+
+    /** @return array<string,mixed> the raw service_requests row */
+    public function rescueRow(int $requestId): array
+    {
+        return $this->pdo->query('SELECT * FROM service_requests WHERE request_id = ' . $requestId)->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    /** @return array<int,int> ids of the sales linked to a request */
+    public function salesLinkedTo(int $requestId): array
+    {
+        return array_map('intval', $this->pdo->query(
+            'SELECT sale_id FROM sales WHERE service_request_id = ' . $requestId
+        )->fetchAll(\PDO::FETCH_COLUMN));
+    }
+
+    /** @return array<string,mixed> the raw sales row */
+    public function saleRow(int $saleId): array
+    {
+        return $this->pdo->query('SELECT * FROM sales WHERE sale_id = ' . $saleId)->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    /** Sales recorded by this fixture's admins, plus any sale linked to its Rescue requests. */
     private function saleIdsForThisFixture(): array
     {
-        if ($this->adminIds === []) {
+        $where = [];
+        if ($this->adminIds !== []) {
+            $where[] = 'admin_id IN (' . implode(',', array_map('intval', $this->adminIds)) . ')';
+        }
+        if ($this->requestIds !== []) {
+            $where[] = 'service_request_id IN (' . implode(',', array_map('intval', $this->requestIds)) . ')';
+        }
+        if ($where === []) {
             return [];
         }
-        $in = implode(',', array_map('intval', $this->adminIds));
-        return array_map('intval', $this->pdo->query("SELECT sale_id FROM sales WHERE admin_id IN ({$in})")->fetchAll(\PDO::FETCH_COLUMN));
+        return array_map('intval', $this->pdo->query('SELECT sale_id FROM sales WHERE ' . implode(' OR ', $where))->fetchAll(\PDO::FETCH_COLUMN));
     }
 
     public function saleCount(): int
@@ -129,6 +198,10 @@ final class SalesFixture
             $this->pdo->exec("DELETE FROM sale_items WHERE sale_id IN ({$in})");
             $this->pdo->exec("DELETE FROM sales WHERE sale_id IN ({$in})");
         }
+        // sales.service_request_id is ON DELETE RESTRICT: linked sales go first (above).
+        $this->deleteByIds('service_requests', 'request_id', $this->requestIds);
+        $this->deleteByIds('vehicles', 'vehicle_id', $this->vehicleIds);
+        $this->deleteByIds('tiremen', 'tireman_id', $this->tiremanIds);
         $this->deleteByIds('items', 'item_id', $this->itemIds);
         $this->deleteByIds('customers', 'customer_id', $this->customerIds);
         $this->deleteByIds('admins', 'admin_id', $this->adminIds);
@@ -151,12 +224,12 @@ final class FailingSaleRepository extends SaleRepository
     public ?int $throwOnAddSaleItemCall = null;
     private int $calls = 0;
 
-    public function createSale(int $adminId, ?int $customerId, string $saleDate, int $totalCentavos): int
+    public function createSale(int $adminId, ?int $customerId, string $saleDate, int $totalCentavos, ?int $serviceRequestId = null): int
     {
         if ($this->throwOnCreateSale) {
             throw new \RuntimeException('injected sales header insertion failure');
         }
-        return parent::createSale($adminId, $customerId, $saleDate, $totalCentavos);
+        return parent::createSale($adminId, $customerId, $saleDate, $totalCentavos, $serviceRequestId);
     }
 
     public function addSaleItem(int $saleId, int $itemId, int $quantity, int $unitPriceCentavos, int $subtotalCentavos): int
@@ -166,6 +239,64 @@ final class FailingSaleRepository extends SaleRepository
             throw new \RuntimeException('injected sale_items insertion failure');
         }
         return parent::addSaleItem($saleId, $itemId, $quantity, $unitPriceCentavos, $subtotalCentavos);
+    }
+}
+
+/**
+ * SaleRepository whose "already has a sale?" pre-check always answers "no" —
+ * simulates losing the race to another admin, so the INSERT meets the real
+ * UNIQUE key (uq_sales_service_request) in the database.
+ */
+final class BlindPrecheckSaleRepository extends SaleRepository
+{
+    public function lockSaleIdForServiceRequest(int $serviceRequestId): ?int
+    {
+        return null;
+    }
+}
+
+/** SaleRepository whose createSale() fails with a chosen duplicate-key (1062) PDOException. */
+final class DuplicateKeySaleRepository extends SaleRepository
+{
+    public function __construct(\PDO $pdo, private string $keyName)
+    {
+        parent::__construct($pdo);
+    }
+
+    public function createSale(int $adminId, ?int $customerId, string $saleDate, int $totalCentavos, ?int $serviceRequestId = null): int
+    {
+        $message = "Duplicate entry '42' for key '{$this->keyName}'";
+        $e = new \PDOException("SQLSTATE[23000]: Integrity constraint violation: 1062 {$message}");
+        $e->errorInfo = ['23000', 1062, $message];
+        throw $e;
+    }
+}
+
+/** ItemRepository that runs a probe just before each item row is locked (lock-order checks). */
+final class LockProbeItemRepository extends ItemRepository
+{
+    public ?\Closure $beforeLock = null;
+
+    public function lockForUpdate(int $itemId): ?array
+    {
+        if ($this->beforeLock !== null) {
+            ($this->beforeLock)($itemId);
+        }
+        return parent::lockForUpdate($itemId);
+    }
+}
+
+/** SaleRepository that runs a probe just before the "already has a sale?" check (lock-order checks). */
+final class LockProbeSaleRepository extends SaleRepository
+{
+    public ?\Closure $beforePrecheck = null;
+
+    public function lockSaleIdForServiceRequest(int $serviceRequestId): ?int
+    {
+        if ($this->beforePrecheck !== null) {
+            ($this->beforePrecheck)($serviceRequestId);
+        }
+        return parent::lockSaleIdForServiceRequest($serviceRequestId);
     }
 }
 
@@ -837,5 +968,415 @@ test('a malformed expected_total_centavos is rejected before anything is written
         }
         assert_same(0, $fx->saleCount());
         assert_same(5, $fx->stockOf($tube));
+    });
+});
+
+// --- Rescue sales: sales.service_request_id (Phase 7.3d-b) -------------------
+
+/** A second raw connection to the same database (autocommit), for concurrency checks. */
+function sale_test_other_connection(): \PDO
+{
+    $cfg = $GLOBALS['vulcatrack_config']['db'];
+    $dsn = "mysql:host={$cfg['host']};port={$cfg['port']};dbname={$cfg['name']};charset={$cfg['charset']}";
+    return new \PDO($dsn, $cfg['user'], $cfg['pass'], [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
+}
+
+test('ordinary sales (walk-in or registered customer) still store service_request_id = NULL; stock rules unchanged', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $adminId = $fx->admin();
+        $custId = $fx->customer();
+        $tube  = $fx->product('Ordinary Tube', '250.00', 10);
+        $patch = $fx->service('Ordinary Patch', '120.00');
+        $lines = [['item_id' => $tube, 'quantity' => 1], ['item_id' => $patch, 'quantity' => 1]];
+
+        $walkIn = (new SaleService($pdo))->checkout(['admin_id' => $adminId, 'lines' => $lines]);
+        $linked = (new SaleService($pdo))->checkout([
+            'admin_id' => $adminId, 'customer_id' => $custId, 'lines' => $lines,
+            'service_request_id' => '',                     // blank = no Rescue, like an absent key
+        ]);
+
+        $w = $fx->saleRow($walkIn['sale_id']);
+        assert_null($w['customer_id'], 'walk-in');
+        assert_null($w['service_request_id'], 'an ordinary walk-in sale is not linked to a Rescue');
+        $l = $fx->saleRow($linked['sale_id']);
+        assert_same($custId, (int) $l['customer_id'], 'registered customer');
+        assert_null($l['service_request_id'], 'an ordinary registered-customer sale is not linked to a Rescue');
+        assert_same(8, $fx->stockOf($tube), 'product stock deducted once per sale');
+        assert_null($fx->stockOf($patch), 'service stock never touched');
+    });
+});
+
+test('a Rescue sale for an ACCEPTED request is linked, recorded for the Rescue customer, with normal stock rules', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $cashier = $fx->admin('Rescue Cashier');
+        $handler = $fx->admin('Rescue Handler');
+        $custId  = $fx->customer('Rescue Customer');
+        $rid     = $fx->rescue($custId, 'accepted', $handler, $fx->tireman());
+        $tube    = $fx->product('Rescue Tube', '250.00', 5);
+        $labor   = $fx->service('Rescue Vulcanizing', '150.00');
+
+        $result = (new SaleService($pdo))->checkout([
+            'admin_id'                => $cashier,
+            'customer_id'             => (string) $custId,     // the POS posts form strings
+            'lines'                   => [['item_id' => $tube, 'quantity' => 1], ['item_id' => $labor, 'quantity' => 1]],
+            'expected_total_centavos' => 40000,
+            'service_request_id'      => (string) $rid,
+        ]);
+
+        $sale = $fx->saleRow($result['sale_id']);
+        assert_same($rid, (int) $sale['service_request_id'], 'the sale is linked to the Rescue');
+        assert_same($custId, (int) $sale['customer_id'], "the Rescue's customer is recorded");
+        assert_same($cashier, (int) $sale['admin_id'], 'recorded by the cashier, not by the Rescue handler');
+        assert_same('400.00', $sale['total_amount']);
+        assert_same([$result['sale_id']], $fx->salesLinkedTo($rid));
+        assert_same(4, $fx->stockOf($tube), 'the product used on the Rescue is deducted');
+        assert_null($fx->stockOf($labor), 'the Rescue service is not');
+    });
+});
+
+test('recording a Rescue sale never changes the request: status, handling admin, Tireman and updated_at stay as they were', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $cashier = $fx->admin('Cashier');
+        $handler = $fx->admin('Handler');
+        $custId  = $fx->customer();
+        $rid     = $fx->rescue($custId, 'accepted', $handler, $fx->tireman());
+        $labor   = $fx->service('Independent Labor', '100.00');
+        $before  = $fx->rescueRow($rid);
+
+        (new SaleService($pdo))->checkout([
+            'admin_id' => $cashier, 'customer_id' => $custId,
+            'lines' => [['item_id' => $labor, 'quantity' => 1]], 'service_request_id' => $rid,
+        ]);
+
+        $after = $fx->rescueRow($rid);
+        assert_same('accepted', $after['status'], 'recording a sale does not complete the Rescue');
+        assert_same($handler, (int) $after['admin_id'], 'admin_id stays the last admin who changed status/assignment');
+        assert_same('2001-01-01 00:00:00', $after['updated_at'], 'updated_at untouched');
+        assert_same($before, $after, 'the whole request row is unchanged');
+    });
+});
+
+test('a COMPLETED request can still have its sale recorded late, and stays completed', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $cashier = $fx->admin();
+        $handler = $fx->admin('Closer');
+        $custId  = $fx->customer();
+        $rid     = $fx->rescue($custId, 'completed', $handler, $fx->tireman());
+        $labor   = $fx->service('Late Labor', '180.00');
+        $before  = $fx->rescueRow($rid);
+
+        $result = (new SaleService($pdo))->checkout([
+            'admin_id' => $cashier, 'customer_id' => $custId,
+            'lines' => [['item_id' => $labor, 'quantity' => 1]], 'service_request_id' => $rid,
+        ]);
+
+        assert_same($rid, (int) $fx->saleRow($result['sale_id'])['service_request_id']);
+        assert_same($before, $fx->rescueRow($rid), 'still completed, nothing on the request changed');
+    });
+});
+
+test('a sale is refused for a pending, rejected, unknown or malformed Rescue request; nothing is written', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $cashier = $fx->admin();
+        $handler = $fx->admin('Handler');
+        $custId  = $fx->customer();
+        $tube    = $fx->product('Refused Tube', '250.00', 5);
+        $sell = fn ($rid) => (new SaleService($pdo))->checkout([
+            'admin_id' => $cashier, 'customer_id' => $custId,
+            'lines' => [['item_id' => $tube, 'quantity' => 1]], 'service_request_id' => $rid,
+        ]);
+
+        foreach (['pending' => null, 'rejected' => $handler] as $status => $admin) {
+            $rid = $fx->rescue($custId, $status, $admin);
+            $before = $fx->rescueRow($rid);
+            assert_throws(fn () => $sell($rid), SaleException::class, "request #{$rid} is {$status}", "a {$status} request");
+            assert_same($before, $fx->rescueRow($rid), "the {$status} request is untouched");
+            assert_same([], $fx->salesLinkedTo($rid));
+        }
+
+        assert_throws(fn () => $sell(2147483646), SaleException::class, 'was not found', 'an unknown request id');
+        foreach (['abc', '0', '-3', '1.5', 2.0] as $bad) {
+            assert_throws(fn () => $sell($bad), SaleException::class, 'service_request_id must be', 'malformed id ' . var_export($bad, true));
+        }
+
+        assert_false($pdo->inTransaction());
+        assert_same(0, $fx->saleCount(), 'no sale was recorded');
+        assert_same(0, $fx->saleItemCount());
+        assert_same(5, $fx->stockOf($tube), 'no stock was deducted');
+    });
+});
+
+test("a Rescue sale must be for the Rescue's customer: walk-in or another customer is refused, never swapped", function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $cashier = $fx->admin();
+        $owner   = $fx->customer('Rescue Owner');
+        $other   = $fx->customer('Someone Else');
+        $rid     = $fx->rescue($owner, 'accepted', $fx->admin('Handler'));
+        $tube    = $fx->product('Customer Tube', '250.00', 5);
+        $sell = fn ($customerId) => (new SaleService($pdo))->checkout([
+            'admin_id' => $cashier, 'customer_id' => $customerId,
+            'lines' => [['item_id' => $tube, 'quantity' => 1]], 'service_request_id' => $rid,
+        ]);
+
+        assert_throws(fn () => $sell(null), SaleException::class, 'cannot be recorded as a walk-in', 'walk-in (null)');
+        assert_throws(fn () => $sell(''), SaleException::class, 'cannot be recorded as a walk-in', 'walk-in (blank)');
+        assert_throws(fn () => $sell($other), SaleException::class, 'is not the customer of Rescue request', 'another customer');
+        assert_same(0, $fx->saleCount(), 'a mismatched customer records nothing');
+        assert_same(5, $fx->stockOf($tube));
+        assert_same([], $fx->salesLinkedTo($rid));
+
+        $ok = $sell($owner);
+        assert_same($owner, (int) $fx->saleRow($ok['sale_id'])['customer_id'], 'the matching customer succeeds');
+    });
+});
+
+test('a second sale for the same Rescue is refused with a clear message (friendly pre-check)', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $cashier = $fx->admin();
+        $custId  = $fx->customer();
+        $rid     = $fx->rescue($custId, 'accepted', $fx->admin('Handler'));
+        $tube    = $fx->product('Once Tube', '250.00', 5);
+        $sell = fn () => (new SaleService($pdo))->checkout([
+            'admin_id' => $cashier, 'customer_id' => $custId,
+            'lines' => [['item_id' => $tube, 'quantity' => 1]], 'service_request_id' => $rid,
+        ]);
+
+        $first = $sell();
+        assert_throws($sell, SaleException::class, "This Rescue already has a recorded sale (Sale #{$first['sale_id']}).");
+        assert_same([$first['sale_id']], $fx->salesLinkedTo($rid), 'still exactly one sale for the Rescue');
+        assert_same(1, $fx->saleItemCount(), 'the refused attempt added no lines');
+        assert_same(4, $fx->stockOf($tube), 'stock deducted once, by the first sale only');
+    });
+});
+
+test('if the pre-check misses (lost race), the UNIQUE key refuses the second sale and it is reported as the same clear error', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $cashier = $fx->admin();
+        $custId  = $fx->customer();
+        $rid     = $fx->rescue($custId, 'accepted', $fx->admin('Handler'));
+        $tube    = $fx->product('Race Tube', '250.00', 5);
+        $request = [
+            'admin_id' => $cashier, 'customer_id' => $custId,
+            'lines' => [['item_id' => $tube, 'quantity' => 1]], 'service_request_id' => $rid,
+        ];
+        $first = (new SaleService($pdo))->checkout($request);
+
+        $caught = null;
+        try {
+            (new SaleService($pdo, new BlindPrecheckSaleRepository($pdo)))->checkout($request);
+        } catch (SaleException $e) {
+            $caught = $e;
+        }
+        assert_not_null($caught, 'the database refused the duplicate and it surfaced as a SaleException');
+        assert_same('This Rescue already has a recorded sale.', $caught->getMessage());
+        $db = $caught->getPrevious();
+        assert_true($db instanceof \PDOException, 'the real database error is kept as the previous exception');
+        assert_same(1062, (int) $db->errorInfo[1], 'duplicate-key error from MariaDB');
+        assert_contains("'uq_sales_service_request'", (string) $db->errorInfo[2], 'on the Rescue link key');
+
+        assert_false($pdo->inTransaction(), 'rolled back');
+        assert_same([$first['sale_id']], $fx->salesLinkedTo($rid));
+        assert_same(1, $fx->saleItemCount(), 'no lines from the refused attempt');
+        assert_same(4, $fx->stockOf($tube), 'the refused attempt deducted nothing');
+    });
+});
+
+test('only a duplicate on uq_sales_service_request becomes the Rescue message; any other duplicate-key error is left alone', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $cashier = $fx->admin();
+        $custId  = $fx->customer();
+        $rid     = $fx->rescue($custId, 'accepted', $fx->admin('Handler'));
+        $labor   = $fx->service('Key Labor', '100.00');
+        $sell = function (string $key, ?int $requestId) use ($pdo, $cashier, $custId, $labor) {
+            (new SaleService($pdo, new DuplicateKeySaleRepository($pdo, $key)))->checkout([
+                'admin_id' => $cashier, 'customer_id' => $custId,
+                'lines' => [['item_id' => $labor, 'quantity' => 1]], 'service_request_id' => $requestId,
+            ]);
+        };
+
+        assert_throws(fn () => $sell('uq_sales_service_request', $rid), SaleException::class, 'already has a recorded sale', 'MariaDB key name');
+        assert_throws(fn () => $sell('sales.uq_sales_service_request', $rid), SaleException::class, 'already has a recorded sale', 'MySQL 8 key name (table-qualified)');
+
+        foreach (['PRIMARY', 'uq_sales_service_request_old', 'uq_other'] as $otherKey) {
+            assert_throws(fn () => $sell($otherKey, $rid), \PDOException::class, $otherKey, "a duplicate on '{$otherKey}' stays a database error");
+        }
+        // An ordinary sale (no Rescue) is never reported as "this Rescue already has a sale".
+        assert_throws(fn () => $sell('uq_sales_service_request', null), \PDOException::class, null, 'no Rescue context: not translated');
+
+        assert_false($pdo->inTransaction());
+        assert_same(0, $fx->saleCount());
+    });
+});
+
+test('a failure after the linked sale row is written rolls back the sale, its lines, the stock and the Rescue link', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $cashier = $fx->admin();
+        $custId  = $fx->customer();
+        $rid     = $fx->rescue($custId, 'accepted', $fx->admin('Handler'), $fx->tireman());
+        $tube    = $fx->product('Rollback Tube', '250.00', 5);
+        $labor   = $fx->service('Rollback Labor', '150.00');
+        $before  = $fx->rescueRow($rid);
+        $request = [
+            'admin_id' => $cashier, 'customer_id' => $custId, 'service_request_id' => $rid,
+            'lines' => [['item_id' => $tube, 'quantity' => 2], ['item_id' => $labor, 'quantity' => 1]],
+        ];
+
+        $sales = new FailingSaleRepository($pdo);
+        $sales->throwOnAddSaleItemCall = 2;   // the header (with the link) and line 1 are written, line 2 fails
+        assert_throws(fn () => (new SaleService($pdo, $sales))->checkout($request), \RuntimeException::class);
+
+        assert_false($pdo->inTransaction());
+        assert_same([], $fx->salesLinkedTo($rid), 'no sale linked to the Rescue survives');
+        assert_same(0, $fx->saleCount(), 'no sales row');
+        assert_same(0, $fx->saleItemCount(), 'no sale_items');
+        assert_same(5, $fx->stockOf($tube), 'stock unchanged');
+        assert_same($before, $fx->rescueRow($rid), 'the request itself was never modified');
+
+        // Nothing was left "taken": the Rescue can still get its one sale.
+        $retry = (new SaleService($pdo))->checkout($request);
+        assert_same([$retry['sale_id']], $fx->salesLinkedTo($rid));
+        assert_same(3, $fx->stockOf($tube));
+    });
+});
+
+test('ServiceRequestRepository::lockForUpdate returns id / customer / status and holds the row until the transaction ends', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $custId = $fx->customer();
+        $rid = $fx->rescue($custId, 'accepted', $fx->admin());
+        $repo = new ServiceRequestRepository($pdo);
+        $other = sale_test_other_connection();
+
+        $pdo->beginTransaction();
+        try {
+            assert_same(['request_id' => $rid, 'customer_id' => $custId, 'status' => 'accepted'], $repo->lockForUpdate($rid));
+            assert_null($repo->lockForUpdate(2147483646), 'unknown request');
+
+            $other->beginTransaction();
+            assert_throws(
+                fn () => $other->query('SELECT status FROM service_requests WHERE request_id = ' . $rid . ' FOR UPDATE NOWAIT'),
+                \PDOException::class,
+                null,
+                'the request row is locked by the Rescue-sale transaction'
+            );
+            $other->rollBack();
+        } finally {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $other = null;
+        }
+        assert_same('2001-01-01 00:00:00', $fx->rescueRow($rid)['updated_at'], 'locking is read-only');
+    });
+});
+
+test('Rescue-sale lock order: the request row is locked before any item row, and the items before the "already has a sale" check', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $cashier = $fx->admin();
+        $custId  = $fx->customer();
+        $rid     = $fx->rescue($custId, 'accepted', $fx->admin('Handler'));
+        $tube    = $fx->product('Order Tube', '250.00', 5);
+        $labor   = $fx->service('Order Labor', '150.00');
+        $other   = sale_test_other_connection();
+
+        // Is this row locked by the checkout right now? (NOWAIT fails at once with 1205 if so.)
+        $locked = function (string $table, string $pk, int $id) use ($other): bool {
+            $other->beginTransaction();
+            try {
+                $other->query("SELECT {$pk} FROM {$table} WHERE {$pk} = {$id} FOR UPDATE NOWAIT")->fetchAll();
+                return false;
+            } catch (\PDOException $e) {
+                if ((int) ($e->errorInfo[1] ?? 0) !== 1205) {
+                    throw $e;
+                }
+                return true;
+            } finally {
+                $other->rollBack();
+            }
+        };
+
+        $seen  = [];
+        $items = new LockProbeItemRepository($pdo);
+        $items->beforeLock = function (int $itemId) use (&$seen, $locked, $rid) {
+            $seen[] = "item {$itemId}: request locked=" . var_export($locked('service_requests', 'request_id', $rid), true);
+        };
+        $sales = new LockProbeSaleRepository($pdo);
+        $sales->beforePrecheck = function () use (&$seen, $locked, $tube, $labor) {
+            $seen[] = 'pre-check: items locked=' . var_export($locked('items', 'item_id', $tube) && $locked('items', 'item_id', $labor), true);
+        };
+
+        (new SaleService($pdo, $sales, $items))->checkout([
+            'admin_id' => $cashier, 'customer_id' => $custId, 'service_request_id' => $rid,
+            'lines' => [['item_id' => $tube, 'quantity' => 1], ['item_id' => $labor, 'quantity' => 1]],
+        ]);
+        $other = null;
+
+        assert_same([
+            "item {$tube}: request locked=true",
+            "item {$labor}: request locked=true",
+            'pre-check: items locked=true',
+        ], $seen, 'request row -> item rows (ascending) -> sales pre-check');
+    });
+});
+
+test('the "already has a sale" pre-check is a current read: it sees a sale another connection committed after the snapshot', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $adminId = $fx->admin();
+        $custId = $fx->customer();
+        $rid = $fx->rescue($custId, 'accepted', $adminId);
+        $other = sale_test_other_connection();
+
+        assert_same('REPEATABLE-READ', (string) $pdo->query('SELECT @@SESSION.tx_isolation')->fetchColumn(),
+            'precondition: plain reads inside a transaction use one snapshot');
+        $pdo->beginTransaction();
+        try {
+            $pdo->query('SELECT COUNT(*) FROM sales')->fetchColumn();   // the transaction's snapshot is taken here
+
+            $other->prepare("INSERT INTO sales (customer_id, service_request_id, admin_id, sale_date, total_amount)
+                             VALUES (?, ?, ?, '2001-01-01 10:00:00', '1.00')")->execute([$custId, $rid, $adminId]);
+            $committedId = (int) $other->lastInsertId();
+
+            $plain = $pdo->query('SELECT sale_id FROM sales WHERE service_request_id = ' . $rid)->fetchColumn();
+            assert_false($plain, 'a plain SELECT still sees the old snapshot (this is why it is not used)');
+            assert_same($committedId, (new SaleRepository($pdo))->lockSaleIdForServiceRequest($rid),
+                'the locking read sees the sale committed a moment ago');
+        } finally {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $other = null;
+        }
+    });
+});
+
+test('a reject arriving while a Rescue sale is being recorded waits for it, then is refused; completion still works', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $cashier = $fx->admin();
+        $handler = $fx->admin('Handler');
+        $custId  = $fx->customer();
+        $rid     = $fx->rescue($custId, 'accepted', $handler, $fx->tireman());
+        $other   = sale_test_other_connection();
+        $other->exec('SET SESSION innodb_lock_wait_timeout = 1');
+        $otherRequests = new ServiceRequestRepository($other);
+
+        // What SaleService does mid-checkout: request row locked, linked sale row written, not yet committed.
+        $pdo->beginTransaction();
+        try {
+            (new ServiceRequestRepository($pdo))->lockForUpdate($rid);
+            (new SaleRepository($pdo))->createSale($cashier, $custId, '2001-01-01 10:00:00', 100, $rid);
+
+            assert_throws(fn () => $otherRequests->reject($rid, 'accepted', $handler), \PDOException::class, 'Lock wait timeout',
+                'the reject cannot slip in while the sale is being recorded');
+            $pdo->commit();
+        } finally {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+        }
+
+        assert_false($otherRequests->reject($rid, 'accepted', $handler), 'once the sale is committed, reject is refused');
+        assert_same('accepted', $fx->rescueRow($rid)['status']);
+        assert_true($otherRequests->complete($rid, $handler), 'a linked sale does not block completion');
+        assert_same('completed', $fx->rescueRow($rid)['status']);
+        $other = null;
     });
 });

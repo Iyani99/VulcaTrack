@@ -3,12 +3,15 @@
 namespace VulcaTrack\Service;
 
 use PDO;
+use PDOException;
 use Throwable;
 use VulcaTrack\Repository\AdminRepository;
 use VulcaTrack\Repository\CustomerRepository;
 use VulcaTrack\Repository\ItemRepository;
 use VulcaTrack\Repository\SaleRepository;
+use VulcaTrack\Repository\ServiceRequestRepository;
 use VulcaTrack\Support\Money;
+use VulcaTrack\Support\OtgStatus;
 
 /**
  * Records one in-person sale, atomically (Phase 5).
@@ -28,6 +31,20 @@ use VulcaTrack\Support\Money;
  *   - commits, or on ANY failure rolls the whole transaction back so no partial
  *     sale is ever left behind.
  *
+ * Rescue sales (Phase 7.3d): the caller may name the Rescue request the sale
+ * is for (`service_request_id`). Inside the same transaction the service then
+ * locks that request row (before any item row), requires it to be accepted or
+ * completed, requires the caller's customer to be the request's customer (a
+ * walk-in or another customer is refused, never silently replaced), refuses a
+ * request that already has a sale, and stores the link on the new sale. It
+ * only READS the request — recording a sale never changes the request's
+ * status, admin, Tireman or updated_at. Without a request id nothing changes:
+ * service_request_id stays NULL, exactly as before.
+ *
+ * Lock order is the same for every sale: item rows first (ascending id), then
+ * the `sales` rows / unique index. A Rescue sale additionally locks its request
+ * row before everything else; no other sale path locks request rows.
+ *
  * The repositories it uses share this same PDO connection and never open,
  * commit or roll back a transaction themselves.
  */
@@ -37,6 +54,7 @@ final class SaleService
     private ItemRepository $items;
     private CustomerRepository $customers;
     private AdminRepository $admins;
+    private ServiceRequestRepository $requests;
 
     /**
      * $sales / $items are injectable so tests can exercise mid-transaction
@@ -51,6 +69,7 @@ final class SaleService
         $this->items     = $items ?? new ItemRepository($pdo);
         $this->customers = new CustomerRepository($pdo);
         $this->admins    = new AdminRepository($pdo);
+        $this->requests  = new ServiceRequestRepository($pdo);
     }
 
     /**
@@ -58,7 +77,8 @@ final class SaleService
      *   admin_id:    int,                                   // recording admin
      *   customer_id?: int|string|null,                      // absent / null / "" = walk-in
      *   lines:       array<array{item_id: int, quantity: int}>,
-     *   expected_total_centavos?: int|string|null           // optional stale-display guard
+     *   expected_total_centavos?: int|string|null,          // optional stale-display guard
+     *   service_request_id?: int|string|null                // absent / null / "" = ordinary sale
      * }
      * `admin_id` MUST be taken from the authenticated Admin session by the
      * caller (admin/pos.php) — it is the recording cashier and the
@@ -75,6 +95,11 @@ final class SaleService
      * changed, or the cart changed in another window — the sale is refused and
      * rolled back instead of silently recording a different amount.
      *
+     * `service_request_id` records the sale for that Rescue request (see the
+     * class doc). The request must be accepted or completed and have no sale
+     * yet, and `customer_id` must be the request's customer — a mismatch
+     * (including a walk-in) is refused as stale or wrong context.
+     *
      * @return array{sale_id: int, total_centavos: int, sale_date: string}
      *
      * @throws SaleException if the sale is rejected (nothing was written)
@@ -86,6 +111,7 @@ final class SaleService
         $customerId = $this->normaliseCustomerId($request['customer_id'] ?? null);
         $wanted     = $this->normaliseLines($request['lines'] ?? null); // [item_id => quantity], low id first
         $expected   = $this->normaliseExpectedTotal($request['expected_total_centavos'] ?? null);
+        $rescueId   = $this->normaliseServiceRequestId($request['service_request_id'] ?? null);
 
         if ($this->pdo->inTransaction()) {
             // Exactly one owner of the checkout transaction — never nest it.
@@ -96,6 +122,10 @@ final class SaleService
         try {
             if ($this->admins->findById($adminId) === null) {
                 throw new SaleException('The recording admin account is no longer valid — please sign in again.');
+            }
+            if ($rescueId !== null) {
+                // Locks the request row first — before any item row.
+                $customerId = $this->lockRescueForSale($rescueId, $customerId);
             }
             if ($customerId !== null && $this->customers->findById($customerId) === null) {
                 throw new SaleException("Customer #{$customerId} was not found.");
@@ -152,6 +182,20 @@ final class SaleService
                 $totalCentavos += $subtotalCentavos;
             }
 
+            if ($rescueId !== null) {
+                // Deliberately AFTER the item locks: this locking read also locks
+                // a gap in uq_sales_service_request that other sales INSERTs
+                // (walk-in ones included) may need. An ordinary checkout locks
+                // items first and touches `sales` last; doing the same here keeps
+                // one lock order, so the two can never deadlock each other.
+                // (Checked before the item loop instead, a Rescue sale and an
+                // ordinary sale on the same item were shown to deadlock.)
+                $existing = $this->sales->lockSaleIdForServiceRequest($rescueId);
+                if ($existing !== null) {
+                    throw new SaleException("This Rescue already has a recorded sale (Sale #{$existing}).");
+                }
+            }
+
             if ($expected !== null && $expected !== $totalCentavos) {
                 throw new SaleException(
                     'The sale total changed to ₱' . Money::format($totalCentavos)
@@ -161,7 +205,17 @@ final class SaleService
             }
 
             $saleDate = date('Y-m-d H:i:s');
-            $saleId   = $this->sales->createSale($adminId, $customerId, $saleDate, $totalCentavos);
+            try {
+                $saleId = $this->sales->createSale($adminId, $customerId, $saleDate, $totalCentavos, $rescueId);
+            } catch (PDOException $e) {
+                // The UNIQUE key is the final guarantee: if another sale for this
+                // request still got in first, say so plainly. Any other database
+                // error (another key included) keeps its normal handling.
+                if ($rescueId !== null && self::isRescueLinkDuplicate($e)) {
+                    throw new SaleException('This Rescue already has a recorded sale.', 0, $e);
+                }
+                throw $e;
+            }
 
             foreach ($lines as $line) {
                 $this->sales->addSaleItem(
@@ -203,6 +257,55 @@ final class SaleService
         }
     }
 
+    // --- Rescue sales (Phase 7.3d) ---------------------------------------------
+
+    /**
+     * Lock the Rescue request row FOR UPDATE (so its status and customer
+     * cannot change until this sale commits or rolls back), check that a sale
+     * may be recorded for it, and return its customer_id — the authoritative
+     * customer of the sale. Only reads the request; never modifies it.
+     */
+    private function lockRescueForSale(int $requestId, ?int $customerId): int
+    {
+        $rescue = $this->requests->lockForUpdate($requestId);
+        if ($rescue === null) {
+            throw new SaleException("Rescue request #{$requestId} was not found.");
+        }
+        if (!OtgStatus::canRecordSale($rescue['status'])) {
+            throw new SaleException(
+                "A sale can only be recorded for an accepted or completed Rescue request; "
+                . "request #{$requestId} is {$rescue['status']}."
+            );
+        }
+        // The caller must already be on the request's customer. A mismatch means
+        // stale or wrong context, so refuse rather than quietly swap customers.
+        if ($customerId === null) {
+            throw new SaleException(
+                "Rescue request #{$requestId} belongs to a registered customer; its sale cannot be recorded as a walk-in."
+            );
+        }
+        if ($customerId !== $rescue['customer_id']) {
+            throw new SaleException("The sale's customer is not the customer of Rescue request #{$requestId}.");
+        }
+
+        return $rescue['customer_id'];
+    }
+
+    /**
+     * True only for a duplicate-key error (1062) on the Rescue link key —
+     * never for a duplicate on any other key. MariaDB names the key as
+     * 'uq_sales_service_request'; MySQL 8 as 'sales.uq_sales_service_request'.
+     */
+    private static function isRescueLinkDuplicate(PDOException $e): bool
+    {
+        $info = $e->errorInfo ?? [];
+        if ((int) ($info[1] ?? 0) !== 1062) {
+            return false;
+        }
+        $key = preg_quote(SaleRepository::RESCUE_LINK_KEY, '/');
+        return preg_match("/for key '(?:[^'.]+\\.)?{$key}'/", (string) ($info[2] ?? '')) === 1;
+    }
+
     // --- request normalisation -------------------------------------------------
 
     private function requirePositiveInt($value, string $field): int
@@ -223,6 +326,19 @@ final class SaleService
         $n = $this->parseWholeNumber($value);
         if ($n === null || $n < 1) {
             throw new SaleException('customer_id must be a positive whole number or blank for a walk-in.');
+        }
+        return $n;
+    }
+
+    /** null / "" / absent → an ordinary sale (no Rescue); otherwise a positive request id. */
+    private function normaliseServiceRequestId($value): ?int
+    {
+        if ($value === null || (is_string($value) && trim($value) === '')) {
+            return null;
+        }
+        $n = $this->parseWholeNumber($value);
+        if ($n === null || $n < 1) {
+            throw new SaleException('service_request_id must be a positive whole number or blank for an ordinary sale.');
         }
         return $n;
     }

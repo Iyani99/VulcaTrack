@@ -10,8 +10,9 @@ namespace VulcaTrack\Support;
  * once a Tireman has been assigned; it is NOT a separate status value
  * (Decisions 7/11, PROJECT-CONTEXT s14).
  *
- * Also holds the allowed admin status transitions (canTransition). The
- * repository's guarded UPDATEs enforce the same rules at the database.
+ * Also holds the allowed admin status transitions (canTransition) and which
+ * statuses may have a sale recorded (canRecordSale). The repository's guarded
+ * UPDATEs and SaleService enforce the same rules at the database.
  */
 final class OtgStatus
 {
@@ -40,6 +41,17 @@ final class OtgStatus
     public static function isFinal(string $status): bool
     {
         return $status === 'rejected' || $status === 'completed';
+    }
+
+    /**
+     * Whether a sale may be recorded for a request in this status (Phase 7.3d,
+     * owner-approved): accepted (the normal case) or completed (a late entry
+     * after the request was closed). Never pending (not yet accepted) or
+     * rejected. Recording a sale does not change the status.
+     */
+    public static function canRecordSale(string $status): bool
+    {
+        return $status === 'accepted' || $status === 'completed';
     }
 
     /** Customer-facing label. */

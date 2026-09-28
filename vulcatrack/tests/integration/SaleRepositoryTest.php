@@ -53,6 +53,30 @@ test('SaleRepository::createSale links an existing customer when given one', fun
     });
 });
 
+test('SaleRepository::createSale stores the Rescue link when given one (NULL by default); lockSaleIdForServiceRequest finds it', function () {
+    $pdo = test_pdo();
+    TestDb::rollback($pdo, function () use ($pdo) {
+        $adminId = (new AdminRepository($pdo))->create('A', TestDb::email('a'), Password::hash('password123'));
+        $custId  = (new CustomerRepository($pdo))->create('Rescue Customer', TestDb::email('c'), '0917', Password::hash('password123'));
+        $pdo->prepare("INSERT INTO vehicles (customer_id, plate_number) VALUES (?, 'SR-1')")->execute([$custId]);
+        $pdo->prepare("INSERT INTO service_requests (customer_id, vehicle_id, problem_description, status) VALUES (?, ?, 'flat', 'accepted')")
+            ->execute([$custId, (int) $pdo->lastInsertId()]);
+        $requestId = (int) $pdo->lastInsertId();
+        $repo = new SaleRepository($pdo);
+
+        assert_null($repo->lockSaleIdForServiceRequest($requestId), 'no sale for the request yet');
+
+        $ordinary = $repo->createSale($adminId, null, '2026-09-28 09:00:00', 1000);   // existing 4-argument call
+        $linked   = $repo->createSale($adminId, $custId, '2026-09-28 10:00:00', 2000, $requestId);
+        $link = fn (int $saleId) => $pdo->query('SELECT service_request_id FROM sales WHERE sale_id = ' . $saleId)->fetchColumn();
+        assert_null($link($ordinary), 'an ordinary sale is not linked');
+        assert_same($requestId, (int) $link($linked), 'the Rescue sale stores its request');
+
+        assert_same($linked, $repo->lockSaleIdForServiceRequest($requestId));
+        assert_null($repo->lockSaleIdForServiceRequest(2147483646), 'unknown request');
+    });
+});
+
 test('SaleRepository::addSaleItem freezes unit price and stores the passed subtotal', function () {
     $pdo = test_pdo();
     TestDb::rollback($pdo, function () use ($pdo) {

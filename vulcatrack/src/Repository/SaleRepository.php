@@ -37,6 +37,13 @@ class SaleRepository
      */
     public const MAX_QUANTITY = 2147483647;
 
+    /**
+     * The UNIQUE key on `sales.service_request_id` (Phase 7.3d-a): at most one
+     * sale per Rescue request. SaleService uses the name to recognise that
+     * one duplicate-key error — and no other — as "already has a sale".
+     */
+    public const RESCUE_LINK_KEY = 'uq_sales_service_request';
+
     public function __construct(private PDO $pdo)
     {
     }
@@ -45,21 +52,52 @@ class SaleRepository
      * Insert the `sales` header. $saleDate is a server-controlled
      * 'Y-m-d H:i:s' string (Decision 35 — no DB default, no backdating).
      * $customerId is null for a walk-in sale (Decision 14).
+     * $serviceRequestId is the Rescue request the sale was recorded for, or
+     * null for an ordinary POS sale (Phase 7.3d); SaleService has already
+     * validated it — the UNIQUE key rejects a second sale for the same request.
      */
-    public function createSale(int $adminId, ?int $customerId, string $saleDate, int $totalCentavos): int
-    {
+    public function createSale(
+        int $adminId,
+        ?int $customerId,
+        string $saleDate,
+        int $totalCentavos,
+        ?int $serviceRequestId = null
+    ): int {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO sales (customer_id, admin_id, sale_date, total_amount)
-             VALUES (:customer_id, :admin_id, :sale_date, :total)'
+            'INSERT INTO sales (customer_id, service_request_id, admin_id, sale_date, total_amount)
+             VALUES (:customer_id, :service_request_id, :admin_id, :sale_date, :total)'
         );
         $stmt->execute([
-            ':customer_id' => $customerId,
-            ':admin_id'    => $adminId,
-            ':sale_date'   => $saleDate,
-            ':total'       => Money::format($totalCentavos),
+            ':customer_id'        => $customerId,
+            ':service_request_id' => $serviceRequestId,
+            ':admin_id'           => $adminId,
+            ':sale_date'          => $saleDate,
+            ':total'              => Money::format($totalCentavos),
         ]);
 
         return (int) $this->pdo->lastInsertId();
+    }
+
+    /**
+     * The id of the sale already recorded for a Rescue request, or null.
+     *
+     * A locking read (SELECT … FOR UPDATE), for use inside SaleService's
+     * checkout transaction: it reads the latest committed rows, not the
+     * transaction's older snapshot, so a sale another admin committed a moment
+     * ago is seen. When there is no such sale InnoDB also locks the gap in
+     * uq_sales_service_request, which other sales INSERTs may wait on until
+     * this transaction ends — SaleService therefore calls it only after it has
+     * locked the item rows (see there). The UNIQUE key remains the final guarantee.
+     */
+    public function lockSaleIdForServiceRequest(int $serviceRequestId): ?int
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT sale_id FROM sales WHERE service_request_id = ? FOR UPDATE'
+        );
+        $stmt->execute([$serviceRequestId]);
+        $id = $stmt->fetchColumn();
+
+        return $id === false ? null : (int) $id;
     }
 
     /**
