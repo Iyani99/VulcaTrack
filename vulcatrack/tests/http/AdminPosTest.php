@@ -125,7 +125,22 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         assert_contains('Out of stock', $html, 'a zero-stock product cannot be added');
         assert_contains('&lt;script&gt;alert(1)&lt;/script&gt;', $html, 'item names are escaped');
         assert_not_contains('<script>alert(1)</script>', $html);
-        assert_contains('class="table-scroll"', $html, 'wide tables scroll in their own box on phones');
+        // Phase 7.3c layout: catalogue pane (item cards that wrap on phones, so no Add
+        // control hides behind a scroll strip) beside the Current sale panel.
+        assert_contains('<section class="pos-catalog" id="items"', $html, 'catalogue pane');
+        assert_contains('<ul class="pos-grid">', $html, 'the catalogue is a wrapping card grid');
+        assert_contains('<section class="pos-sale" id="sale"', $html, 'Current sale panel');
+        assert_true(strpos($html, 'id="items"') < strpos($html, 'id="sale"'), 'catalogue first, then the sale (desktop left/right, stacked order)');
+        // each card keeps the same add form: POST action=add + item_id + quantity, never nested
+        assert_contains('<input type="hidden" name="item_id" value="' . $P . '">', $html);
+        assert_same(0, preg_match('#<form[^>]*>(?:(?!</form>).)*<form#s', $html), 'no nested forms');
+        // type chips are plain links carrying the real ?type= values (search kept)
+        $filtered = $page('?q=' . urlencode($tag) . '&type=service');
+        assert_contains('href="/vulcatrack/admin/pos.php?q=' . urlencode($tag) . '&amp;type=product"', $filtered, 'the Products chip keeps the search');
+        assert_contains('aria-current="true">Services</a>', $filtered, 'the chosen type is marked current');
+        assert_contains('<input type="hidden" name="type" value="service">', $filtered, 'searching keeps the chosen type');
+        assert_contains("{$tag} Patching", $filtered);
+        assert_not_contains("{$tag} Tire Valve", $filtered, 'the type filter still filters');
         assert_contains('No items yet', $html);
         assert_contains('Walk-in', $html, 'blank customer = walk-in');
         $assertClean($html, 'pos (empty)');
@@ -172,7 +187,17 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         assert_null($qtyOf($body, $H), 'removed from the cart');
         assert_same(4, $qtyOf($body, $P), 'other lines untouched');
         assert_contains('&#8369;800.50', $body, 'total = 4 x 150.00 + 200.50, shown from DB prices');
-        assert_contains('Total due: &#8369;800.50', $body, 'the total is repeated beside the cash box (visible on phones)');
+        assert_contains('<span class="pos-total__value">&#8369;800.50</span>', $body, 'the server total is the large figure beside the cash box');
+        // Form semantics of the sale panel (Phase 7.3c): quantities, expected_total and
+        // Complete sale live in #pos-sale, whose FIRST own submit button is "Update
+        // quantities" (Enter in a quantity box); Remove buttons belong to #pos-remove.
+        assert_true(preg_match('#<form id="pos-sale"(.*?)</form>#s', $body, $saleForm) === 1, 'the sale form');
+        assert_contains('name="expected_total" value="80050"', $saleForm[1]);
+        assert_contains('name="qty[' . $P . ']"', $saleForm[1]);
+        assert_contains('value="checkout" class="btnlink pos-complete">Complete sale</button>', $saleForm[1], 'Complete sale is the red primary action of the sale form');
+        preg_match_all('#<button type="submit"(?![^>]*form="pos-remove")[^>]*>#', $saleForm[1], $ownButtons);
+        assert_contains('value="update"', $ownButtons[0][0] ?? '', 'Update quantities is the first submit button of the sale form');
+        assert_same(2, substr_count($saleForm[1], 'form="pos-remove"'), 'one Remove per line, owned by #pos-remove');
         $assertClean($body, 'pos (cart)');
 
         // ================= optional customer linking =================

@@ -20,6 +20,10 @@
  * Every cart change is POST + CSRF and redirects back (PRG) with a one-time
  * session flash. A failed checkout re-renders in place so the cash amount the
  * cashier typed is kept; the cart itself always survives in the session.
+ *
+ * Layout (Phase 7.3c): a catalogue of item cards on the left and the Current
+ * sale panel on the right (stacked on narrow screens). Presentation only —
+ * the forms, field names, form owners and Enter-key behaviour are unchanged.
  */
 
 use VulcaTrack\Auth\Csrf;
@@ -85,6 +89,24 @@ function pos_flash(string $type, string $message): void
 function pos_peso(int $centavos): string
 {
     return '&#8369;' . e(Money::format($centavos));
+}
+
+/**
+ * Catalogue stock chip [modifier, label] — the same chips as Inventory
+ * (Phase 7.3b), from the same low-stock rule: $isLow comes from
+ * ItemRepository::lowStockProducts(). Presentation only; the catalogue lists
+ * active items only, and the stock check that matters stays in SaleService.
+ */
+function pos_stock_chip(array $row, bool $isLow): array
+{
+    if ($row['item_type'] !== 'product') {
+        return ['na', 'n/a'];
+    }
+    $stock = (int) $row['stock_quantity'];
+    if ($stock < 1) {
+        return [$isLow ? 'low' : 'out', 'Out: ' . $stock];
+    }
+    return $isLow ? ['low', 'Low: ' . $stock] : ['ok', 'OK: ' . $stock];
 }
 
 $errors      = [];   // shown on this render (failed checkout)
@@ -285,11 +307,22 @@ if ($filters['q'] !== '')    { $catalogFilters['search'] = $filters['q']; }
 if ($filters['type'] !== '') { $catalogFilters['type'] = $filters['type']; }
 $catalog = $items->list($catalogFilters);
 
+// Which catalogue products carry a low-stock alert — the exact Inventory rule.
+$lowStockIds = [];
+foreach ($items->lowStockProducts() as $p) {
+    $lowStockIds[(int) $p['item_id']] = true;
+}
+
 $pageTitle = 'POS';
 $navActive = 'pos';
 require __DIR__ . '/../src/Views/partials/admin_top.php';
 ?>
-<h1>Point of Sale</h1>
+<div class="pagehead">
+  <div>
+    <h1>Point of Sale</h1>
+    <p class="pagehead__meta">Add items from the catalogue, then complete the sale in the Current sale panel.</p>
+  </div>
+</div>
 
 <?php if ($lastSale !== null): ?>
   <section class="card card--sold" aria-live="polite">
@@ -312,9 +345,81 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <p class="error" role="alert"><?= e($message) ?></p>
 <?php endforeach; ?>
 
+<?php /* Phase 7.3c layout: catalogue (left) | current sale (right) on desktop,
+   stacked catalogue-then-sale below the breakpoint. Every form below is the
+   same as before — same fields, same form ids / owners, none nested; only
+   the presentation around them changed. */ ?>
+<div class="pos-layout">
+
+<!-- ================= catalogue ================= -->
+<section class="pos-catalog" id="items" aria-labelledby="pos-catalog-title">
+  <h2 class="pos-pane-title" id="pos-catalog-title">Catalogue</h2>
+
+  <div class="pos-tools">
+    <form class="pos-search" method="get" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>" role="search">
+      <?php if ($filters['type'] !== ''): ?><input type="hidden" name="type" value="<?= e($filters['type']) ?>"><?php endif; ?>
+      <label class="sr-only" for="pos-q">Search items</label>
+      <input type="text" id="pos-q" name="q" value="<?= e($filters['q']) ?>" maxlength="150" placeholder="Search by name or category">
+      <button type="submit">Search</button>
+    </form>
+    <?php // Type filter as chips: plain links with the same ?type= values (the search is kept). ?>
+    <nav class="chips" aria-label="Item type">
+      <?php foreach (['' => 'All', 'product' => 'Products', 'service' => 'Services'] as $typeValue => $typeLabel): ?>
+        <a class="chip<?= $filters['type'] === $typeValue ? ' is-active' : '' ?>" href="<?= e(pos_url(['q' => $filters['q'], 'type' => $typeValue])) ?>"<?= $filters['type'] === $typeValue ? ' aria-current="true"' : '' ?>><?= e($typeLabel) ?></a>
+      <?php endforeach; ?>
+    </nav>
+    <?php if ($filters['q'] !== '' || $filters['type'] !== ''): ?>
+      <a class="pos-clear" href="<?= e(vulcatrack_url('/admin/pos.php')) ?>">Clear</a>
+    <?php endif; ?>
+  </div>
+
+  <?php if ($view['rows']): /* stacked (narrow) layout only: the sale sits below the catalogue */ ?>
+    <?php $lineCount = count($view['rows']); ?>
+    <a class="pos-jump" href="#sale">Current sale: <?= $lineCount ?> <?= $lineCount === 1 ? 'item' : 'items' ?> &middot; <?= pos_peso((int) $view['total_centavos']) ?></a>
+  <?php endif; ?>
+
+  <?php if (!$catalog): ?>
+    <p class="muted">No active items match.</p>
+  <?php else: ?>
+    <ul class="pos-grid">
+    <?php foreach ($catalog as $row): ?>
+      <?php
+        $isProduct  = $row['item_type'] === 'product';
+        $outOfStock = $isProduct && (int) $row['stock_quantity'] < 1;
+        [$chip, $chipLabel] = pos_stock_chip($row, isset($lowStockIds[(int) $row['item_id']]));
+      ?>
+      <li class="pos-item<?= $outOfStock ? ' pos-item--out' : '' ?>">
+        <div class="pos-item__tags">
+          <span class="badge badge--<?= $isProduct ? 'product' : 'service' ?>"><?= $isProduct ? 'Product' : 'Service' ?></span>
+          <span class="stock stock--<?= $chip ?>"><?= e($chipLabel) ?></span>
+        </div>
+        <p class="pos-item__name"><?= e($row['item_name']) ?></p>
+        <?php if ($row['category'] !== null && $row['category'] !== ''): ?>
+          <p class="pos-item__cat"><?= e($row['category']) ?></p>
+        <?php endif; ?>
+        <p class="pos-item__price"><?= pos_peso((int) $row['price_centavos']) ?></p>
+        <?php if ($outOfStock): ?>
+          <p class="pos-item__unavailable"><span class="badge badge--low">Out of stock</span></p>
+        <?php else: ?>
+          <form class="pos-addform" method="post" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>">
+            <?= Csrf::field() ?><?= pos_filter_fields($filters) ?>
+            <input type="hidden" name="_action" value="add">
+            <input type="hidden" name="item_id" value="<?= (int) $row['item_id'] ?>">
+            <input type="text" class="qty-input" name="quantity" value="1" inputmode="numeric" maxlength="4"
+                   aria-label="Quantity of <?= e($row['item_name']) ?> to add">
+            <button type="submit" class="secondary">Add</button>
+          </form>
+        <?php endif; ?>
+      </li>
+    <?php endforeach; ?>
+    </ul>
+  <?php endif; ?>
+</section>
+
 <!-- ================= current sale ================= -->
-<section class="card" id="sale">
-  <h2>Current sale</h2>
+<section class="pos-sale" id="sale" aria-labelledby="pos-sale-title">
+  <h2 class="pos-sale__head" id="pos-sale-title">Current sale</h2>
+  <div class="pos-sale__body">
 
   <div class="pos-customer">
     <p>
@@ -366,7 +471,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   </details>
 
   <?php if (!$view['rows']): ?>
-    <p class="muted">No items yet. Add products or services from the list below.</p>
+    <p class="muted pos-empty">No items yet. Add products or services from the catalogue.</p>
   <?php else: ?>
     <form id="pos-sale" method="post" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>"
           data-total="<?= (int) $view['total_centavos'] ?>">
@@ -376,35 +481,33 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <div class="table-scroll">
       <table class="datatable pos-cart">
         <thead>
-          <tr><th>Item</th><th class="num">Unit price</th><th>Qty</th><th class="num">Subtotal</th><th></th></tr>
+          <tr><th>Item</th><th>Qty</th><th class="num">Subtotal</th></tr>
         </thead>
         <tbody>
         <?php foreach ($view['rows'] as $row): ?>
           <tr>
             <td>
-              <?= e($row['item_name']) ?>
-              <?php if ($row['item_type'] !== null): ?>
-                <span class="badge badge--<?= $row['item_type'] === 'product' ? 'product' : 'service' ?>"><?= $row['item_type'] === 'product' ? 'Product' : 'Service' ?></span>
-              <?php endif; ?>
+              <span class="pos-cart__name"><?= e($row['item_name']) ?></span>
+              <span class="pos-cart__meta">
+                <?php if ($row['item_type'] !== null): ?>
+                  <span class="badge badge--<?= $row['item_type'] === 'product' ? 'product' : 'service' ?>"><?= $row['item_type'] === 'product' ? 'Product' : 'Service' ?></span>
+                <?php endif; ?>
+                <span><?= pos_peso((int) $row['unit_centavos']) ?> each</span>
+              </span>
               <?php if ($row['problem'] !== null): ?><small class="error"><?= e($row['problem']) ?></small><?php endif; ?>
+              <?php // owned by #pos-remove (form attribute), so it is never this form's Enter-key button ?>
+              <button type="submit" class="linklike pos-cart__remove" form="pos-remove" name="item_id"
+                      value="<?= (int) $row['item_id'] ?>">Remove</button>
             </td>
-            <td class="num"><?= pos_peso((int) $row['unit_centavos']) ?></td>
             <td>
               <input type="text" class="qty-input" name="qty[<?= (int) $row['item_id'] ?>]"
                      value="<?= (int) $row['quantity'] ?>" inputmode="numeric" maxlength="4"
                      aria-label="Quantity of <?= e($row['item_name']) ?>">
             </td>
             <td class="num"><?= pos_peso((int) $row['subtotal_centavos']) ?></td>
-            <td>
-              <button type="submit" class="linklike" form="pos-remove" name="item_id"
-                      value="<?= (int) $row['item_id'] ?>">Remove</button>
-            </td>
           </tr>
         <?php endforeach; ?>
         </tbody>
-        <tfoot>
-          <tr class="pos-totalrow"><th colspan="3">Total</th><td class="num"><?= pos_peso((int) $view['total_centavos']) ?></td><td></td></tr>
-        </tfoot>
       </table>
       </div>
 
@@ -413,10 +516,14 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
         <button type="submit" name="_action" value="update" class="secondary">Update quantities</button>
       </div>
 
+      <?php // the server-computed total (the same figure sent as expected_total) ?>
+      <p class="pos-total">
+        <span class="pos-total__label">Total due</span>
+        <span class="pos-total__value"><?= pos_peso((int) $view['total_centavos']) ?></span>
+      </p>
+
       <div class="pos-pay">
-        <!-- repeated beside the cash box: on a phone the table's total column can sit behind the scroll strip -->
-        <p class="pos-change pos-due">Total due: <?= pos_peso((int) $view['total_centavos']) ?></p>
-        <div>
+        <div class="pos-pay__cash">
           <label for="cash_tendered">Cash received (&#8369;)</label>
           <input type="text" id="cash_tendered" name="cash_tendered" inputmode="decimal" maxlength="14"
                  value="<?= e($tenderInput) ?>" autocomplete="off"
@@ -424,9 +531,9 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
         </div>
         <p class="pos-change">Change: <output id="pos-change" for="cash_tendered">—</output></p>
       </div>
-      <p class="muted">Change is shown for convenience; the server re-checks the cash against the total. Cash received is not stored.</p>
+      <p class="muted pos-note">Change is shown for convenience; the server re-checks the cash against the total. Cash received is not stored.</p>
 
-      <button type="submit" name="_action" value="checkout">Complete sale</button>
+      <button type="submit" name="_action" value="checkout" class="btnlink pos-complete">Complete sale</button>
     </form>
 
     <form id="pos-remove" method="post" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>">
@@ -440,68 +547,10 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <button type="submit" class="linklike" onclick="return confirm('Cancel this sale and empty the cart?');">Cancel sale</button>
     </form>
   <?php endif; ?>
+  </div>
 </section>
 
-<!-- ================= add items ================= -->
-<section id="items">
-  <h2>Add items</h2>
-  <form class="filterbar" method="get" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>">
-    <label>Search
-      <input type="text" name="q" value="<?= e($filters['q']) ?>" maxlength="150" placeholder="name or category">
-    </label>
-    <label>Type
-      <select name="type">
-        <option value=""<?= $filters['type'] === '' ? ' selected' : '' ?>>All</option>
-        <option value="product"<?= $filters['type'] === 'product' ? ' selected' : '' ?>>Product</option>
-        <option value="service"<?= $filters['type'] === 'service' ? ' selected' : '' ?>>Service</option>
-      </select>
-    </label>
-    <button type="submit">Filter</button>
-    <?php if ($filters['q'] !== '' || $filters['type'] !== ''): ?>
-      <a href="<?= e(vulcatrack_url('/admin/pos.php')) ?>">Clear</a>
-    <?php endif; ?>
-  </form>
-
-  <?php if (!$catalog): ?>
-    <p class="muted">No active items match.</p>
-  <?php else: ?>
-    <div class="table-scroll">
-    <table class="datatable pos-catalog">
-      <thead>
-        <tr><th>Item</th><th>Type</th><th class="num">Price</th><th class="num">Stock</th><th>Add</th></tr>
-      </thead>
-      <tbody>
-      <?php foreach ($catalog as $row): ?>
-        <?php $isProduct = $row['item_type'] === 'product'; $outOfStock = $isProduct && (int) $row['stock_quantity'] < 1; ?>
-        <tr>
-          <td>
-            <?= e($row['item_name']) ?>
-            <?php if ($row['category'] !== null && $row['category'] !== ''): ?><br><span class="muted"><?= e($row['category']) ?></span><?php endif; ?>
-          </td>
-          <td><span class="badge badge--<?= $isProduct ? 'product' : 'service' ?>"><?= $isProduct ? 'Product' : 'Service' ?></span></td>
-          <td class="num"><?= pos_peso((int) $row['price_centavos']) ?></td>
-          <td class="num"><?= $isProduct ? (int) $row['stock_quantity'] : '<span class="muted">n/a</span>' ?></td>
-          <td>
-            <?php if ($outOfStock): ?>
-              <span class="badge badge--low">Out of stock</span>
-            <?php else: ?>
-              <form class="pos-addform" method="post" action="<?= e(vulcatrack_url('/admin/pos.php')) ?>">
-                <?= Csrf::field() ?><?= pos_filter_fields($filters) ?>
-                <input type="hidden" name="_action" value="add">
-                <input type="hidden" name="item_id" value="<?= (int) $row['item_id'] ?>">
-                <input type="text" class="qty-input" name="quantity" value="1" inputmode="numeric" maxlength="4"
-                       aria-label="Quantity of <?= e($row['item_name']) ?> to add">
-                <button type="submit" class="secondary">Add</button>
-              </form>
-            <?php endif; ?>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-    </div>
-  <?php endif; ?>
-</section>
+</div><!-- /.pos-layout -->
 
 <script>
 /* Convenience only: live change display. Integer centavos, no float maths.
