@@ -42,7 +42,7 @@ We are building it as a **BSIT student project**, so the priorities are maintain
 - Sales history (all recorded sales, newest first, with an optional date filter)
 - Sales reports (transaction count, total sales, daily totals and items sold for an optional date range)
 
-Phase 6 features are built; the Phase 6 closeout review is still pending.
+Phase 6 is complete. Next is Phase 7: final integration, testing, UI refinement and presentation readiness.
 
 ### On-the-Go Services
 

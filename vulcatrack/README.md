@@ -5,8 +5,10 @@ Local development runs on XAMPP (Apache + PHP + MariaDB).
 
 ## Status
 
-**Phase 5 complete -- admin Inventory + Point of Sale.** Phases 1–4 (foundation,
-schema, auth, customer side) were completed first; see below.
+**Phase 6 complete -- admin OTG handling, Tiremen, Sales History and Reports.**
+Phases 1–5 (foundation, schema, auth, customer side, Inventory + Point of Sale) were
+completed first; see below. Next is Phase 7 (integration, testing, UI refinement,
+presentation readiness).
 
 Phase 4 delivered the customer side on top of the Phase 3 auth system: customer dashboard, profile
 (name / contact number / password), saved vehicles (add / edit / soft-delete /
@@ -23,7 +25,7 @@ Phase 5 added the admin side for the shop counter: an admin dashboard, one
 Inventory module for products **and** services, and a Point of Sale with a
 printable Transaction Summary (see *Admin functionality* below).
 
-**Phase 6 is in progress.** Chunk 6.1 added admin **Tireman management**: view,
+**Phase 6 (complete, 2026-09-28).** Chunk 6.1 added admin **Tireman management**: view,
 Active / Inactive / All filter, add, edit, activate / deactivate (no hard delete).
 Tiremen stay non-login records. Chunk 6.2 added the **admin Rescue view** (request
 list with a status filter, detail page with a read-only map) and Chunk 6.3 the
@@ -32,8 +34,6 @@ rejected / completed are final. **Sales History** lists every recorded sale, new
 first, with an optional From / To date filter; each row opens its Transaction Summary.
 **Sales Reports** totals the same kind of range: transactions, total sales, daily
 totals and items sold. No schema change.
-
-Phase 6 features are built; the Phase 6 closeout review is still pending.
 
 ## Design / decision documents
 

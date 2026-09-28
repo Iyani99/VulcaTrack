@@ -2,9 +2,10 @@
 
 **Status:** Authoritative record of CONFIRMED project decisions.
 **Last updated:** 2026-09-28
-**Last revised:** 2026-09-28 — **Decisions 65–68 added** (owner-approved Rescue status rules,
-Phase 6.3; Decision 25 refined, `admin_id` open question resolved) and Phase 6 status updated
-(Chunks 6.1–6.3, Sales History and Sales Reports done). Previous: 2026-09-23 — Phase 5 closed; clarified
+**Last revised:** 2026-09-28 — **Phase 6 closed** (status only). Earlier the same day:
+**Decisions 65–68 added** (owner-approved Rescue status rules, Phase 6.3; Decision 25
+refined, `admin_id` open question resolved) and Phase 6 status updated (Chunks 6.1–6.3,
+Sales History and Sales Reports done). Previous: 2026-09-23 — Phase 5 closed; clarified
 Decision 62 (optional expected-total assertion) and Decision 50 (printable sale
 document is a non-official transaction reference)
 (see [Revision History](#revision-history)).
@@ -923,7 +924,7 @@ Do not turn these into confirmed requirements without approval.
   Decision 50 — non-official). Closed after an end-to-end walkthrough through
   Apache, a phone/LAN check and a documentation pass.
 - **Phase 6 (admin OTG handling, Tireman assignment, reporting — Decision 49)
-  IN PROGRESS.** Chunk 6.1 (2026-09-28): admin **Tireman management**
+  COMPLETE (closed 2026-09-28).** Chunk 6.1 (2026-09-28): admin **Tireman management**
   (Decision 24) — `admin/tiremen.php` + `admin/tireman-edit.php` on
   `TiremanRepository`: view, Active / Inactive / All filter, add, edit,
   activate / deactivate; no hard delete; `listActive()` ready for assignment.
@@ -942,6 +943,9 @@ Do not turn these into confirmed requirements without approval.
   From / To filter; Transactions and Total Sales, Daily Sales grouped by
   `sale_date`, Items Sold with frozen revenue (Decisions 17, 35, 49).
   No schema change.
+- **Phase 7 (integration, testing, bug fixing, presentation readiness) is
+  next — not started.** Its deferred-item backlog is consolidated in
+  `docs/PROJECT-CONTEXT.md` §16.5.
 - Repo on `main` at `C:\IPT102`, pushed to
   `https://github.com/Iyani99/VulcaTrack.git`; app at `C:\IPT102\vulcatrack\`
   served via a Windows junction from `C:\xampp\htdocs\vulcatrack`.
@@ -949,21 +953,22 @@ Do not turn these into confirmed requirements without approval.
   (`vulcatrack/database/schema.sql`); no seed data ships (the owner keeps a
   personal test account).
 - **Test harness (Phase 4.5, extended each chunk):** `vulcatrack/tests/` —
-  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **181 passed, 0
-  failed, 2257 assertions across 31 files** (unit, integration — schema +
-  repositories + Auth + inventory + sales + Tiremen + admin request reads and
-  guarded status changes + DB session, and end-to-end HTTP incl. the POS,
-  Transaction Summary, Tiremen and Rescue pages and actions). All green as of
-  2026-09-28.
+  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **198 passed, 0
+  failed, 2762 assertions across 36 files** (unit, integration — schema +
+  repositories + Auth + inventory + sales + Sales History / Reports reads +
+  Tiremen + admin request reads and guarded status changes + DB session, and
+  end-to-end HTTP incl. the POS, Transaction Summary, Sales History, Reports,
+  Tiremen and Rescue pages and actions). All green as of 2026-09-28 (`4e3d8c3`).
 - Auth (Decisions 41–47): customer + admin login/logout, CLI
   `vulcatrack/database/seed_admin.php`, hardened sessions, guards.
 - Customer side (Decision 48): `vulcatrack/customer/*` — dashboard, profile,
   saved vehicles (soft-delete), OTG rescue submission with a frozen-snapshot
   ETA, request history + customer-facing status. No schema change; OTG requests
   are always created `status = 'pending'`.
-- Admin side (Phase 5; Tiremen + Rescue added in Phase 6):
-  `vulcatrack/admin/*` — dashboard, inventory + item edit, POS, transaction
-  summary, Tiremen, Rescue (list, detail, status actions). No schema change — still exactly the 8 tables.
+- Admin side (Phase 5; Tiremen, Rescue, Sales History and Reports added in
+  Phase 6): `vulcatrack/admin/*` — dashboard, inventory + item edit, POS,
+  transaction summary, Sales History, Reports, Tiremen, Rescue (list, detail,
+  status actions). No schema change — still exactly the 8 tables.
 - ERD exists (PNG + text schema `docs/ERD/schema.dbml`).
 - Use-case diagram exists (PNG; changes pending — see Required Diagram Changes).
 - Six flowcharts exist.
@@ -1051,6 +1056,18 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-28 — Phase 6 closed (status only; no decision change)
+
+- **Current Project Status** updated: Phase 6 is **COMPLETE**. A closeout review
+  found every Phase 6 feature built and tested — Tireman management (Decision 24),
+  the admin Rescue view and status actions (Decisions 9, 33, 65–68), Sales History
+  and Sales Reports (Decision 49). No required Phase 6 item is missing. The Admin
+  Dashboard is unchanged; its Figma alignment belongs to Phase 7. The admin file
+  list and test summary were brought up to date (**198 passed / 2762 assertions /
+  36 files**). Phase 7 is next; its deferred backlog is consolidated in
+  `docs/PROJECT-CONTEXT.md` §16.5.
+- No renumbering, no new decision, no schema change, no code change.
 
 ### 2026-09-28 — Phase 6: admin Sales Reports (status only; no decision change)
 
