@@ -115,7 +115,8 @@ test('transaction summary: guards, id validation, frozen historical values, esca
         assert_contains('504 San Jose St. Baliwag, Bulacan', $html, 'shop address from config/shop.php');
         assert_contains('<dd>' . $linked['sale_id'] . '</dd>', $html, 'sale number');
         assert_contains(e($saleDate), $html, 'recorded sale date/time');
-        assert_contains(e("{$tag} Cashier <i>Jo</i>"), $html, 'cashier name, escaped');
+        // in its field: the signed-in admin (this cashier) is also named in the sidebar
+        assert_contains('<dd>' . e("{$tag} Cashier <i>Jo</i>") . '</dd>', $html, 'cashier name, escaped');
         assert_contains(e("{$tag} <b>Ana</b> & Co"), $html, 'linked customer name, escaped');
         assert_not_contains('<b>Ana</b>', $html);
         assert_not_contains('<i>Jo</i>', $html);
@@ -139,7 +140,7 @@ test('transaction summary: guards, id validation, frozen historical values, esca
             assert_not_contains('>' . $absent, $html, "no {$absent} field");
         }
         assert_contains('window.print()', $html, 'Print button');
-        assert_contains('class="is-printdoc"', $html, 'print styles are scoped to this document');
+        assert_contains('<body class="admin is-printdoc">', $html, 'print styles are scoped to this document (on the admin shell)');
         assert_contains('pagehead no-print', $html, 'screen-only controls are hidden when printing');
         assert_contains('Back to POS', $html);
 

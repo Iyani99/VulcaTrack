@@ -3,9 +3,11 @@
  * Admin dashboard — landing page for the signed-in admin.
  *
  * Phase 7.2: "Dashboard Overview" with three live summary cards, following the
- * approved Figma dashboard frame (without its activity feed, comparisons,
- * notification / help icons or sidebar — not in scope). Each figure reuses the
- * exact read behind the page its card links to, so the numbers always agree:
+ * approved Figma dashboard frame (without its activity feed, comparisons or
+ * notification / help icons — not in scope). Phase 7.3a moved it into the
+ * shared admin sidebar shell; the signed-in admin's name now sits in the
+ * sidebar. Each figure reuses the exact read behind the page its card links
+ * to, so the numbers always agree:
  *
  * - Total Sales Today — SaleRepository::summarize(today, today) on sale_date
  *   (Decision 35), "today" in the app timezone → Reports for today.
@@ -36,15 +38,14 @@ $pending    = count((new ServiceRequestRepository($pdo))->listForAdmin('pending'
 
 $pageTitle = 'Dashboard';
 $navActive = 'dashboard';
-$bodyClass = 'is-dashboard'; // dashboard-only width + look (app.css); the shared shell is unchanged
 require __DIR__ . '/../src/Views/partials/admin_top.php';
 ?>
-<header class="dash-head">
+<header class="pagehead">
   <div>
     <h1>Dashboard Overview</h1>
-    <p class="dash-head__meta">Signed in as <?= e($admin['name']) ?> &middot; Figures for <?= e($today) ?></p>
+    <p class="pagehead__meta">Figures for <?= e($today) ?></p>
   </div>
-  <a class="dash-btn" href="<?= e(vulcatrack_url('/admin/pos.php')) ?>">+ New sale</a>
+  <a class="btnlink" href="<?= e(vulcatrack_url('/admin/pos.php')) ?>">+ New sale</a>
 </header>
 
 <div class="dash-cards">

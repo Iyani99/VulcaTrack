@@ -109,7 +109,7 @@ test('sales reports: guards, cards, daily + items tables, escaping, date filters
         $html = $r['body'];
         $assertClean($html, 'reports');
         assert_contains('<h1>Sales Reports</h1>', $html);
-        assert_contains(' class="is-active">Reports</a>', $html, 'the Reports nav entry is active');
+        assert_contains('href="/vulcatrack/admin/reports.php" class="is-active" aria-current="page"', $html, 'the Reports nav entry is active');
         assert_contains('Range: <strong>All recorded sales</strong>', $html, 'the default range is stated');
         assert_not_contains('>Clear</a>', $html, 'no Clear link without a filter');
         assert_contains($dayRow('2001-07-01', 2, '586.50'), $flat($html), 'the default range includes the seeded days');

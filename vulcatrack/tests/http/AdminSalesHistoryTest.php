@@ -95,7 +95,7 @@ test('sales history: guards, newest-first list, walk-in/customer, escaping, date
         $html = $r['body'];
         $assertClean($html, 'sales history');
         assert_contains('<h1>Sales History</h1>', $html);
-        assert_contains(' class="is-active">Sales History</a>', $html, 'the Sales History nav entry is active');
+        assert_contains('href="/vulcatrack/admin/sales.php" class="is-active" aria-current="page"', $html, 'the Sales History nav entry is active');
         $shows($html, [$early, $walkIn, $late, $nextDay], [], 'unfiltered');
         assert_true(strpos($html, $link($nextDay)) < strpos($html, $link($late))
             && strpos($html, $link($late)) < strpos($html, $link($walkIn))
@@ -107,7 +107,8 @@ test('sales history: guards, newest-first list, walk-in/customer, escaping, date
         // row contents: sale no., date/time, cashier, customer / walk-in, stored total
         assert_contains('<td>' . $early . '</td>', $html, 'sale number');
         assert_contains('2001-03-15 10:00:00', $html, 'recorded sale date/time');
-        assert_contains(e("{$tag} Cashier <i>Jo</i>"), $html, 'cashier name, escaped');
+        // in its table cell: the signed-in admin (this cashier) is also named in the sidebar
+        assert_contains('<td>' . e("{$tag} Cashier <i>Jo</i>") . '</td>', $html, 'cashier name, escaped');
         assert_contains(e("{$tag} <b>Ana</b> & Co"), $html, 'linked customer name, escaped');
         assert_not_contains('<i>Jo</i>', $html);
         assert_not_contains('<b>Ana</b>', $html);

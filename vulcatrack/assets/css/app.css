@@ -1,6 +1,7 @@
 /* VulcaTrack -- minimal styling for the authentication screens and the
    signed-in customer area. Intentionally plain; align with the Figma
-   prototype in a later pass. */
+   prototype in a later pass. The admin area layers its own shell + theme
+   on top of these rules, scoped to body.admin (see "admin area" below). */
 
 * { box-sizing: border-box; }
 
@@ -378,9 +379,7 @@ button.loc-result:hover { background: #eef2fb; }
 
 @media print {
   body.is-printdoc { background: #fff; }
-  body.is-printdoc .appbar,
-  body.is-printdoc .appfoot,
-  body.is-printdoc .no-print { display: none !important; }
+  body.is-printdoc .no-print { display: none !important; } /* the admin shell itself: see "admin area" print rules below */
   body.is-printdoc .app { max-width: none; margin: 0; padding: 0; }
   body.is-printdoc .txn-doc { max-width: none; margin: 0; border: 0; padding: 0; }
   body.is-printdoc .table-scroll { overflow: visible; }
@@ -485,52 +484,267 @@ body.lp { background: #fff; color: #111; }
   .lp-step:last-child { border-bottom: 0; }
 }
 
-/* ---- admin dashboard (Phase 7.2) -------------------------------------------
-   Scoped to body.is-dashboard / .dash-* so only the dashboard changes. Follows
-   the Figma dashboard content area (black / white, red for alerts, square
-   geometry); the shared admin shell and other pages keep their current look
-   until the Phase 7.3 theme pass. */
+/* ---- admin area (Phase 7.3a) ----------------------------------------------
+   The shared admin shell (src/Views/partials/admin_top.php) + the admin visual
+   system from the approved Figma frames: dark left sidebar, light workspace,
+   black / white with red as deliberate emphasis, square geometry, monospace
+   meta labels, dark table headers.
 
-body.is-dashboard { background: #f2f2f2; }
-body.is-dashboard .app,
-body.is-dashboard .appfoot { max-width: 78rem; }
-body.is-dashboard .app { margin-top: 2rem; padding: 0 1.5rem 2.5rem; }
+   EVERYTHING here is scoped to body.admin so the customer + auth screens keep
+   the base rules above untouched. Two scoping styles, on purpose:
+   - :where(body.admin) <element> — element defaults (links, buttons, inputs,
+     h2) at the lowest specificity, so any class rule (.linklike, .qty-input,
+     .dash-card__label, Leaflet's own…) still wins over them;
+   - body.admin .<class> — admin versions of the shared base components
+     (.btnlink, .card, .datatable, .badge, .filterbar…). */
 
-.dash-head {
-  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
-  gap: .75rem 1.5rem; margin-bottom: 2rem; padding-bottom: .9rem; border-bottom: 2px solid #111;
+body.admin {
+  --adm-ink: #111;
+  --adm-side: #1b1c1e;
+  --adm-side-hover: #26282b;
+  --adm-side-line: #3b3d41;
+  --adm-side-text: #cfd0d2;
+  --adm-red: #e31b23;
+  --adm-red-dark: #b9141b;
+  --adm-bg: #f4f4f4;
+  --adm-line: #dadada;
+  --adm-line-soft: #ececec;
+  --adm-zebra: #f6f6f6;
+  --adm-muted: #666;
+  --adm-mono: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+  --adm-sans: system-ui, "Segoe UI", Arial, sans-serif;
+  background: var(--adm-bg);
+  color: var(--adm-ink);
 }
-.dash-head h1 { margin: 0; font-size: clamp(1.6rem, 2.6vw, 2.05rem); font-weight: 800; letter-spacing: -.01em; line-height: 1.15; color: #111; }
-.dash-head__meta { margin: .35rem 0 0; font-size: .82rem; color: #777; }
-.dash-btn {
-  display: inline-block; padding: .6rem 1.1rem; border: 2px solid #e31b23; background: #e31b23; color: #fff;
-  font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; text-decoration: none;
-}
-.dash-btn:hover { background: #b9141b; border-color: #b9141b; }
+body.admin .adm-red { color: var(--adm-red); }
 
-.dash-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.4rem; margin: 0 0 2rem; }
+/* shell: sidebar + workspace */
+body.admin .adm { display: grid; grid-template-columns: 15rem minmax(0, 1fr); min-height: 100vh; }
+/* the aside fills the whole column (dark to the bottom of long pages); its
+   inner box stays pinned to the viewport while the workspace scrolls */
+body.admin .adm-side { background: var(--adm-side); color: var(--adm-side-text); border-right: 1px solid #000; }
+body.admin .adm-side__inner {
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+body.admin .adm-brand {
+  display: flex; align-items: center; gap: .55rem; padding: 1.35rem 1.25rem;
+  border-bottom: 1px solid var(--adm-side-line); color: #fff; text-decoration: none;
+}
+body.admin .adm-brand__pin { width: 1.7rem; height: 1.7rem; flex: none; fill: var(--adm-red); }
+body.admin .adm-brand__text { display: flex; flex-direction: column; line-height: 1.15; }
+body.admin .adm-brand__name { font-size: 1.2rem; font-weight: 800; letter-spacing: -.01em; }
+body.admin .adm-brand__sub {
+  margin-top: .15rem; font-family: var(--adm-mono); font-size: .7rem;
+  letter-spacing: .08em; text-transform: uppercase; color: #9a9ca0;
+}
+body.admin .adm-nav { display: flex; flex-direction: column; padding: .9rem 0; }
+body.admin .adm-nav a {
+  display: flex; align-items: center; gap: .8rem; padding: .72rem 1.25rem;
+  border-left: 3px solid transparent; color: var(--adm-side-text); text-decoration: none;
+  font-family: var(--adm-mono); font-size: .86rem;
+}
+body.admin .adm-nav a:hover { background: var(--adm-side-hover); color: #fff; }
+body.admin .adm-nav a[aria-current="page"] { border-left-color: var(--adm-red); background: var(--adm-side-hover); color: #fff; font-weight: 700; }
+body.admin .adm-nav__icon {
+  width: 1.15rem; height: 1.15rem; flex: none;
+  fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round;
+}
+body.admin .adm-side__foot { margin-top: auto; padding: 1rem 1.25rem 1.25rem; border-top: 1px solid var(--adm-side-line); }
+body.admin .adm-user { margin: 0 0 .75rem; min-width: 0; }
+body.admin .adm-user__label {
+  display: block; font-family: var(--adm-mono); font-size: .68rem;
+  letter-spacing: .08em; text-transform: uppercase; color: #8d8f93;
+}
+body.admin .adm-user__name { display: block; color: #fff; font-weight: 600; overflow-wrap: anywhere; }
+body.admin .adm-logout { margin: 0; }
+body.admin .adm-logout button {
+  margin: 0; width: 100%; padding: .5rem .75rem;
+  background: transparent; border: 1px solid #5a5c60; color: #e4e4e4; font-size: .74rem;
+}
+body.admin .adm-logout button:hover { background: var(--adm-side-hover); border-color: #8d8f93; color: #fff; }
+
+body.admin .adm-main { max-width: 80rem; margin: 0; padding: 2rem 2.25rem 3rem; outline: 0; }
+
+body.admin .adm-skip {
+  position: absolute; left: .5rem; top: -4rem; z-index: 10; padding: .5rem .8rem;
+  background: #fff; color: var(--adm-ink); border: 2px solid var(--adm-red); font-weight: 700;
+}
+body.admin .adm-skip:focus { top: .5rem; }
+
+/* element defaults (lowest specificity — see the note above) */
+:where(body.admin) a { color: var(--adm-ink); text-underline-offset: 2px; }
+:where(body.admin) a:hover { color: var(--adm-red); }
+:where(body.admin) a:focus-visible,
+:where(body.admin) button:focus-visible,
+:where(body.admin) summary:focus-visible { outline: 2px solid var(--adm-red); outline-offset: 2px; }
+:where(body.admin .adm-main) h2 { font-weight: 800; letter-spacing: -.005em; }
+
+:where(body.admin) button {
+  border: 2px solid var(--adm-ink); border-radius: 0; background: var(--adm-ink); color: #fff;
+  font-size: .82rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+}
+:where(body.admin) button:hover { background: #333; border-color: #333; }
+
+:where(body.admin) input[type="text"],
+:where(body.admin) input[type="email"],
+:where(body.admin) input[type="password"],
+:where(body.admin) input[type="date"],
+:where(body.admin) select,
+:where(body.admin) textarea { border: 1px solid #b5b5b5; border-radius: 0; background: #fff; color: var(--adm-ink); }
+:where(body.admin) input:focus,
+:where(body.admin) select:focus,
+:where(body.admin) textarea:focus { outline: 2px solid var(--adm-ink); outline-offset: 0; border-color: var(--adm-ink); }
+
+/* page hierarchy: bold title over a black rule (one pattern for every page) */
+body.admin .pagehead {
+  align-items: flex-end; gap: .75rem 1.5rem;
+  margin: 0 0 1.5rem; padding-bottom: .9rem; border-bottom: 2px solid var(--adm-ink);
+}
+body.admin .adm-main > h1,
+body.admin .pagehead h1 {
+  margin: 0; font-size: clamp(1.55rem, 2.4vw, 2rem); font-weight: 800;
+  letter-spacing: -.01em; line-height: 1.15; color: var(--adm-ink);
+}
+body.admin .adm-main > h1 { margin-bottom: 1.5rem; padding-bottom: .9rem; border-bottom: 2px solid var(--adm-ink); }
+body.admin .pagehead__meta { margin: .35rem 0 0; font-size: .82rem; color: #777; }
+
+/* buttons: red = the page's primary action (.btnlink), black = submit,
+   outlined = secondary, .linklike stays a quiet text action */
+body.admin .btnlink {
+  padding: .6rem 1.1rem; border: 2px solid var(--adm-red); border-radius: 0;
+  background: var(--adm-red); color: #fff;
+  font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; text-decoration: none;
+}
+body.admin .btnlink:hover { background: var(--adm-red-dark); border-color: var(--adm-red-dark); color: #fff; }
+body.admin button.secondary {
+  border: 2px solid var(--adm-ink); border-radius: 0; background: #fff; color: var(--adm-ink); padding: .45rem .9rem;
+  font-size: .78rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; /* base sets font: inherit */
+}
+body.admin button.secondary:hover { background: var(--adm-ink); color: #fff; }
+body.admin .linklike {
+  border: 0; color: var(--adm-red-dark); font-weight: 600;
+  letter-spacing: 0; text-transform: none; text-decoration: underline; text-underline-offset: 2px;
+}
+
+/* notices */
+body.admin .notice { background: #fff; color: var(--adm-ink); border: 1px solid var(--adm-line); border-left: 4px solid var(--adm-ink); border-radius: 0; padding: .6rem .8rem; }
+body.admin p.error { color: var(--adm-red-dark); font-weight: 600; }
+
+/* compact meta labels */
+body.admin .kv dt,
+body.admin .pos-summary dt,
+body.admin .txn-meta dt,
+body.admin .filterbar label,
+body.admin .card__label { font-family: var(--adm-mono); font-size: .72rem; letter-spacing: .07em; text-transform: uppercase; color: #555; }
+body.admin .filterbar .filterbar__check { font-family: var(--adm-sans); font-size: .85rem; color: #333; text-transform: none; letter-spacing: 0; }
+/* controls inside those mono labels keep the normal text face (select / textarea use font: inherit) */
+body.admin .filterbar input,
+body.admin .filterbar select { font-family: var(--adm-sans); font-size: .95rem; }
+
+/* cards + filters */
+body.admin .card { border-radius: 0; border-color: var(--adm-line); padding: 1.25rem 1.4rem; }
+body.admin .card--sold { background: #fff; border: 2px solid var(--adm-ink); }
+body.admin .card__num { font-weight: 800; letter-spacing: -.01em; }
+body.admin .filterbar { border-radius: 0; border-color: var(--adm-line); }
+body.admin .pos-customers { border-radius: 0; }
+body.admin .otg-map { border-radius: 0; }
+
+/* tables: dark header, zebra rows */
+body.admin .datatable { border: 1px solid var(--adm-line); }
+body.admin .datatable thead th {
+  padding: .7rem .8rem; background: var(--adm-side); color: #fff; border-bottom: 0;
+  font-family: var(--adm-mono); font-size: .72rem; font-weight: 600; letter-spacing: .07em;
+}
+body.admin .datatable td { padding: .65rem .8rem; border-bottom-color: var(--adm-line-soft); vertical-align: middle; }
+/* the base .rowactions is display:flex, which pulls a <td> out of the table
+   grid (visible once rows are striped) — keep it a real cell here */
+body.admin .datatable td.rowactions { display: table-cell; white-space: nowrap; }
+body.admin .datatable td.rowactions > * + * { margin-left: .75rem; }
+body.admin .datatable tbody tr:nth-child(even) > * { background: var(--adm-zebra); }
+body.admin .datatable td.num { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* badges: square, monospace, uppercase. Rescue: pending grey, accepted black,
+   completed red, rejected outlined (labels / classes unchanged). */
+body.admin .badge {
+  padding: .2rem .45rem; border: 1px solid transparent; border-radius: 0;
+  font-family: var(--adm-mono); font-size: .68rem; font-weight: 700; line-height: 1.35;
+  letter-spacing: .06em; text-transform: uppercase; background: #e6e6e6; color: #333;
+}
+body.admin .badge--pending   { background: #e2e2e2; color: #333; }
+body.admin .badge--accepted  { background: var(--adm-ink); color: #fff; }
+body.admin .badge--completed { background: var(--adm-red); color: #fff; }
+body.admin .badge--rejected  { background: #fff; color: var(--adm-ink); border-color: var(--adm-ink); }
+body.admin .badge--product   { background: #fff; color: #333; border-color: #a9a9a9; }
+body.admin .badge--service   { background: #ededed; color: #333; border-color: #c9c9c9; }
+body.admin .badge--active    { background: #e9e9e9; color: var(--adm-ink); }
+body.admin .badge--inactive  { background: #fff; color: #888; border-color: #c4c4c4; border-style: dashed; }
+body.admin .badge--low       { background: #fdecec; color: var(--adm-red-dark); border-color: #f0b3b5; }
+
+/* dashboard (Phase 7.2 cards, on the shared shell since 7.3a) */
+.dash-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1.25rem; margin: 0 0 2rem; }
 .dash-card {
   display: flex; flex-direction: column; padding: 1.3rem 1.4rem 1.2rem;
-  background: #fff; border: 1px solid #dcdcdc;
+  background: #fff; border: 1px solid var(--adm-line);
 }
 .dash-card--alert { border-left: 3px solid #c9c9c9; }
-.dash-card__label {
+.dash-card .dash-card__label { /* .dash-card prefix: outranks the base `.app h2` size + margin */
   display: flex; align-items: center; gap: .5rem; margin: 0;
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  font-size: .78rem; font-weight: 400; letter-spacing: .05em; text-transform: uppercase; color: #444;
+  font-family: var(--adm-mono); font-size: .78rem; font-weight: 400;
+  letter-spacing: .05em; text-transform: uppercase; color: #444;
 }
 .dash-card__icon { width: 1.1rem; height: 1.1rem; flex: none; fill: currentColor; }
-.dash-card--alert .dash-card__label { color: #d4141c; }
-.dash-card__value { margin: .8rem 0 .3rem; font-size: 1.9rem; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; color: #111; }
-.dash-card__note { margin: 0 0 1rem; font-size: .82rem; color: #666; }
+.dash-card--alert .dash-card__label { color: var(--adm-red); } /* (0,2,0), after the base label rule */
+.dash-card__value { margin: .8rem 0 .3rem; font-size: 1.9rem; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; color: var(--adm-ink); }
+.dash-card__note { margin: 0 0 1rem; font-size: .82rem; color: var(--adm-muted); }
 .dash-card__link {
-  margin-top: auto; align-self: flex-start; padding-bottom: .1rem; border-bottom: 1px solid #111;
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  font-size: .74rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-  color: #111; text-decoration: none;
+  margin-top: auto; align-self: flex-start; padding-bottom: .1rem; border-bottom: 1px solid var(--adm-ink);
+  font-family: var(--adm-mono); font-size: .74rem; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--adm-ink); text-decoration: none;
 }
 .dash-card__link::after { content: " \2192"; }
-.dash-card__link:hover { color: #e31b23; border-bottom-color: #e31b23; }
-.dash-card--alert .dash-card__link { color: #d4141c; border-bottom-color: #d4141c; }
-.dash-btn:focus-visible,
-.dash-card__link:focus-visible { outline: 2px solid #111; outline-offset: 3px; }
+.dash-card__link:hover { color: var(--adm-red); border-bottom-color: var(--adm-red); }
+.dash-card--alert .dash-card__link { color: var(--adm-red-dark); border-bottom-color: var(--adm-red-dark); }
+
+/* narrow screens: the sidebar becomes a top bar — brand + logout on one row,
+   the nav links wrapping below (CSS only, no menu script). The detailed
+   360 / 390 / 430 / tablet pass is Phase 7.4. */
+@media (max-width: 60rem) {
+  body.admin .adm { display: block; }
+  body.admin .adm-side { border-right: 0; border-bottom: 3px solid var(--adm-red); }
+  body.admin .adm-side__inner {
+    position: static; height: auto; overflow: visible;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand foot" "nav nav";
+  }
+  body.admin .adm-brand { grid-area: brand; padding: .7rem 1rem; border-bottom: 0; }
+  body.admin .adm-brand__pin { width: 1.4rem; height: 1.4rem; }
+  body.admin .adm-brand__name { font-size: 1.05rem; }
+  body.admin .adm-side__foot { grid-area: foot; display: flex; align-items: center; gap: .75rem; margin: 0; padding: .6rem 1rem; border-top: 0; min-width: 0; }
+  body.admin .adm-user { margin: 0; }
+  body.admin .adm-user__label { display: none; }
+  body.admin .adm-user__name { max-width: 9rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: .85rem; }
+  body.admin .adm-logout button { width: auto; }
+  body.admin .adm-nav { grid-area: nav; flex-direction: row; flex-wrap: wrap; gap: 0 .15rem; padding: 0 .5rem .35rem; }
+  body.admin .adm-nav a { padding: .5rem .55rem; border-left: 0; border-bottom: 3px solid transparent; font-size: .8rem; }
+  body.admin .adm-nav a[aria-current="page"] { border-bottom-color: var(--adm-red); }
+  body.admin .adm-nav__icon { display: none; }
+  body.admin .adm-main { padding: 1.25rem 1rem 2rem; }
+}
+@media (max-width: 30rem) {
+  body.admin .adm-user { display: none; }
+}
+
+/* printing any admin page: drop the shell, keep the content legible without
+   background colours (dark table headers / filled badges would print blank). */
+@media print {
+  body.admin { background: #fff; }
+  body.admin .adm-side,
+  body.admin .adm-skip { display: none !important; }
+  body.admin .adm { display: block; }
+  body.admin .adm-main { max-width: none; padding: 0; }
+  body.admin .datatable { border: 0; }
+  body.admin .datatable thead th { background: none; color: #000; border-bottom: 2px solid #000; }
+  body.admin .datatable tbody tr:nth-child(even) > * { background: none; }
+  body.admin .badge { background: none !important; color: #000 !important; border: 1px solid #000 !important; }
+  body.admin.is-printdoc .txn-doc { max-width: none; margin: 0; border: 0; padding: 0; }
+}

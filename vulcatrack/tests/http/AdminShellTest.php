@@ -8,6 +8,12 @@
  * Dashboard / POS / Sales History / Reports / Inventory / Tiremen / Rescue, and the rendered pages (plus the server log)
  * being free of PHP warnings/notices.
  *
+ * Phase 7.3a (sidebar shell): the nav is a left sidebar in the approved order
+ * Dashboard / Inventory / POS / Sales History / Rescue / Tiremen / Reports,
+ * each page marks exactly its own entry aria-current="page", the sidebar shows
+ * the signed-in admin and holds the POST + CSRF logout, and the customer area
+ * does not pick up the admin shell.
+ *
  * A throwaway customer and admin are seeded via PDO before the server starts
  * and deleted afterwards. The database must be running.
  */
@@ -69,6 +75,16 @@ test('admin shell: guards, actor separation, logout CSRF, nav and clean output',
             assert_contains('/admin/login.php', (string) $r['location']);
         }
 
+        // The customer area keeps its own shell: no admin body class, sidebar,
+        // admin nav or admin logout leak into customer pages (7.3a isolation).
+        $custDash = $server->request('/vulcatrack/customer/dashboard.php');
+        assert_same(200, $custDash['status']);
+        assert_contains('<body>', $custDash['body'], 'customer pages carry no admin body class');
+        assert_contains('<header class="appbar">', $custDash['body'], 'customer pages keep their top-bar shell');
+        foreach (['class="admin', 'adm-side', 'adm-nav', 'Admin Terminal', '/vulcatrack/admin/logout.php'] as $adminOnly) {
+            assert_not_contains($adminOnly, $custDash['body'], "customer dashboard must not contain admin shell markup: {$adminOnly}");
+        }
+
         // Drop the customer session before switching actors.
         $profile = $server->request('/vulcatrack/customer/profile.php');
         $token = HttpServer::csrfToken($profile['body']);
@@ -85,7 +101,7 @@ test('admin shell: guards, actor separation, logout CSRF, nav and clean output',
         $dash = $server->request('/vulcatrack/admin/index.php');
         assert_same(200, $dash['status'], 'the signed-in admin can open the dashboard');
         assert_contains('<h1>Dashboard Overview</h1>', $dash['body']);
-        assert_contains('Shell Admin', $dash['body'], 'the dashboard greets the signed-in admin by name');
+        assert_contains('Shell Admin', $dash['body'], 'the shell shows the signed-in admin by name');
         $assertCleanHtml($dash['body'], 'admin/index.php');
 
         // 4. The shell nav has exactly Dashboard / POS / Sales History / Reports /
@@ -103,8 +119,42 @@ test('admin shell: guards, actor separation, logout CSRF, nav and clean output',
         assert_contains('/vulcatrack/admin/tiremen.php"', $dash['body'], 'the Tiremen nav entry links to the Tireman list');
         assert_contains('>Rescue<', $dash['body']);
         assert_contains('/vulcatrack/admin/rescue.php"', $dash['body'], 'the Rescue nav entry links to the request list');
-        foreach (['Customers', 'Analytics', 'Settings', 'Notifications', 'Feedback'] as $absent) {
+        foreach (['Customers', 'Analytics', 'Settings', 'Notifications', 'Feedback', 'Help'] as $absent) {
             assert_not_contains('>' . $absent . '<', $dash['body'], "the admin nav must not contain a '{$absent}' link yet");
+        }
+
+        // 4b. Phase 7.3a sidebar shell: admin body class, skip link, one nav with
+        //     exactly the 7 entries in the approved order, the signed-in admin's
+        //     name, and the POST + CSRF logout form inside the sidebar.
+        $body = $dash['body'];
+        assert_contains('<body class="admin">', $body, 'admin pages carry the admin body class');
+        assert_contains('<a class="adm-skip" href="#main">Skip to content</a>', $body, 'skip link');
+        assert_contains('<main class="app adm-main" id="main"', $body, 'the skip link target');
+        assert_contains('<aside class="adm-side">', $body, 'the sidebar');
+        assert_true(preg_match('#<nav class="adm-nav" aria-label="Admin">(.*?)</nav>#s', $body, $navMatch) === 1, 'the sidebar nav');
+        preg_match_all('#<a href="([^"]+)"#', $navMatch[1], $navLinks);
+        assert_same([
+            '/vulcatrack/admin/index.php',
+            '/vulcatrack/admin/inventory.php',
+            '/vulcatrack/admin/pos.php',
+            '/vulcatrack/admin/sales.php',
+            '/vulcatrack/admin/rescue.php',
+            '/vulcatrack/admin/tiremen.php',
+            '/vulcatrack/admin/reports.php',
+        ], $navLinks[1], 'exactly the 7 nav entries, in the approved order');
+        assert_contains('<span class="adm-user__name">Shell Admin</span>', $body, 'the sidebar shows the signed-in admin');
+        $logoutAt = strpos($body, '<form class="adm-logout" method="post" action="/vulcatrack/admin/logout.php">');
+        assert_true($logoutAt !== false && $logoutAt > strpos($body, '<aside class="adm-side">') && $logoutAt < strpos($body, '</aside>'),
+            'the POST logout form sits in the sidebar');
+        assert_true(strpos($body, 'name="_csrf"', $logoutAt) < strpos($body, '</form>', $logoutAt), 'the logout form carries the CSRF token');
+
+        // 4c. Every main page marks exactly its own nav entry as current.
+        foreach ($adminPages as $path) {
+            $page = $server->request($path);
+            assert_same(200, $page['status'], "{$path} should load for the signed-in admin");
+            preg_match_all('#<a href="([^"]+)"[^>]*aria-current="page"#', $page['body'], $current);
+            assert_same([$path], $current[1], "{$path} marks exactly its own nav entry aria-current");
+            $assertCleanHtml($page['body'], $path);
         }
 
         // 5. POS and Inventory are real pages (POS behaviour is covered in
