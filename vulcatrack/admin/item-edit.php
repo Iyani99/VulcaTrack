@@ -6,6 +6,11 @@
  * handled as integer centavos via Money / Validator::price(). Server-side
  * validation is authoritative — the small type-toggle script is only a
  * convenience.
+ *
+ * Phase 7.1: an item with recorded sales shows its type as fixed (and a posted
+ * type change is refused); an edit carries the type + stock it was loaded with
+ * and is refused if a sale has changed them since, so a stale form cannot
+ * overwrite newer stock (ItemRepository::update()).
  */
 
 use VulcaTrack\Auth\Csrf;
@@ -37,6 +42,17 @@ if ($editing) {
     }
 }
 
+// Phase 7.1: an item that appears on a recorded sale keeps its type for good.
+$sold = $editing && $repo->hasSales($itemId);
+
+// The type and stock this form was loaded with, sent back as hidden fields so
+// a save cannot put back a stock level that a POS sale has changed meanwhile.
+// On a re-rendered POST they keep the POSTED values — only a fresh GET
+// (reloading the item) picks up the current ones.
+$expectedType  = $editing ? (string) $item['item_type'] : '';
+$expectedStock = ($editing && $item['stock_quantity'] !== null) ? (string) $item['stock_quantity'] : '';
+$staleEdit     = false;
+
 $errors = [];
 $old = [
     'item_name'      => (string) ($item['item_name'] ?? ''),
@@ -60,9 +76,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'reorder_level'  => (string) ($_POST['reorder_level'] ?? ''),
         ];
 
+        $expected = null;
+        if ($editing) {
+            $expectedType  = is_string($_POST['expected_type'] ?? null) ? $_POST['expected_type'] : '';
+            $expectedStock = is_string($_POST['expected_stock'] ?? null) ? $_POST['expected_stock'] : '';
+            if (in_array($expectedType, ['product', 'service'], true)
+                && ($expectedStock === ''
+                    || (preg_match('/^\d{1,10}$/D', $expectedStock) === 1 && (int) $expectedStock <= 2147483647))) {
+                $expected = [
+                    'item_type'      => $expectedType,
+                    'stock_quantity' => $expectedStock === '' ? null : (int) $expectedStock,
+                ];
+            }
+        }
+
         $v = new Validator();
         $name          = $v->text('item_name', $_POST['item_name'] ?? null, 'Item name', 150);
         $type          = $v->itemType('item_type', $_POST['item_type'] ?? null);
+        if ($sold && $type !== null && $type !== $item['item_type']) {
+            $v->add('item_type', 'Item type cannot be changed after the item has recorded sales.');
+        }
         $category      = $v->optionalText('category', $_POST['category'] ?? null, 'Category', 60);
         $priceCentavos = $v->price('price', $_POST['price'] ?? null, 'Price');
 
@@ -78,14 +111,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($v->passes()) {
             try {
                 if ($editing) {
-                    $repo->update($itemId, $name, $type, $category, $priceCentavos, $stock, $reorder);
+                    // Missing / malformed expected state is treated as stale: never write blind.
+                    $saved = $expected !== null
+                        && $repo->update($itemId, $name, $type, $category, $priceCentavos, $stock, $reorder, $expected);
                     $done = 'updated';
                 } else {
                     $repo->create($name, $type, $category, $priceCentavos, $stock, $reorder);
-                    $done = 'created';
+                    $saved = true;
+                    $done  = 'created';
                 }
-                header('Location: ' . vulcatrack_url('/admin/inventory.php?saved=' . $done));
-                exit;
+                if ($saved) {
+                    header('Location: ' . vulcatrack_url('/admin/inventory.php?saved=' . $done));
+                    exit;
+                }
+                $staleEdit = true;
+                $errors['form'] = 'This item changed (a sale may have been recorded). Reload the item and try again.';
             } catch (\InvalidArgumentException $e) {
                 $errors['form'] = 'That item could not be saved. Please review the values and try again.';
             } catch (\PDOException $e) {
@@ -108,25 +148,40 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 </div>
 
 <?php if (!empty($errors['form'])): ?><p class="error"><?= e($errors['form']) ?></p><?php endif; ?>
+<?php if ($staleEdit): ?>
+  <p><a href="<?= e(vulcatrack_url('/admin/item-edit.php?id=' . $itemId)) ?>">Reload this item</a></p>
+<?php endif; ?>
 
 <section class="card">
   <form method="post" novalidate
         action="<?= e(vulcatrack_url('/admin/item-edit.php' . ($editing ? '?id=' . $itemId : ''))) ?>">
     <?= Csrf::field() ?>
+    <?php if ($editing): ?>
+      <input type="hidden" name="expected_type" value="<?= e($expectedType) ?>">
+      <input type="hidden" name="expected_stock" value="<?= e($expectedStock) ?>">
+    <?php endif; ?>
 
     <label for="item_name">Item name</label>
     <input type="text" id="item_name" name="item_name" maxlength="150" required
            value="<?= e($old['item_name']) ?>" autofocus>
     <?php if (!empty($errors['item_name'])): ?><small class="error"><?= e($errors['item_name']) ?></small><?php endif; ?>
 
-    <label for="item_type">Item type</label>
-    <select id="item_type" name="item_type">
-      <option value="product"<?= $old['item_type'] === 'product' ? ' selected' : '' ?>>Product</option>
-      <option value="service"<?= $old['item_type'] === 'service' ? ' selected' : '' ?>>Service</option>
-    </select>
-    <?php if (!empty($errors['item_type'])): ?><small class="error"><?= e($errors['item_type']) ?></small><?php endif; ?>
-    <?php if ($editing && $item['item_type'] === 'product'): ?>
-      <p class="muted">Switching this product to a Service permanently clears its stock quantity and reorder level.</p>
+    <?php if ($sold): ?>
+      <label for="item_type_fixed">Item type</label>
+      <input type="text" id="item_type_fixed" value="<?= $item['item_type'] === 'product' ? 'Product' : 'Service' ?>" readonly>
+      <input type="hidden" name="item_type" value="<?= e($item['item_type']) ?>">
+      <?php if (!empty($errors['item_type'])): ?><small class="error"><?= e($errors['item_type']) ?></small><?php endif; ?>
+      <p class="muted">Item type cannot be changed after the item has recorded sales.</p>
+    <?php else: ?>
+      <label for="item_type">Item type</label>
+      <select id="item_type" name="item_type">
+        <option value="product"<?= $old['item_type'] === 'product' ? ' selected' : '' ?>>Product</option>
+        <option value="service"<?= $old['item_type'] === 'service' ? ' selected' : '' ?>>Service</option>
+      </select>
+      <?php if (!empty($errors['item_type'])): ?><small class="error"><?= e($errors['item_type']) ?></small><?php endif; ?>
+      <?php if ($editing && $item['item_type'] === 'product'): ?>
+        <p class="muted">Switching this product to a Service permanently clears its stock quantity and reorder level.</p>
+      <?php endif; ?>
     <?php endif; ?>
 
     <label for="category">Category <span class="muted">(optional)</span></label>
@@ -142,7 +197,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
            value="<?= e($old['price']) ?>">
     <?php if (!empty($errors['price'])): ?><small class="error"><?= e($errors['price']) ?></small><?php endif; ?>
 
-    <div id="stock-fields"<?= $old['item_type'] === 'service' ? ' hidden' : '' ?>>
+    <div id="stock-fields"<?= ($sold ? $item['item_type'] : $old['item_type']) === 'service' ? ' hidden' : '' ?>>
       <label for="stock_quantity">Stock quantity <span class="muted">(products only)</span></label>
       <input type="text" id="stock_quantity" name="stock_quantity" inputmode="numeric"
              value="<?= e($old['stock_quantity']) ?>">

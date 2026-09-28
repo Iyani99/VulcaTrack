@@ -167,7 +167,29 @@ class ItemRepository
      * Update an item's editable fields. Does not touch `is_active` — use
      * setActive() for that.
      *
-     * @throws InvalidArgumentException on a negative price or a product without stock
+     * Two integrity guards (Phase 7.1):
+     *
+     * - **Type lock.** Once an item appears on a recorded sale (`sale_items`)
+     *   its item_type is fixed: a different $itemType is refused. Unsold items
+     *   may still switch between product and service. The rule is checked up
+     *   front AND repeated inside the UPDATE, so a sale recorded in between
+     *   cannot slip a type change through.
+     *
+     * - **Stale edit guard.** $expected carries the item_type and
+     *   stock_quantity the edit form was loaded with. The row is only written
+     *   while it still has those values, so a stale form can never put back a
+     *   stock level that a POS sale has since reduced. Pass null to skip this
+     *   guard (internal callers that just read the current row).
+     *
+     * Returns false — writing nothing — when the item is unknown or no longer
+     * matches $expected. MySQL counts only *changed* rows, so a save that
+     * matched but changed nothing also reports 0; that case is told apart by
+     * re-reading the row, and counts as success when the row already holds
+     * exactly the submitted values.
+     *
+     * @param array{item_type: string, stock_quantity: ?int}|null $expected
+     * @throws InvalidArgumentException on a negative price, a product without
+     *         stock, or a type change on an item that has recorded sales
      */
     public function update(
         int $itemId,
@@ -176,26 +198,70 @@ class ItemRepository
         ?string $category,
         int $priceCentavos,
         ?int $stockQuantity,
-        ?int $reorderLevel
-    ): void {
+        ?int $reorderLevel,
+        ?array $expected = null
+    ): bool {
         [$stock, $reorder] = $this->normaliseStockFields($itemType, $stockQuantity, $reorderLevel);
+        $category = $this->nullIfBlank($category);
+        $price    = Money::format($this->assertNonNegativePrice($priceCentavos));
 
-        $stmt = $this->pdo->prepare(
-            'UPDATE items
-                SET item_name = :name, item_type = :type, category = :category,
-                    price = :price, stock_quantity = :stock, reorder_level = :reorder,
-                    updated_at = CURRENT_TIMESTAMP
-              WHERE item_id = :id'
-        );
-        $stmt->execute([
-            ':name'     => $name,
-            ':type'     => $itemType,
-            ':category' => $this->nullIfBlank($category),
-            ':price'    => Money::format($this->assertNonNegativePrice($priceCentavos)),
-            ':stock'    => $stock,
-            ':reorder'  => $reorder,
-            ':id'       => $itemId,
-        ]);
+        $current = $this->findById($itemId);
+        if ($current === null) {
+            return false;
+        }
+        if ($itemType !== $current['item_type'] && $this->hasSales($itemId)) {
+            throw new InvalidArgumentException('Item type cannot be changed after the item has recorded sales.');
+        }
+
+        $sql = 'UPDATE items
+                   SET item_name = :name, item_type = :type, category = :category,
+                       price = :price, stock_quantity = :stock, reorder_level = :reorder,
+                       updated_at = CURRENT_TIMESTAMP
+                 WHERE item_id = :id
+                   AND (item_type = :same_type
+                        OR NOT EXISTS (SELECT 1 FROM sale_items si WHERE si.item_id = :sold_id))';
+        $params = [
+            ':name'      => $name,
+            ':type'      => $itemType,
+            ':category'  => $category,
+            ':price'     => $price,
+            ':stock'     => $stock,
+            ':reorder'   => $reorder,
+            ':id'        => $itemId,
+            ':same_type' => $itemType,
+            ':sold_id'   => $itemId,
+        ];
+        if ($expected !== null) {
+            $sql .= ' AND item_type = :expected_type AND stock_quantity <=> :expected_stock';
+            $params[':expected_type']  = $expected['item_type'];
+            $params[':expected_stock'] = $expected['stock_quantity'];
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        if ($stmt->rowCount() === 1) {
+            return true;
+        }
+
+        // 0 rows: stale / locked (nothing written), or matched with nothing to change.
+        $now = $this->findById($itemId);
+
+        return $now !== null
+            && $now['item_name'] === $name
+            && $now['item_type'] === $itemType
+            && $now['category'] === $category
+            && $now['price_centavos'] === $priceCentavos
+            && $now['stock_quantity'] === $stock
+            && $now['reorder_level'] === $reorder;
+    }
+
+    /** True once the item appears on at least one recorded sale line. */
+    public function hasSales(int $itemId): bool
+    {
+        $stmt = $this->pdo->prepare('SELECT 1 FROM sale_items WHERE item_id = ? LIMIT 1');
+        $stmt->execute([$itemId]);
+
+        return $stmt->fetchColumn() !== false;
     }
 
     /** Activate (true) or soft-delete (false) an item. */

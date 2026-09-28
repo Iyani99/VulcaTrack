@@ -213,6 +213,7 @@ test('admin inventory mutations: guard, CSRF, create, edit, activate/deactivate'
             ->execute([':c1' => '2001-02-03 04:05:06', ':c2' => '2001-02-03 04:05:06', ':id' => $seedProduct]);
         $r = $server->request($EDIT . '?id=' . $seedProduct, [
             '_csrf' => $token($EDIT . '?id=' . $seedProduct),
+            'expected_type' => 'product', 'expected_stock' => '7',   // what the edit form was loaded with
             'item_name' => "{$tag} Seed Product EDITED", 'item_type' => 'product',
             'category' => 'Parts', 'price' => '11.25', 'stock_quantity' => '9', 'reorder_level' => '4',
         ]);
@@ -228,6 +229,7 @@ test('admin inventory mutations: guard, CSRF, create, edit, activate/deactivate'
         // ============ EDIT: product -> service clears stock + reorder ============
         $r = $server->request($EDIT . '?id=' . $seedProduct, [
             '_csrf' => $token($EDIT . '?id=' . $seedProduct),
+            'expected_type' => 'product', 'expected_stock' => '9',
             'item_name' => "{$tag} Now A Service", 'item_type' => 'service',
             'category' => 'Labor', 'price' => '11.25',
             'stock_quantity' => '9', 'reorder_level' => '4',   // sent, must be dropped
@@ -241,6 +243,7 @@ test('admin inventory mutations: guard, CSRF, create, edit, activate/deactivate'
         // ============ EDIT: service -> product WITHOUT stock is rejected ============
         $r = $server->request($EDIT . '?id=' . $seedService, [
             '_csrf' => $token($EDIT . '?id=' . $seedService),
+            'expected_type' => 'service', 'expected_stock' => '',
             'item_name' => "{$tag} Seed Service", 'item_type' => 'product',
             'category' => 'Labor', 'price' => '120.00', 'stock_quantity' => '',
         ]);
@@ -252,6 +255,7 @@ test('admin inventory mutations: guard, CSRF, create, edit, activate/deactivate'
         // ============ EDIT: service -> product WITH valid stock succeeds ============
         $r = $server->request($EDIT . '?id=' . $seedService, [
             '_csrf' => $token($EDIT . '?id=' . $seedService),
+            'expected_type' => 'service', 'expected_stock' => '',
             'item_name' => "{$tag} Seed Service", 'item_type' => 'product',
             'category' => 'Labor', 'price' => '1234.5', 'stock_quantity' => '6', 'reorder_level' => '',
         ]);

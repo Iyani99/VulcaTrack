@@ -2,7 +2,8 @@
 
 **Status:** Authoritative record of CONFIRMED project decisions.
 **Last updated:** 2026-09-28
-**Last revised:** 2026-09-28 — **Phase 6 closed** (status only). Earlier the same day:
+**Last revised:** 2026-09-28 — **Decision 69 added** (Phase 7.1: an item's type is fixed
+once it has recorded sales). Earlier the same day: **Phase 6 closed** (status only), and
 **Decisions 65–68 added** (owner-approved Rescue status rules, Phase 6.3; Decision 25
 refined, `admin_id` open question resolved) and Phase 6 status updated (Chunks 6.1–6.3,
 Sales History and Sales Reports done). Previous: 2026-09-23 — Phase 5 closed; clarified
@@ -729,6 +730,21 @@ cancellation, rejection-reason or completion-notes column/table.
     only while the request is `accepted` with a Tireman; a completed request shows the
     Tireman's name as history and never the on-the-way wording.
 
+## Confirmed Project Decisions — 2026-09-28 (Phase 7.1: inventory edit integrity)
+
+Approved by the owner for Phase 7.1. **No schema change.**
+
+69. **An item's type is fixed once it has recorded sales.** While an item appears on no
+    `sale_items` row, an admin may still correct it between product and service (the
+    stock fields follow Decision 16). Once it appears on at least one recorded sale,
+    `item_type` can no longer change in the application — the edit page shows it
+    read-only and `ItemRepository::update()` refuses a change (also inside the UPDATE
+    itself, so a sale recorded in between cannot let one through). All other fields of
+    a sold item stay editable. *Implementation note (same chunk):* the item edit form
+    carries the type and stock it was loaded with, and the save is refused ("This item
+    changed …") if a sale has changed them since, so a stale form can never put back
+    stock that the POS has already deducted.
+
 Unless explicitly approved later, do **not** introduce:
 
 - Live technician / Tireman GPS tracking
@@ -943,8 +959,10 @@ Do not turn these into confirmed requirements without approval.
   From / To filter; Transactions and Total Sales, Daily Sales grouped by
   `sale_date`, Items Sold with frozen revenue (Decisions 17, 35, 49).
   No schema change.
-- **Phase 7 (integration, testing, bug fixing, presentation readiness) is
-  next — not started.** Its deferred-item backlog is consolidated in
+- **Phase 7 (integration, testing, bug fixing, presentation readiness) IN
+  PROGRESS.** Chunk 7.1 (2026-09-28): inventory edit integrity — a sold item's
+  type is fixed (**Decision 69**) and a stale item edit cannot overwrite stock a
+  sale has changed. Its deferred-item backlog is consolidated in
   `docs/PROJECT-CONTEXT.md` §16.5.
 - Repo on `main` at `C:\IPT102`, pushed to
   `https://github.com/Iyani99/VulcaTrack.git`; app at `C:\IPT102\vulcatrack\`
@@ -1056,6 +1074,18 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-28 — Phase 7.1: inventory edit integrity (**decision change: Decision 69 added**)
+
+- **Decision change (owner-approved):** added **Decision 69** — an item's `item_type`
+  is fixed once it appears on a recorded sale; unsold items may still switch between
+  product and service. No existing decision was rewritten or renumbered.
+- **Status:** Phase 7 in progress; Chunk 7.1 implemented. `ItemRepository::update()`
+  now enforces the type lock (up front and inside the UPDATE) and accepts the edit
+  form's loaded type + stock as an optimistic guard, so a stale edit cannot overwrite
+  stock a POS sale changed; a matched save with nothing to change is not mistaken
+  for a stale one. Tests **204 passed / 2873 assertions / 38 files**.
+- No schema change.
 
 ### 2026-09-28 — Phase 6 closed (status only; no decision change)
 
