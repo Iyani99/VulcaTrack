@@ -4,7 +4,7 @@
 **Last updated:** 2026-09-28
 **Last revised:** 2026-09-28 — **Decisions 65–68 added** (owner-approved Rescue status rules,
 Phase 6.3; Decision 25 refined, `admin_id` open question resolved) and Phase 6 status updated
-(Chunks 6.1–6.3 and Sales History done). Previous: 2026-09-23 — Phase 5 closed; clarified
+(Chunks 6.1–6.3, Sales History and Sales Reports done). Previous: 2026-09-23 — Phase 5 closed; clarified
 Decision 62 (optional expected-total assertion) and Decision 50 (printable sale
 document is a non-official transaction reference)
 (see [Revision History](#revision-history)).
@@ -938,7 +938,10 @@ Do not turn these into confirmed requirements without approval.
   Sales History (2026-09-28): read-only `admin/sales.php` — all recorded
   sales newest first, optional From / To filter on `sale_date` (Decision 35),
   each row linking to the Transaction Summary (Decision 50).
-  Not yet built: sales reports. No schema change.
+  Sales Reports (2026-09-28): read-only `admin/reports.php` — the same
+  From / To filter; Transactions and Total Sales, Daily Sales grouped by
+  `sale_date`, Items Sold with frozen revenue (Decisions 17, 35, 49).
+  No schema change.
 - Repo on `main` at `C:\IPT102`, pushed to
   `https://github.com/Iyani99/VulcaTrack.git`; app at `C:\IPT102\vulcatrack\`
   served via a Windows junction from `C:\xampp\htdocs\vulcatrack`.
@@ -1048,6 +1051,19 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-28 — Phase 6: admin Sales Reports (status only; no decision change)
+
+- **Current Project Status** updated: the reporting half of **Decision 49** is
+  built — `admin/reports.php`, read-only, over an optional From / To range on
+  `sales.sale_date` (Decision 35; all recorded sales by default). It shows the
+  transaction count and total sales (stored `total_amount`), Daily Sales grouped
+  by `sale_date`, and Items Sold (quantity + revenue from the frozen
+  `sale_items.subtotal`, Decision 17). It deliberately has no item-type column or
+  product/service totals, because `items.item_type` stays editable. It also has
+  no charts, exports or pagination. Sales History is unchanged and separate.
+  Tests **198 passed / 2762 assertions / 36 files**.
+- No renumbering, no new decision, no schema change.
 
 ### 2026-09-28 — Phase 6: admin Sales History (status only; no decision change)
 

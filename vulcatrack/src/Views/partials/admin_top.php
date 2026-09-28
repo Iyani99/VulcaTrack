@@ -5,7 +5,7 @@
  * and the same app.css classes.
  *
  * Expects:  string $pageTitle
- * Optional: string $navActive  (dashboard|pos|sales|inventory|tiremen|rescue)
+ * Optional: string $navActive  (dashboard|pos|sales|reports|inventory|tiremen|rescue)
  *           array  $admin       (session actor; only used by the page body)
  *           string $bodyClass   (page-specific <body> class, e.g. for print styles)
  *           bool   $useMap      (load the vendored Leaflet assets — map pages only)
@@ -18,6 +18,7 @@ $nav = [
     'dashboard' => ['Dashboard', '/admin/index.php'],
     'pos'       => ['POS',       '/admin/pos.php'],
     'sales'     => ['Sales History', '/admin/sales.php'],
+    'reports'   => ['Reports',   '/admin/reports.php'],
     'inventory' => ['Inventory', '/admin/inventory.php'],
     'tiremen'   => ['Tiremen',   '/admin/tiremen.php'],
     'rescue'    => ['Rescue',    '/admin/rescue.php'],

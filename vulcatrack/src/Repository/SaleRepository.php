@@ -141,6 +141,133 @@ class SaleRepository
                 FROM sales s
                 JOIN admins a ON a.admin_id = s.admin_id
                 LEFT JOIN customers c ON c.customer_id = s.customer_id';
+        [$where, $params] = $this->saleDateRange($from, $to);
+        $sql .= $where . ' ORDER BY s.sale_date DESC, s.sale_id DESC';
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        $rows = $stmt->fetchAll();
+        foreach ($rows as $i => $row) {
+            $rows[$i]['total_amount_centavos'] = Money::toCentavos((string) $row['total_amount']);
+        }
+
+        return $rows;
+    }
+
+    /*
+     * Sales Reports (Decision 49) — aggregate reads over the recorded sales,
+     * with the same optional From / To days as listForHistory(). Money is summed
+     * in SQL over the stored DECIMAL columns (exact) and converted once to
+     * integer centavos; nothing is recalculated from the current items.price.
+     * (Money::toCentavos() caps at Money::MAX_CENTAVOS, ₱99,999,999.99 — far
+     * beyond this shop's totals.)
+     */
+
+    /**
+     * Transaction count and total sales (SUM of the stored sales.total_amount)
+     * for the range. An empty range gives 0 / 0.
+     *
+     * @return array{count: int, total_centavos: int}
+     * @throws InvalidArgumentException when $from or $to is not a valid day
+     */
+    public function summarize(?string $from = null, ?string $to = null): array
+    {
+        [$where, $params] = $this->saleDateRange($from, $to);
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*) AS sale_count, COALESCE(SUM(s.total_amount), 0) AS total
+             FROM sales s' . $where
+        );
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+
+        return [
+            'count'          => (int) $row['sale_count'],
+            'total_centavos' => Money::toCentavos((string) $row['total']),
+        ];
+    }
+
+    /**
+     * One row per calendar day that has sales in the range, newest day first:
+     * day ('YYYY-MM-DD'), transaction_count, total_centavos. Grouped on
+     * DATE(sale_date) — sale_date is stored in the app's local timezone — while
+     * the range filter still compares the raw sale_date. Days without sales
+     * are not listed.
+     *
+     * @return array<int,array{day: string, transaction_count: int, total_centavos: int}>
+     * @throws InvalidArgumentException when $from or $to is not a valid day
+     */
+    public function listDailyTotals(?string $from = null, ?string $to = null): array
+    {
+        [$where, $params] = $this->saleDateRange($from, $to);
+        $stmt = $this->pdo->prepare(
+            'SELECT DATE(s.sale_date) AS sale_day, COUNT(*) AS sale_count, SUM(s.total_amount) AS total
+             FROM sales s' . $where . '
+             GROUP BY DATE(s.sale_date)
+             ORDER BY sale_day DESC'
+        );
+        $stmt->execute($params);
+
+        $rows = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $rows[] = [
+                'day'               => (string) $row['sale_day'],
+                'transaction_count' => (int) $row['sale_count'],
+                'total_centavos'    => Money::toCentavos((string) $row['total']),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * One row per item sold in the range: item_id, item_name, quantity (units
+     * sold) and revenue_centavos (SUM of the frozen sale_items.subtotal).
+     * Grouped by item_id, so a renamed item stays one row; the name itself is
+     * the item's CURRENT name (no name snapshot in the approved schema).
+     * Inactive items are included — items are never hard-deleted. Ordered by
+     * quantity, then revenue (both highest first), then item_id.
+     *
+     * @return array<int,array{item_id: int, item_name: string, quantity: int, revenue_centavos: int}>
+     * @throws InvalidArgumentException when $from or $to is not a valid day
+     */
+    public function listItemTotals(?string $from = null, ?string $to = null): array
+    {
+        [$where, $params] = $this->saleDateRange($from, $to);
+        $stmt = $this->pdo->prepare(
+            'SELECT si.item_id, i.item_name, SUM(si.quantity) AS qty_sold, SUM(si.subtotal) AS revenue
+             FROM sale_items si
+             JOIN sales s ON s.sale_id = si.sale_id
+             JOIN items i ON i.item_id = si.item_id' . $where . '
+             GROUP BY si.item_id, i.item_name
+             ORDER BY qty_sold DESC, revenue DESC, si.item_id ASC'
+        );
+        $stmt->execute($params);
+
+        $rows = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $rows[] = [
+                'item_id'          => (int) $row['item_id'],
+                'item_name'        => (string) $row['item_name'],
+                'quantity'         => (int) $row['qty_sold'],
+                'revenue_centavos' => Money::toCentavos((string) $row['revenue']),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * The shared From / To filter on `sales s`.sale_date for Sales History and
+     * Sales Reports: [' WHERE …' or '', bound values]. Both days are optional
+     * and inclusive — sale_date >= from 00:00:00 and sale_date < (to + 1 day)
+     * 00:00:00 — so the raw column is compared, never DATE(sale_date).
+     *
+     * @return array{0: string, 1: array<int,string>}
+     * @throws InvalidArgumentException when $from or $to is not a valid day
+     */
+    private function saleDateRange(?string $from, ?string $to): array
+    {
         $where  = [];
         $params = [];
         if ($from !== null) {
@@ -160,20 +287,8 @@ class SaleRepository
                 $params[] = (new DateTimeImmutable($to))->modify('+1 day')->format('Y-m-d') . ' 00:00:00';
             }
         }
-        if ($where) {
-            $sql .= ' WHERE ' . implode(' AND ', $where);
-        }
-        $sql .= ' ORDER BY s.sale_date DESC, s.sale_id DESC';
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-
-        $rows = $stmt->fetchAll();
-        foreach ($rows as $i => $row) {
-            $rows[$i]['total_amount_centavos'] = Money::toCentavos((string) $row['total_amount']);
-        }
-
-        return $rows;
+        return [$where ? ' WHERE ' . implode(' AND ', $where) : '', $params];
     }
 
     /**

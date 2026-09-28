@@ -40,8 +40,9 @@ We are building it as a **BSIT student project**, so the priorities are maintain
 - Registered customer sales
 - Printable transaction summaries (for reference only; not an official BIR invoice)
 - Sales history (all recorded sales, newest first, with an optional date filter)
+- Sales reports (transaction count, total sales, daily totals and items sold for an optional date range)
 
-Still in development (Phase 6): sales reports.
+Phase 6 features are built; the Phase 6 closeout review is still pending.
 
 ### On-the-Go Services
 
