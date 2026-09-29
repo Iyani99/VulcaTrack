@@ -1031,3 +1031,189 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
   body.admin .badge { background: none !important; color: #000 !important; border: 1px solid #000 !important; }
   body.admin.is-printdoc .txn-doc { max-width: none; margin: 0; border: 0; padding: 0; }
 }
+
+/* ---- customer area (Phase 7.4b-a) -----------------------------------------
+   The Customer Figma look: white header with centered nav and a red active
+   link, light workspace, black / white with red emphasis, square cards, black
+   table headers, compact monospace labels.
+
+   EVERYTHING here is scoped to the .cust wrapper (customer_top.php), so the
+   admin area and the guest login / register screens are untouched. The header
+   and footer apply to every customer page (shared shell); the .cu-* components
+   are the shared customer pattern set, used so far by the Dashboard only — the
+   other customer pages keep their current content styling until their own
+   Figma pass. */
+
+.cust {
+  --cu-ink: #111;
+  --cu-red: #e31b23;
+  --cu-red-dark: #b9141b;
+  --cu-line: #dcdcdc;
+  --cu-line-soft: #ececec;
+  --cu-bg: #f6f6f6;
+  --cu-muted: #666;
+  --cu-mono: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+  display: flex; flex-direction: column; min-height: 100vh;
+  background: var(--cu-bg);
+  color: var(--cu-ink);
+}
+/* the workspace grows so the footer sits at the bottom of short pages; width
+   keeps .app's max-width + auto margins behaving as before inside the column */
+.cust > .app { flex: 1 0 auto; width: 100%; }
+.cust .cust-red { color: var(--cu-red-dark); }
+.cust .sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+.cust .cust-skip {
+  position: absolute; left: .5rem; top: -4rem; z-index: 10; padding: .5rem .8rem;
+  background: #fff; color: var(--cu-ink); border: 2px solid var(--cu-red); font-weight: 700;
+}
+.cust .cust-skip:focus { top: .5rem; }
+.cust .appbar :focus-visible,
+.cust .app--wide :focus-visible { outline: 2px solid var(--cu-red); outline-offset: 2px; }
+.cust .app:focus { outline: 0; }
+
+/* header: brand | centered nav | account + logout */
+.cust .appbar {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center;
+  gap: .25rem 1.5rem; min-height: 3.75rem; padding: 0 1.5rem;
+  background: #fff; border-bottom: 1px solid var(--cu-line);
+}
+.cust .appbar__brand { font-size: 1.35rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; color: var(--cu-ink); text-decoration: none; }
+.cust .appnav { flex: none; justify-content: center; gap: .25rem 1.6rem; }
+.cust .appnav a {
+  display: inline-flex; align-items: center; padding: .3rem 0; border-bottom: 2px solid transparent;
+  color: #555; font-size: .92rem;
+}
+.cust .appnav a:hover { color: var(--cu-ink); }
+.cust .appnav a.is-active { color: var(--cu-red-dark); border-bottom-color: var(--cu-red-dark); font-weight: 700; }
+.cust .appbar__account { display: flex; align-items: center; gap: .9rem; min-width: 0; }
+.cust .appbar__user { display: flex; align-items: center; gap: .4rem; min-width: 0; font-size: .88rem; }
+.cust .appbar__icon { width: 1.4rem; height: 1.4rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; }
+.cust .appbar__name { max-width: 10rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cust .appbar__logout button {
+  margin: 0; width: auto; padding: .4rem .75rem; border: 1.5px solid var(--cu-ink); border-radius: 0;
+  background: #fff; color: var(--cu-ink); font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+}
+.cust .appbar__logout button:hover { background: var(--cu-ink); color: #fff; }
+
+.cust .appfoot { max-width: none; padding: 1rem 1.5rem; border-top: 1px solid var(--cu-line); background: #fff; text-align: center; }
+.cust .appfoot p { margin: 0; font-size: .8rem; }
+
+/* wider workspace, opted into per page ($mainClass) */
+.cust .app--wide { max-width: 64rem; margin: 2rem auto; padding: 0 1.5rem 2.5rem; }
+
+/* shared customer components */
+.cust .cu-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .55rem;
+  padding: .65rem 1.2rem; border: 2px solid var(--cu-ink); border-radius: 2px;
+  font-size: .8rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; text-decoration: none;
+}
+.cust .cu-btn--lg { padding: .95rem 1.6rem; font-size: .85rem; }
+.cust .cu-btn--red { background: var(--cu-red-dark); border-color: var(--cu-red-dark); color: #fff; }
+.cust .cu-btn--red:hover { background: #9d1017; border-color: #9d1017; color: #fff; }
+.cust .cu-btn--outline { background: #fff; color: var(--cu-ink); border-width: 1.5px; }
+.cust .cu-btn--outline:hover { background: var(--cu-ink); color: #fff; }
+.cust .cu-btn__icon { width: 1.15rem; height: 1.15rem; flex: none; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; }
+
+.cust .cu-card { background: #fff; border: 1px solid var(--cu-line); padding: 1.15rem 1.25rem; }
+.cust .cu-card--accent { border-left: 4px solid var(--cu-red); }
+.cust .cu-label {
+  display: flex; align-items: center; gap: .5rem; margin: 0;
+  font-family: var(--cu-mono); font-size: .72rem; font-weight: 400; letter-spacing: .08em; text-transform: uppercase; color: #444;
+}
+.cust .cu-label__icon { width: 1.15rem; height: 1.15rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.cust .cu-chip {
+  display: inline-block; margin: 0; padding: .25rem .5rem; background: var(--cu-ink); color: #fff;
+  font-family: var(--cu-mono); font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.cust .cu-chip--quiet { background: #fff; color: #555; border: 1px solid #bbb; }
+.cust .cu-section-title { margin: 0 0 1rem; padding-bottom: .6rem; border-bottom: 1px solid var(--cu-line); font-size: 1.3rem; font-weight: 800; }
+.cust .cu-empty { margin: 0; padding: 1rem 1.1rem; background: #fff; border: 1px solid var(--cu-line); color: var(--cu-muted); font-size: .9rem; }
+
+/* status badges: the four real statuses (customer wording from OtgStatus::label) */
+.cust .cu-status {
+  display: inline-block; padding: .22rem .5rem; border: 1px solid transparent;
+  font-family: var(--cu-mono); font-size: .68rem; font-weight: 700; line-height: 1.35;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.cust .cu-status--pending   { background: #e6e6e6; color: #333; }
+.cust .cu-status--accepted  { background: var(--cu-red-dark); color: #fff; }
+.cust .cu-status--completed { background: var(--cu-ink); color: #fff; }
+.cust .cu-status--rejected  { background: #fff; color: var(--cu-ink); border-color: var(--cu-ink); }
+
+/* tables: black header row, thin rows; scroll inside .table-scroll on phones */
+.cust .cu-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--cu-line); }
+.cust .table-scroll > .cu-table { min-width: 30rem; }
+.cust .cu-table th {
+  padding: .8rem 1rem; background: var(--cu-ink); color: #fff; text-align: left;
+  font-family: var(--cu-mono); font-size: .7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+}
+.cust .cu-table td { padding: .75rem 1rem; border-bottom: 1px solid var(--cu-line-soft); font-size: .9rem; vertical-align: middle; }
+.cust .cu-table tbody tr:last-child td { border-bottom: 0; }
+.cust .cu-table td.nowrap { white-space: nowrap; }
+.cust .cu-table__sub { display: block; font-size: .78rem; color: var(--cu-muted); }
+.cust .cu-table__action { text-align: right; }
+.cust .cu-table a,
+.cust .cd-active__more a,
+.cust .cd-recent__more a { color: var(--cu-ink); font-weight: 600; text-underline-offset: 2px; }
+.cust .cu-table a:hover,
+.cust .cd-active__more a:hover,
+.cust .cd-recent__more a:hover { color: var(--cu-red-dark); }
+
+/* Dashboard */
+.cust .cd-hero { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 1rem 2rem; margin: 0 0 1.5rem; }
+.cust .cd-hero h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2rem); font-weight: 800; letter-spacing: -.02em; line-height: 1.15; overflow-wrap: anywhere; }
+.cust .cd-hero__sub { margin: .35rem 0 0; color: #555; }
+.cust .cd-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr)); gap: 1.25rem; margin: 0 0 1.25rem; }
+.cust .cd-stat__value { margin: .6rem 0 0; font-size: 1.45rem; font-weight: 800; line-height: 1.2; }
+.cust .cd-stat__note { margin: .3rem 0 0; font-size: .8rem; color: var(--cu-muted); }
+.cust .cd-active {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem 2rem;
+  margin: 0 0 2rem; padding: 1.4rem 1.5rem; border-left: 4px solid var(--cu-red);
+}
+.cust .cd-active--none { border-left-color: #c9c9c9; }
+.cust .cd-active__main { flex: 1 1 20rem; min-width: 0; }
+.cust .cd-active__title { margin: .7rem 0 .45rem; font-size: 1.45rem; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
+.cust .cd-active--none .cd-active__title { font-size: 1.15rem; }
+.cust .cd-active__meta { display: flex; flex-wrap: wrap; gap: .25rem 1.5rem; margin: 0; font-size: .85rem; color: #555; }
+.cust .cd-active__meta > span { display: inline-flex; align-items: center; gap: .3rem; }
+.cust .cd-active__icon { width: .95rem; height: .95rem; flex: none; fill: none; stroke: currentColor; stroke-width: 2; }
+.cust .cd-active__more { margin: .6rem 0 0; font-size: .85rem; }
+.cust .cd-columns { display: grid; grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); gap: 1.5rem 2rem; align-items: start; }
+.cust .cd-quick__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; margin: 0; padding: 0; list-style: none; }
+.cust .cd-quick__item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .55rem;
+  min-height: 6.25rem; padding: .9rem .6rem; background: #efefef; border: 1px solid #dedede;
+  color: var(--cu-ink); font-size: .86rem; font-weight: 700; text-align: center; text-decoration: none;
+}
+.cust .cd-quick__item svg { width: 1.6rem; height: 1.6rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
+.cust .cd-quick__item:hover { background: #fff; border-color: var(--cu-ink); color: var(--cu-ink); }
+.cust .cd-recent .table-scroll { margin: 0; }
+.cust .cd-recent__more { margin: .75rem 0 0; font-size: .85rem; }
+
+/* narrow screens: brand + account on one row, the nav wrapping below it
+   (CSS only, every link stays visible — same approach as the admin top bar) */
+@media (max-width: 60rem) {
+  .cust .appbar { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand account" "nav nav"; padding: .6rem 1rem 0; }
+  .cust .appbar__brand { grid-area: brand; }
+  .cust .appbar__account { grid-area: account; }
+  .cust .appnav { grid-area: nav; justify-content: flex-start; gap: 0 1.25rem; }
+  .cust .appnav a { min-height: 2.75rem; }
+}
+@media (max-width: 48rem) {
+  .cust .app--wide { margin-top: 1.25rem; padding: 0 1rem 2rem; }
+  .cust .cd-columns { grid-template-columns: minmax(0, 1fr); }
+  .cust .cd-active { padding: 1.2rem 1.1rem; }
+}
+@media (max-width: 30rem) {
+  .cust .appbar__name { display: none; }
+  .cust .cd-hero .cu-btn { width: 100%; }
+  /* phones: fit all five columns (status in view) instead of scrolling them */
+  .cust .table-scroll > .cu-table { min-width: 0; }
+  .cust .cu-table th,
+  .cust .cu-table td { padding: .6rem .35rem; font-size: .82rem; }
+  .cust .cu-table th { font-size: .64rem; letter-spacing: .04em; }
+  .cust .cu-status { font-size: .62rem; letter-spacing: .03em; }
+}
