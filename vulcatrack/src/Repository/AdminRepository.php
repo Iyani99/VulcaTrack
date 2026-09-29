@@ -47,6 +47,28 @@ final class AdminRepository
         return $row === false ? null : $row;
     }
 
+    /**
+     * Every admin account for the Admin Accounts page (Decision 79), newest
+     * first (admin_id breaks a created_at tie). Display fields only — never
+     * the password hash.
+     *
+     * @return array<int,array{admin_id:int,full_name:string,email:string,created_at:string}>
+     */
+    public function listAll(): array
+    {
+        $stmt = $this->pdo->query(
+            'SELECT admin_id, full_name, email, created_at
+             FROM admins ORDER BY created_at DESC, admin_id DESC'
+        );
+
+        return array_map(static fn (array $r): array => [
+            'admin_id'   => (int) $r['admin_id'],
+            'full_name'  => (string) $r['full_name'],
+            'email'      => (string) $r['email'],
+            'created_at' => (string) $r['created_at'],
+        ], $stmt->fetchAll());
+    }
+
     /** Insert an admin. Lets a duplicate-email PDOException (SQLSTATE 23000 / 1062) propagate. */
     public function create(string $fullName, string $email, string $passwordHash): int
     {

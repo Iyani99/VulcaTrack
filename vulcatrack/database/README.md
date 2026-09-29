@@ -74,9 +74,11 @@ and can be deleted.
 
 ## Creating an admin account
 
-There is no public admin registration (Decision 18/40/46). Admin accounts are
-created from the command line with `seed_admin.php` — this is the supported
-mechanism for the first admin and for every additional admin:
+There is no public admin registration (Decision 18/40/46). The **first** admin is
+created from the command line with `seed_admin.php`, which also stays the recovery
+and development path. Additional admins can instead be created by a signed-in
+admin on the authenticated Admin Accounts page (`admin/accounts.php`,
+Decision 79). The command-line script:
 
 ```
 php vulcatrack/database/seed_admin.php

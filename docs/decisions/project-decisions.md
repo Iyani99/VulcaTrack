@@ -1,7 +1,7 @@
 # VulcaTrack — Project Decision Record
 
 **Status:** Authoritative record of CONFIRMED project decisions.
-**Last updated:** 2026-09-28
+**Last updated:** 2026-09-29
 **Last revised:** 2026-09-28 — **Decision 69 added** (Phase 7.1: an item's type is fixed
 once it has recorded sales). Earlier the same day: **Phase 6 closed** (status only), and
 **Decisions 65–68 added** (owner-approved Rescue status rules, Phase 6.3; Decision 25
@@ -302,6 +302,9 @@ open questions. **No schema change** — the 8-table design is untouched.
     Decision 44, hashes the password, and inserts one `admins` row. It never
     prints or logs the password. No public admin registration page exists
     (reaffirms Decisions 18/40).
+    *(Clarified by **Decision 79**: the CLI script remains the way to create the
+    **first** admin and to recover access; additional admins can also be created by a
+    signed-in admin on the authenticated Admin Accounts page.)*
 47. **Two independent session actors — customer and admin — never cross.** One
     actor per browser session. `require_customer()` and `require_admin()` guard
     their own actor type only; a customer session never satisfies the admin
@@ -910,6 +913,34 @@ feedback columns on `service_requests` plus a named rating CHECK — still exact
       overturn) Decision 26 and the "Technician … ratings" out-of-scope item — see
       conflict **C8**.
 
+## Confirmed Project Decisions — 2026-09-29 (Phase 7.4 Chunk 2: Admin Accounts)
+
+Approved by the owner before deployment: the shop should not need a command line to add
+another admin. **No schema change** — the existing `admins` table already holds multiple
+accounts (UNIQUE, case-insensitive email).
+
+79. **A signed-in admin may create additional admin accounts from an authenticated
+    Admin Accounts page** (`admin/accounts.php`).
+    - The page lists every admin account (full name, email, created date — never the
+      password hash) and holds a **Create Admin Account** form: full name, email, new
+      password, confirm new password, and **the signed-in admin's own current
+      password**.
+    - Creating an account requires the admin session, POST + CSRF, and re-authentication:
+      the current password is verified against the admin row of the **trusted session**
+      (never an id from the form). Same email / password rules as elsewhere (valid email;
+      Decision 44 minimum length; confirmation must match; `Password::hash`). Emails are
+      stored trimmed and lowercased; the UNIQUE key is the final duplicate guard.
+    - Success redirects back to the page (PRG). The current admin stays signed in; the new
+      admin is **not** signed in and uses the normal admin login later.
+    - **All admins stay equivalent** — no roles, permission levels or super-admin tier. No
+      public admin registration, no email invitations, and no admin edit / delete / disable
+      or password reset in this decision.
+    - The page is reached from the signed-in identity area of the admin sidebar ("Admin
+      accounts"), not from the operational navigation; there is no generic Settings page.
+    - `database/seed_admin.php` stays supported for the **first** admin (bootstrap),
+      emergency recovery and development. This clarifies Decisions 18 / 40 / 46 (it does
+      not reopen public admin sign-up).
+
 Unless explicitly approved later, do **not** introduce:
 
 - Live technician / Tireman GPS tracking
@@ -1279,6 +1310,15 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-29 — Phase 7.4 Chunk 2: Admin Accounts (**decision change: Decision 79 added**)
+
+- **Decision change (owner-approved):** added **Decision 79** — an authenticated Admin
+  Accounts page lists admins and creates additional ones (current-password
+  re-authentication, CSRF, PRG; all admins equivalent; no roles, public sign-up, edit /
+  delete or reset). **Decision 46** gained a clarification note: `seed_admin.php` remains
+  the first-admin bootstrap / recovery / development path.
+- **Schema:** none — still exactly 8 tables.
 
 ### 2026-09-29 — Phase 7.4c: completed Rescue feedback (**decision change: Decision 78 added**)
 

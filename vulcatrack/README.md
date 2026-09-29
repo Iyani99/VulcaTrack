@@ -62,8 +62,8 @@ the database design source of truth is `docs/ERD/schema.dbml`.
 
 ## Creating an admin account
 
-We deliberately expose **no public admin registration** (Decision 18/40); admin accounts
-are provisioned from the command line:
+We deliberately expose **no public admin registration** (Decision 18/40). The
+**first** admin (and emergency recovery) is provisioned from the command line:
 
 ```
 php vulcatrack/database/seed_admin.php
@@ -73,6 +73,11 @@ The script is CLI-only (it refuses to run over the web), prompts for full name,
 email and password, enforces the 8-character minimum, hashes the password with
 `password_hash()`, and inserts one row into `admins`. It never prints or logs the
 password. **Do not commit real admin credentials.**
+
+After that, a signed-in admin adds further admins from **Admin accounts** (the link
+under "Signed in as" in the admin sidebar → `admin/accounts.php`, Decision 79): full
+name, email, new password + confirmation, and the admin's **own current password**.
+All admins have the same access; there are no roles, and no edit / delete yet.
 
 ## Authentication / authorization
 

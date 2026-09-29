@@ -619,6 +619,14 @@ body.admin .adm-user__label {
   letter-spacing: .08em; text-transform: uppercase; color: #8d8f93;
 }
 body.admin .adm-user__name { display: block; color: #fff; font-weight: 600; overflow-wrap: anywhere; }
+/* Admin accounts (Decision 79): a quiet link beside the signed-in identity */
+body.admin .adm-accounts {
+  display: flex; align-items: center; min-height: 2.25rem; margin: 0 0 .6rem;
+  color: #cfd0d2; font-size: .8rem; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: #5a5c60;
+}
+body.admin .adm-accounts:hover,
+body.admin .adm-accounts:focus-visible { color: #fff; text-decoration-color: #fff; }
+body.admin .adm-accounts.is-active { color: #fff; font-weight: 700; text-decoration-color: var(--adm-red); }
 body.admin .adm-logout { margin: 0; }
 body.admin .adm-logout button {
   margin: 0; width: 100%; padding: .5rem .75rem;
@@ -850,6 +858,19 @@ body.admin .panel__foot { margin: 0; padding: .7rem 1.1rem; border-top: 1px soli
 body.admin .panel .table-scroll { margin: 0; }
 body.admin .panel .datatable { border: 0; border-top: 1px solid var(--adm-line); }
 body.admin .panel .table-scroll > .datatable { min-width: 0; } /* 3-column tables fit a half-width panel */
+
+/* Admin Accounts (Decision 79): list panel + create form panel */
+body.admin .acct-form { padding: .9rem 1.1rem 1.2rem; }
+body.admin .acct-form input { width: 100%; }
+body.admin .acct-form .error { display: block; margin: .25rem 0 0; }
+body.admin .acct-hint { margin: .3rem 0 0; font-size: .8rem; }
+body.admin .acct-confirm { margin: 1.25rem 0 0; padding: .8rem .9rem .9rem; border: 1px solid var(--adm-line); border-left: 3px solid var(--adm-ink); }
+body.admin .acct-confirm legend { padding: 0 .35rem; font-family: var(--adm-mono); font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+body.admin .acct-confirm label { margin-top: 0; }
+body.admin .acct-form button[type="submit"] { width: 100%; min-height: 2.75rem; margin-top: 1.1rem; }
+/* emails stay whole: on narrow panels the table scrolls in its own box (Phase 7.4a pattern) */
+body.admin .acct-grid .table-scroll > .datatable { min-width: 30rem; }
+body.admin .acct-grid td.acct-email { white-space: nowrap; }
 
 /* Reports */
 body.admin .report-range { margin: 0 0 .25rem; }
@@ -1112,6 +1133,7 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
   body.admin .adm-user__label { display: none; }
   body.admin .adm-user__name { max-width: 9rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: .85rem; }
   body.admin .adm-logout button { width: auto; }
+  body.admin .adm-accounts { margin: 0; min-height: 2.75rem; white-space: nowrap; }
   body.admin .adm-nav { grid-area: nav; flex-direction: row; flex-wrap: wrap; gap: 0 .15rem; padding: 0 .5rem .35rem; }
   body.admin .adm-nav a { padding: .5rem .55rem; border-left: 0; border-bottom: 3px solid transparent; font-size: .8rem; }
   body.admin .adm-nav a[aria-current="page"] { border-bottom-color: var(--adm-red); }

@@ -117,7 +117,7 @@ test('admin inventory: guard, actor separation, filters, low-stock and escaping'
         assert_not_contains('badge--inactive', $r['body'], 'the active-only view shows no Inactive badge');
         $productsOnly = $server->request($base . '?type=product&q=' . $tag);
         assert_same(200, $productsOnly['status']);
-        assert_not_contains('n/a', $productsOnly['body'], 'a product view never shows the service placeholder');
+        assert_not_contains('>n/a<', $productsOnly['body'], 'a product view never shows the service placeholder'); // the chip text, not any URL containing "n/a" (e.g. admin/accounts.php)
 
         // 6. type=service filter -> only the service; no low-stock treatment for services.
         $svc = $server->request($base . '?type=service&q=' . $tag);

@@ -7,7 +7,8 @@
  * rules) are unaffected. Below ~60rem the sidebar becomes a top bar (CSS only).
  *
  * Expects:  string $pageTitle
- * Optional: string $navActive  (dashboard|inventory|pos|sales|rescue|tiremen|reports)
+ * Optional: string $navActive  (dashboard|inventory|pos|sales|rescue|tiremen|reports;
+ *                               accounts = the footer Admin accounts link, no nav item)
  *           string $bodyClass   (extra page-specific <body> class, e.g. for print styles)
  *           bool   $useMap      (load the vendored Leaflet assets — map pages only)
  *
@@ -58,6 +59,8 @@ $nav = [
   </nav>
   <div class="adm-side__foot">
     <p class="adm-user"><span class="adm-user__label">Signed in as</span> <span class="adm-user__name"><?= e((string) ($shellAdmin['name'] ?? '')) ?></span></p>
+    <?php /* Decision 79: account admin lives with the signed-in identity, not in the operational nav */ ?>
+    <a class="adm-accounts<?= $navActive === 'accounts' ? ' is-active" aria-current="page' : '' ?>" href="<?= e(vulcatrack_url('/admin/accounts.php')) ?>">Admin accounts</a>
     <form class="adm-logout" method="post" action="<?= e(vulcatrack_url('/admin/logout.php')) ?>">
       <?= \VulcaTrack\Auth\Csrf::field() ?>
       <button type="submit">Log out</button>
