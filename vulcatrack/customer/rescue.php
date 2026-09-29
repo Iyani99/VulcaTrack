@@ -91,76 +91,72 @@ if ($vehicles && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+/** Tile icon from the vehicle's own free-text type (display only). */
+function rb_vehicle_icon(?string $type): string
+{
+    $motor = preg_match('/motor|bike|scooter|tricycle/i', (string) $type) === 1;
+    return $motor
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="16.5" r="3"/><circle cx="18.5" cy="16.5" r="3"/><path d="M5.5 16.5 9 10h5l4.5 6.5M9 10 7.5 7H5M14 10l1.5-3H18"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16V11l2-5h10l2 5v5M5 16h14M5 16v2.5M19 16v2.5M4 11h16"/><circle cx="8" cy="13.5" r=".6"/><circle cx="16" cy="13.5" r=".6"/></svg>';
+}
+
 $pageTitle = 'Book a Rescue';
 $navActive = 'rescue';
 $useMap = true;
+$mainClass = 'app--wide';
 require __DIR__ . '/../src/Views/partials/customer_top.php';
 ?>
-<h1>Book a Rescue</h1>
+<div class="rb">
+<div class="rb-head">
+  <p class="rb-eyebrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/></svg>Roadside rescue</p>
+  <h1>Request Rescue Service</h1>
+  <p class="rb-sub">Follow the steps below. The shop reviews every request and calls you on your contact number.</p>
+</div>
 
 <?php if (!$vehicles): ?>
-  <section class="card">
+  <section class="cu-card rb-step">
+    <h2 class="rb-step__title"><span class="rb-step__num">1</span>Select vehicle</h2>
     <p>You need an active vehicle before you can request roadside service.</p>
-    <p><a class="btnlink" href="<?= e(vulcatrack_url('/customer/vehicle-edit.php')) ?>">Add a vehicle</a></p>
+    <p class="rb-actions"><a class="cu-btn cu-btn--red" href="<?= e(vulcatrack_url('/customer/vehicle-edit.php')) ?>">Add a vehicle</a></p>
   </section>
 <?php else: ?>
 
-  <?php if (!empty($errors['form'])): ?><p class="error"><?= e($errors['form']) ?></p><?php endif; ?>
+  <?php if (!empty($errors['form'])): ?>
+    <p class="cu-alert" role="alert"><?= e($errors['form']) ?></p>
+  <?php elseif ($errors): ?>
+    <p class="cu-alert" role="alert">Please check the highlighted steps below.</p>
+  <?php endif; ?>
 
   <form method="post" action="<?= e(vulcatrack_url('/customer/rescue.php')) ?>" novalidate>
     <?= Csrf::field() ?>
 
-    <section class="card">
-      <h2>1. Which vehicle?</h2>
-      <label for="vehicle_id">Vehicle</label>
-      <select id="vehicle_id" name="vehicle_id" required>
-        <option value="">— choose a vehicle —</option>
+    <fieldset class="cu-card rb-step<?= !empty($errors['vehicle_id']) ? ' rb-step--error' : '' ?>"<?= !empty($errors['vehicle_id']) ? ' aria-describedby="err-vehicle"' : '' ?>>
+      <legend class="rb-step__title"><span class="rb-step__num">1</span>Select vehicle</legend>
+      <div class="rb-vehicles">
         <?php foreach ($vehicles as $veh): ?>
-          <option value="<?= (int) $veh['vehicle_id'] ?>" <?= (string) $old['vehicle_id'] === (string) $veh['vehicle_id'] ? 'selected' : '' ?>>
-            <?= e($veh['plate_number']) ?><?php
-              $d = array_filter([$veh['make'] ?? '', $veh['model'] ?? '', $veh['vehicle_type'] ?? '']);
-              echo $d ? ' — ' . e(implode(' ', $d)) : ''; ?>
-          </option>
+          <?php $details = array_filter([$veh['make'] ?? '', $veh['model'] ?? '']); ?>
+          <label class="rb-vehicle">
+            <input type="radio" name="vehicle_id" value="<?= (int) $veh['vehicle_id'] ?>" required<?= (string) $old['vehicle_id'] === (string) $veh['vehicle_id'] ? ' checked' : '' ?>>
+            <span class="rb-vehicle__art"><?= rb_vehicle_icon($veh['vehicle_type'] ?? null) ?></span>
+            <span class="rb-vehicle__name"><?= $details ? e(implode(' ', $details)) : e($veh['vehicle_type'] ?: 'Vehicle') ?></span>
+            <span class="rb-vehicle__plate">Plate # <?= e($veh['plate_number']) ?><?= $details && !empty($veh['vehicle_type']) ? ' &middot; ' . e($veh['vehicle_type']) : '' ?></span>
+          </label>
         <?php endforeach; ?>
-      </select>
-      <?php if (!empty($errors['vehicle_id'])): ?><small class="error"><?= e($errors['vehicle_id']) ?></small><?php endif; ?>
-    </section>
-
-    <section class="card">
-      <h2>2. What's wrong?</h2>
-      <label for="problem_description">Describe the problem</label>
-      <textarea id="problem_description" name="problem_description" rows="3" maxlength="2000" required><?= e($old['problem_description']) ?></textarea>
-      <?php if (!empty($errors['problem_description'])): ?><small class="error"><?= e($errors['problem_description']) ?></small><?php endif; ?>
-    </section>
-
-    <section class="card">
-      <h2>3. Where do you need assistance?</h2>
-      <p class="muted">We use this location once, to work out the route and a one-time ETA. We do not track you.</p>
-
-      <div class="loc-methods">
-        <div class="loc-method">
-          <button type="button" id="otg-locate" class="secondary">Use my current location</button>
-          <span class="muted">Uses your device location when GPS is available.</span>
-        </div>
-
-        <p class="loc-or">or</p>
-
-        <div class="loc-method">
-          <label for="otg-search-q">Search a landmark or address</label>
-          <div class="loc-search">
-            <input type="text" id="otg-search-q" name="otg_search_q" maxlength="120" autocomplete="off"
-                   placeholder="e.g. Shell Baliwag, SM City Baliwag, San Jose St"
-                   onkeydown="if(event.key==='Enter'){event.preventDefault();}">
-            <button type="button" id="otg-search-btn" class="secondary">Search</button>
-          </div>
-          <p id="otg-search-status" class="loc-status" hidden></p>
-          <ul id="otg-search-results" class="loc-results" hidden></ul>
-          <p class="loc-attribution muted">Search results from OpenStreetMap / Nominatim.</p>
-        </div>
       </div>
+      <?php if (!empty($errors['vehicle_id'])): ?><small class="error" id="err-vehicle"><?= e($errors['vehicle_id']) ?></small><?php endif; ?>
+      <p class="rb-note">Not listed? <a href="<?= e(vulcatrack_url('/customer/vehicles.php')) ?>">Manage my vehicles</a></p>
+    </fieldset>
 
-      <p id="otg-loc-status" class="loc-status">Location not set yet.</p>
-      <p id="otg-selected-label" class="loc-selected" hidden></p>
+    <section class="cu-card rb-step<?= !empty($errors['problem_description']) ? ' rb-step--error' : '' ?>">
+      <h2 class="rb-step__title"><span class="rb-step__num">2</span>Describe the issue</h2>
+      <label class="sr-only" for="problem_description">Describe the problem</label>
+      <textarea id="problem_description" name="problem_description" rows="4" maxlength="2000" required
+                placeholder="What happened? e.g. flat rear tire, the car can't move, parked beside the public market."<?= !empty($errors['problem_description']) ? ' aria-invalid="true" aria-describedby="err-problem"' : '' ?>><?= e($old['problem_description']) ?></textarea>
+      <?php if (!empty($errors['problem_description'])): ?><small class="error" id="err-problem"><?= e($errors['problem_description']) ?></small><?php endif; ?>
+    </section>
+
+    <section class="cu-card rb-step<?= !empty($errors['location']) ? ' rb-step--error' : '' ?>">
+      <h2 class="rb-step__title"><span class="rb-step__num">3</span>Confirm location</h2>
 
       <div class="mapwrap">
         <div id="otg-map" class="otg-map"
@@ -169,7 +165,24 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
              data-shop-name="<?= e($shop['name'] ?? 'Shop') ?>"
              data-geocode-url="<?= e(vulcatrack_url('/customer/geocode.php')) ?>"></div>
       </div>
-      <p class="muted">Drag the pin to the exact roadside spot before you submit — that final position is what we use.</p>
+
+      <div class="rb-locate">
+        <label class="sr-only" for="otg-search-q">Search a landmark or address</label>
+        <div class="loc-search">
+          <input type="text" id="otg-search-q" name="otg_search_q" maxlength="120" autocomplete="off"
+                 placeholder="Search a landmark or address, e.g. SM City Baliwag"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();}">
+          <button type="button" id="otg-search-btn" class="secondary">Search</button>
+        </div>
+        <button type="button" id="otg-locate" class="secondary rb-locate__me"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Locate me</button>
+      </div>
+      <p id="otg-search-status" class="loc-status" hidden></p>
+      <ul id="otg-search-results" class="loc-results" hidden></ul>
+      <p class="loc-attribution muted">Search results from OpenStreetMap / Nominatim.</p>
+
+      <p id="otg-loc-status" class="loc-status">Location not set yet.</p>
+      <p id="otg-selected-label" class="loc-selected" hidden></p>
+      <p class="rb-note">Use <strong>Locate me</strong> (when your device allows it) or search, then drag the pin to the exact roadside spot. The pin's final position is what we save.</p>
 
       <?php if (!empty($errors['location'])): ?><small class="error"><?= e($errors['location']) ?></small><?php endif; ?>
 
@@ -186,19 +199,28 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
       </details>
     </section>
 
-    <section class="card">
-      <h2>4. Confirm</h2>
-      <p class="muted">
-        Shop: <?= e($shop['name'] ?? 'VulcaTrack') ?><?= isset($shop['address']) ? ' — ' . e($shop['address']) : '' ?>.<br>
-        Contact number on file: <strong><?= e($record['contact_number']) ?></strong>
-        (<a href="<?= e(vulcatrack_url('/customer/profile.php')) ?>">update</a>).
-        The shop will call you on this number.
-      </p>
-      <button type="submit">Submit rescue request</button>
+    <aside class="rb-privacy" aria-label="Location privacy">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/></svg>
+      <div>
+        <p class="rb-privacy__title">Privacy notice</p>
+        <p>We use this location once, to work out the route and a one-time ETA. We do not track you.</p>
+      </div>
+    </aside>
+
+    <section class="cu-card rb-review" aria-labelledby="rb-review-title">
+      <h2 class="rb-step__title" id="rb-review-title"><span class="rb-step__num">4</span>Before you submit</h2>
+      <dl class="rb-review__list">
+        <div><dt>Contact number on file</dt><dd><strong><?= e($record['contact_number']) ?></strong> <a href="<?= e(vulcatrack_url('/customer/profile.php')) ?>">Update</a><span class="rb-review__hint">The shop will call you on this number.</span></dd></div>
+        <div><dt>Shop</dt><dd><?= e($shop['name'] ?? 'VulcaTrack') ?><?= isset($shop['address']) ? '<span class="rb-review__hint">' . e($shop['address']) . '</span>' : '' ?></dd></div>
+        <div><dt>Charges</dt><dd>Nothing is charged here.<span class="rb-review__hint">After the job, the shop records the products and services actually used.</span></dd></div>
+      </dl>
     </section>
+
+    <button type="submit" class="rb-submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 21 3l-6.5 18-3-7.5z"/></svg>Submit rescue request</button>
   </form>
 
   <script src="<?= e(vulcatrack_asset('/assets/js/otg-map.js')) ?>" defer></script>
 <?php endif; ?>
+</div>
 
 <?php require __DIR__ . '/../src/Views/partials/customer_bottom.php'; ?>

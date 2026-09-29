@@ -7,9 +7,11 @@
  * request is accepted with an assigned Tireman -- "Tireman is on the way" with
  * the Tireman's name and contact number. A completed request keeps the
  * Tireman's name as history but never says "on the way".
- * ?new=1 shows the post-submission confirmation banner.
+ * ?new=1 (right after submitting) shows the confirmation view while the
+ * request is still pending, else the confirmation banner on this page.
  */
 
+use VulcaTrack\Repository\CustomerRepository;
 use VulcaTrack\Repository\ServiceRequestRepository;
 use VulcaTrack\Support\OtgStatus;
 
@@ -24,8 +26,14 @@ $request = $requestId > 0
     ? (new ServiceRequestRepository(vulcatrack_db()))->findForCustomer($requestId, (int) $customer['id'])
     : null;
 
-$pageTitle = $request ? ('Request #' . $requestId) : 'Request not found';
-$navActive = 'bookings';
+// ?new=1 is the PRG target right after a submission (customer/rescue.php):
+// while the request is still pending it gets the confirmation view (Phase
+// 7.4b-c); otherwise — or later — this is the normal status page.
+$confirming = $request !== null && isset($_GET['new']) && $request['status'] === 'pending';
+
+$pageTitle = $request ? ($confirming ? 'Request submitted' : 'Request #' . $requestId) : 'Request not found';
+$navActive = $confirming ? 'rescue' : 'bookings';
+$mainClass = $confirming ? 'app--wide' : '';
 $useMap = $request !== null;
 require __DIR__ . '/../src/Views/partials/customer_top.php';
 
@@ -41,6 +49,14 @@ if ($request === null) {
 $tiremanAssigned = $request['tireman_id'] !== null;
 $hasLocation = $request['latitude'] !== null && $request['longitude'] !== null;
 $vehicleBits = array_filter([$request['make'] ?? '', $request['model'] ?? '', $request['vehicle_type'] ?? '']);
+
+if ($confirming) {
+    $contactRow = (new CustomerRepository(vulcatrack_db()))->findById((int) $customer['id']);
+    $contactNumber = $contactRow !== null ? (string) $contactRow['contact_number'] : null;
+    require __DIR__ . '/../src/Views/customer_rescue_confirmation.php';
+    require __DIR__ . '/../src/Views/partials/customer_bottom.php';
+    exit;
+}
 ?>
 
 <?php if (isset($_GET['new'])): ?>
