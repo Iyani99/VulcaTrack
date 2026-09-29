@@ -79,7 +79,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php foreach ($sales as $s): ?>
       <tr>
         <td><?= (int) $s['sale_id'] ?></td>
-        <td class="muted"><?= e($s['sale_date']) ?></td>
+        <td class="muted nowrap"><?= e($s['sale_date']) ?></td>
         <td><?= e($s['admin_name']) ?></td>
         <?php /* walk-in vs registered customer: a quiet tag vs a stronger neutral one (presentation only) */ ?>
         <td><?= $s['customer_name'] !== null

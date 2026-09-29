@@ -60,9 +60,9 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php foreach ($requests as $r): ?>
       <tr>
         <td class="cell-strong"><?= (int) $r['request_id'] ?></td>
-        <td class="muted"><?= e($r['requested_at']) ?></td>
+        <td class="muted nowrap"><?= e($r['requested_at']) ?></td>
         <td class="cell-strong"><?= e($r['customer_name']) ?></td>
-        <td><?= e($r['plate_number']) ?></td>
+        <td class="nowrap"><?= e($r['plate_number']) ?></td>
         <td>
           <span class="badge <?= e(OtgStatus::badgeClass($r['status'])) ?>"><?= e(OtgStatus::adminLabel($r['status'])) ?></span>
         </td>

@@ -371,10 +371,13 @@ button.loc-result:hover { background: #eef2fb; }
 .datatable .txn-totalrow td { font-size: 1.05rem; font-weight: 700; color: #1a1a1a; text-transform: none; letter-spacing: 0; border-bottom: 0; }
 .txn-note { margin: 1rem 0 0; font-size: .85rem; color: #555; text-align: center; font-style: italic; }
 @media (max-width: 30rem) { /* phones: keep all four columns + the total in view */
-  .txn-doc { padding: 1rem .8rem; }
-  .datatable.txn-lines th,
-  .datatable.txn-lines td { padding: .45rem .3rem; }
-  .datatable.txn-lines th.num { white-space: normal; }
+  /* body.admin prefix: must outrank the admin theme's .card / .datatable
+     padding (added in 7.3a), which had pushed Subtotal + Total off-screen */
+  body.admin .txn-doc { padding: 1rem .8rem; }
+  body.admin .datatable.txn-lines th,
+  body.admin .datatable.txn-lines td { padding: .45rem .3rem; }
+  body.admin .datatable.txn-lines thead th { letter-spacing: .03em; }
+  body.admin .datatable.txn-lines th.num { white-space: normal; }
 }
 
 @media print {
@@ -739,6 +742,9 @@ body.admin .tablepanel__foot { margin: 0; padding: .65rem .9rem; border-top: 1px
 body.admin .linklike--neutral { color: var(--adm-ink); } /* a non-destructive text action (Activate) — red stays for Deactivate / Reject / Remove */
 body.admin .datatable td.cell-strong { font-weight: 700; }
 body.admin .datatable td.cell-money { font-size: 1rem; font-weight: 800; }
+/* short values that must read as one unit (date / time, plate number): never
+   split at a hyphen — on phones the table scrolls instead (Phase 7.4a) */
+body.admin .datatable td.nowrap { white-space: nowrap; }
 
 /* stock chips (Inventory + Dashboard): a coloured square + a short label */
 body.admin .stock {
@@ -756,13 +762,16 @@ body.admin .stock--plain { background: none; color: #777; padding-left: 0; }
 body.admin .stock--na::before,
 body.admin .stock--plain::before { display: none; }
 
-/* customer tags (Sales History): walk-in quiet, registered customer stronger */
+/* customer tags (Sales History): walk-in quiet, registered customer stronger.
+   break-word (not anywhere): a name wraps between words, and only a single
+   over-long word is split — so a scrolled table widens instead of squeezing
+   the column to one letter per line on phones (Phase 7.4a). */
 body.admin .tag {
   display: inline-block; max-width: 18rem; padding: .2rem .5rem; border: 1px solid transparent;
   font-family: var(--adm-mono); font-size: .72rem; font-weight: 700; letter-spacing: .05em;
-  line-height: 1.35; text-transform: uppercase; overflow-wrap: anywhere;
+  line-height: 1.35; text-transform: uppercase; overflow-wrap: break-word;
 }
-body.admin .tag--walkin   { background: #fff; color: #777; border-color: #c9c9c9; }
+body.admin .tag--walkin   { background: #fff; color: #777; border-color: #c9c9c9; white-space: nowrap; }
 body.admin .tag--customer { background: #e3e3e3; color: var(--adm-ink); border-color: #bdbdbd; }
 /* sale source (Phase 7.3d): in-shop quiet, a Rescue link in the brand red */
 body.admin .tag--inshop,
@@ -828,9 +837,12 @@ body.admin .rescue-assign .rescue-assign__sub { margin-top: .2rem; font-size: .8
 body.admin .rescue-assign__eta { text-align: right; }
 body.admin .rescue-assign a { color: #fff; }
 body.admin .rescue-actions__grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 1.25rem 2.5rem; align-items: end; }
-body.admin .rescue-pick { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .25rem .6rem; align-items: end; margin: 0; }
-body.admin .rescue-pick label { grid-column: 1 / -1; margin: 0 0 .15rem; }
-body.admin .rescue-pick select { min-width: 0; }
+/* label above; the select grows and keeps a readable width — when the row is
+   too narrow for select + button, the button wraps below it (Phase 7.4a) */
+body.admin .rescue-pick { display: flex; flex-wrap: wrap; gap: .25rem .6rem; align-items: flex-end; margin: 0; }
+body.admin .rescue-pick label { flex: 1 1 100%; margin: 0 0 .15rem; }
+body.admin .rescue-pick select { flex: 1 1 13rem; width: auto; min-width: 0; }
+body.admin .rescue-pick button { flex: 0 0 auto; }
 body.admin .rescue-actions__close { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .75rem 1.5rem; }
 body.admin .rescue-actions__close > * { margin: 0; }
 /* Rescue detail: the linked sale (Phase 7.3d) */
@@ -952,9 +964,15 @@ body.admin .pos-sold-links { display: flex; flex-wrap: wrap; gap: .6rem; }
 body.admin .btnlink--outline { background: #fff; color: var(--adm-ink); border-color: var(--adm-ink); }
 body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: var(--adm-ink); color: #fff; }
 
+/* two columns from 68rem. Between 68rem and 80rem the 15rem sidebar leaves
+   little room, so the sale panel stays at 22rem — the catalogue then keeps two
+   card columns instead of one (Phase 7.4a); the full 26rem panel from 80rem. */
 @media (min-width: 68rem) {
-  body.admin .pos-layout { grid-template-columns: minmax(0, 1fr) minmax(22rem, 26rem); }
+  body.admin .pos-layout { grid-template-columns: minmax(0, 1fr) 22rem; }
   body.admin .pos-jump { display: none; }
+}
+@media (min-width: 80rem) {
+  body.admin .pos-layout { grid-template-columns: minmax(0, 1fr) minmax(22rem, 26rem); }
 }
 
 @media (max-width: 48rem) {
@@ -964,8 +982,9 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
 }
 
 /* narrow screens: the sidebar becomes a top bar — brand + logout on one row,
-   the nav links wrapping below (CSS only, no menu script). The detailed
-   360 / 390 / 430 / tablet pass is Phase 7.4. */
+   the nav links wrapping below (CSS only, no menu script). Kept deliberately in
+   Phase 7.4a: every link stays one tap away with no hidden menu, the top bar is
+   ~140px at 360px, and the POST logout form is untouched. */
 @media (max-width: 60rem) {
   body.admin .adm { display: block; }
   body.admin .adm-side { border-right: 0; border-bottom: 3px solid var(--adm-red); }
@@ -989,6 +1008,13 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
 }
 @media (max-width: 30rem) {
   body.admin .adm-user { display: none; }
+}
+/* touch: the quiet text actions (Deactivate / Activate, Remove, Reject request,
+   Cancel sale, Make walk-in) are ~20px tall — give them a finger-sized hit
+   area without changing how they look (Phase 7.4a) */
+@media (max-width: 60rem), (pointer: coarse) {
+  body.admin .adm-main .linklike { min-height: 2.25rem; padding: .35rem 0; }
+  body.admin .pos-cart .pos-cart__remove { margin-top: 0; }
 }
 
 /* printing any admin page: drop the shell, keep the content legible without
