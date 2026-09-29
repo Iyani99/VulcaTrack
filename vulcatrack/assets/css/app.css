@@ -1560,3 +1560,155 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
   .cust .bk-head .cu-btn { width: 100%; }
   .cust .rs .otg-map { height: 17rem; }
 }
+
+/* ---- customer Account: My Vehicles + Add / Edit Vehicle (Phase 7.4b-e1) ----
+   The Account Settings (Your Vehicles) and Add New Vehicle Figma frames on
+   the .cust system. My Vehicles sits under Profile: an account side panel
+   (initials placeholder, no photo; no Notifications) beside the vehicle cards.
+   Remove / Restore stay real POST + CSRF forms; only their look changed. */
+
+.cust .ac :focus-visible,
+.cust .vf :focus-visible { outline: 2px solid var(--cu-red); outline-offset: 2px; }
+.cust .ac-head { margin: 0 0 1.5rem; }
+.cust .ac-head h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2rem); font-weight: 800; letter-spacing: -.01em; text-transform: uppercase; }
+.cust .ac-sub { margin: .35rem 0 0; color: #555; font-size: .9rem; }
+.cust .ac-layout { display: grid; grid-template-columns: minmax(0, 18.5rem) minmax(0, 1fr); gap: 1.5rem 1.75rem; align-items: start; }
+.cust .ac-main { min-width: 0; }
+
+/* account side panel */
+.cust .ac-side { padding: 1.35rem 1.2rem 1.2rem; }
+.cust .ac-id { display: flex; align-items: center; gap: .9rem; margin: 0 0 1rem; padding: 0 0 1.1rem; border-bottom: 1px solid var(--cu-line); }
+.cust .ac-avatar {
+  display: flex; align-items: center; justify-content: center; width: 3.6rem; height: 3.6rem; flex: none;
+  background: #e8e8e8; border: 1.5px solid var(--cu-ink); color: var(--cu-ink); font-size: 1.2rem; font-weight: 800; letter-spacing: .02em;
+}
+.cust .ac-id__text { min-width: 0; }
+.cust .ac-id__name { margin: 0; font-size: 1.2rem; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
+.cust .ac-id__since { margin: .25rem 0 0; font-family: var(--cu-mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: #555; }
+.cust .ac-nav ul { display: grid; gap: .2rem; margin: 0; padding: 0; list-style: none; }
+.cust .ac-nav form { margin: 0; }
+.cust .ac-nav a,
+.cust .ac-nav button {
+  display: flex; align-items: center; gap: .7rem; width: 100%; min-height: 2.75rem; margin: 0; padding: .5rem .75rem;
+  border: 0; border-left: 3px solid transparent; border-radius: 0; background: none; color: #333; text-align: left; text-decoration: none;
+  font-family: var(--cu-mono); font-size: .74rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+}
+.cust .ac-nav a:hover,
+.cust .ac-nav button:hover { background: #f1f1f1; color: var(--cu-ink); }
+.cust .ac-nav a.is-active { background: #e6e6e6; border-left-color: var(--cu-red-dark); color: var(--cu-ink); font-weight: 700; }
+.cust .ac-nav button { color: var(--cu-ink); font-weight: 700; }
+.cust .ac-nav svg { width: 1.1rem; height: 1.1rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; stroke-linecap: round; }
+
+/* My Vehicles */
+.cust .vh-bar {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem 1.5rem;
+  margin: 0 0 1.75rem; padding: 1.3rem 1.4rem; border-left: 4px solid #cfcfcf;
+}
+.cust .vh-bar__title { display: flex; align-items: center; gap: .6rem; margin: 0; font-size: 1.2rem; font-weight: 800; text-transform: uppercase; }
+.cust .vh-bar__title svg { width: 1.4rem; height: 1.4rem; flex: none; fill: none; stroke: var(--cu-red-dark); stroke-width: 2; stroke-linejoin: round; }
+.cust .vh-bar .cu-btn { min-height: 2.9rem; }
+.cust .vh-section { margin: 0 0 2rem; }
+.cust .vh-section__title {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 0 0 1rem; padding-bottom: .6rem;
+  border-bottom: 1px solid var(--cu-line); font-size: 1.25rem; font-weight: 800; text-transform: uppercase;
+}
+.cust .vh-section__title svg { width: 1.3rem; height: 1.3rem; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.cust .vh-section--removed .vh-section__title { color: #555; }
+.cust .vh-count { font-size: .9rem; font-weight: 400; color: var(--cu-muted); }
+.cust .vh-section__note { margin: -.35rem 0 1rem; font-size: .84rem; color: var(--cu-muted); }
+.cust .vh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr)); gap: 1.25rem; margin: 0; padding: 0; list-style: none; }
+.cust .vh-card { display: flex; flex-direction: column; min-width: 0; background: #fff; border: 1px solid var(--cu-line); border-left: 4px solid #d4d4d4; }
+.cust .vh-card__body { position: relative; flex: 1 1 auto; padding: 1.3rem 1.3rem 1.15rem; }
+.cust .vh-card__icon { position: absolute; top: 1.1rem; right: 1.1rem; color: #555; }
+.cust .vh-card__icon svg { display: block; width: 1.45rem; height: 1.45rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.cust .vh-card__name { margin: 0 2.4rem 0 0; font-size: 1.3rem; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.cust .vh-card__type { margin: .3rem 0 0; font-size: .86rem; color: #555; overflow-wrap: anywhere; }
+.cust .vh-card__plate {
+  display: inline-block; max-width: 100%; margin: .9rem 0 0; padding: .45rem .8rem; background: var(--cu-ink); color: #fff;
+  font-family: var(--cu-mono); font-size: .8rem; font-weight: 700; letter-spacing: .1em; overflow-wrap: anywhere;
+}
+.cust .vh-card__added { margin: .7rem 0 0; font-size: .76rem; color: var(--cu-muted); }
+.cust .vh-card__actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); border-top: 1px solid var(--cu-line); }
+.cust .vh-card__actions > * + * { border-left: 1px solid var(--cu-line); }
+.cust .vh-card__actions form { display: flex; margin: 0; }
+.cust .vh-action {
+  display: flex; align-items: center; justify-content: center; gap: .45rem; width: 100%; min-height: 3rem; margin: 0; padding: .6rem;
+  border: 0; border-radius: 0; background: #fff; color: var(--cu-ink); text-decoration: none; cursor: pointer;
+  font-family: inherit; font-size: .78rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+}
+.cust .vh-action:hover { background: #f1f1f1; color: var(--cu-ink); }
+.cust .vh-action--remove { color: var(--cu-red-dark); }
+.cust .vh-action--remove:hover { background: #fdecec; color: #9d1017; }
+.cust .vh-action:focus-visible { outline-offset: -3px; }
+.cust .vh-action svg { width: 1rem; height: 1rem; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.cust .vh-card--removed { background: #fafafa; border-left-color: #e3e3e3; }
+.cust .vh-card--removed .vh-card__name { color: #555; }
+.cust .vh-card--removed .vh-card__plate { background: #6a6a6a; }
+.cust .vh-card--removed .vh-action { background: #fafafa; }
+.cust .vh-card--removed .vh-action:hover { background: #fff; }
+.cust .vh-card__state {
+  display: inline-block; margin: 0 0 .6rem; padding: .18rem .45rem; border: 1px solid #bbb; background: #fff; color: #555;
+  font-family: var(--cu-mono); font-size: .66rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.cust .vh-empty { padding: 1.5rem 1.4rem; }
+.cust .vh-empty p { margin: 0 0 .4rem; color: #555; }
+.cust .vh-empty .vh-empty__title { font-size: 1.1rem; font-weight: 800; color: var(--cu-ink); }
+.cust .vh-empty p:last-child { margin: 1rem 0 0; }
+
+/* Add / Edit Vehicle */
+.cust .vf { max-width: 34rem; margin: 0 auto; }
+.cust .vf-card { padding: 1.9rem 1.9rem 1.7rem; border-left: 4px solid var(--cu-red-dark); }
+.cust .vf-card h1 { margin: 0; font-size: clamp(1.35rem, 2.6vw, 1.6rem); font-weight: 800; text-transform: uppercase; }
+.cust .vf-sub { margin: .45rem 0 1.4rem; color: #555; font-size: .92rem; }
+.cust .vf-field { min-width: 0; margin: 0 0 1.15rem; }
+.cust .vf label {
+  display: block; margin: 0 0 .45rem; color: var(--cu-ink);
+  font-family: var(--cu-mono); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.cust .vf-req { color: var(--cu-red-dark); }
+.cust .vf-opt { font-weight: 400; letter-spacing: 0; text-transform: none; color: #888; }
+.cust .vf input[type="text"],
+.cust .vf select {
+  display: block; width: 100%; min-height: 2.9rem; padding: .6rem .8rem; border: 1px solid #cfcfcf; border-radius: 2px;
+  background: #fff; color: var(--cu-ink); font-size: 1rem;
+}
+.cust .vf input::placeholder { color: #999; font-family: var(--cu-mono); font-size: .85rem; }
+.cust .vf input:focus,
+.cust .vf select:focus { outline: 2px solid var(--cu-ink); outline-offset: 0; border-color: var(--cu-ink); }
+.cust .vf [aria-invalid="true"] { border-color: var(--cu-red-dark); }
+.cust .vf-plate { position: relative; }
+.cust .vf-plate svg {
+  position: absolute; left: .8rem; top: 50%; width: 1.15rem; height: 1.15rem; transform: translateY(-50%);
+  fill: none; stroke: #666; stroke-width: 1.8; stroke-linejoin: round; pointer-events: none;
+}
+.cust .vf-plate input[type="text"] { padding-left: 2.6rem; font-family: var(--cu-mono); letter-spacing: .04em; }
+.cust .vf-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1.25rem; }
+.cust .vf small.error { margin-top: .4rem; color: #a3121a; font-size: .85rem; font-weight: 600; overflow-wrap: anywhere; }
+.cust .vf-hint { margin: 0; font-size: .78rem; color: var(--cu-muted); }
+.cust .vf-hint span { color: var(--cu-red-dark); }
+.cust .vf-actions {
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .9rem; margin: 1.25rem 0 0; padding-top: 1.25rem;
+  border-top: 1px solid var(--cu-line);
+}
+.cust .vf-actions .cu-btn { min-height: 2.9rem; min-width: 8.5rem; }
+.cust .vf button.cu-btn { width: auto; margin: 0; font-family: inherit; cursor: pointer; }
+.cust .vf-save { width: 1.05rem; height: 1.05rem; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+
+/* the account panel stacks above the vehicles once two columns get tight;
+   its four sections become a 2 x 2 grid instead of a long list */
+@media (max-width: 56rem) {
+  .cust .ac-layout { grid-template-columns: minmax(0, 1fr); }
+  .cust .ac-nav ul { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .3rem; }
+}
+@media (max-width: 30rem) {
+  .cust .ac-side { padding: 1.1rem 1rem 1rem; }
+  .cust .ac-nav a,
+  .cust .ac-nav button { gap: .5rem; padding: .5rem .55rem; font-size: .7rem; letter-spacing: .04em; }
+  .cust .vh-bar { padding: 1.1rem 1rem; }
+  .cust .vh-bar .cu-btn { width: 100%; }
+  .cust .vf-card { padding: 1.4rem 1.1rem 1.3rem; }
+  .cust .vf-row { grid-template-columns: minmax(0, 1fr); }
+  /* full-width buttons in DOM (= Tab) order; side by side "Save vehicle" wrapped at 390px */
+  .cust .vf-actions { flex-direction: column; }
+  .cust .vf-actions .cu-btn { width: 100%; }
+}

@@ -7,7 +7,8 @@
  * unaffected. On narrow screens the nav wraps onto its own row (CSS only).
  *
  * Expects:  string $pageTitle
- * Optional: string $navActive  (dashboard|rescue|bookings|vehicles|profile)
+ * Optional: string $navActive  (dashboard|rescue|bookings|profile — the
+ *                                account pages, My Vehicles included, use profile)
  *           string $mainClass  (extra class on <main>, e.g. 'app--wide')
  *           bool   $useMap     (load the vendored Leaflet assets)
  *
@@ -18,12 +19,12 @@ $navActive = $navActive ?? '';
 $shellCustomer = current_customer();
 // The Figma "Tracking" item and notification bell have no destination in
 // VulcaTrack (no live tracking, no notifications); request status lives under
-// My Bookings. My Vehicles is not in the Figma but is a required existing page.
+// My Bookings. My Vehicles lives under Profile (account navigation,
+// customer_account_nav.php) since Phase 7.4b-e1; its URLs are unchanged.
 $nav = [
     'dashboard' => ['Home',          '/customer/dashboard.php'],
     'rescue'    => ['Book a Rescue', '/customer/rescue.php'],
     'bookings'  => ['My Bookings',   '/customer/bookings.php'],
-    'vehicles'  => ['My Vehicles',   '/customer/vehicles.php'],
     'profile'   => ['Profile',       '/customer/profile.php'],
 ];
 ?><!doctype html>

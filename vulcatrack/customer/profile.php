@@ -102,7 +102,7 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
   </form>
 </section>
 
-<section class="card">
+<section class="card" id="security">
   <h2>Change password</h2>
   <form method="post" action="<?= e(vulcatrack_url('/customer/profile.php')) ?>" novalidate>
     <?= Csrf::field() ?>

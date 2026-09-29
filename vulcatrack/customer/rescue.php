@@ -15,6 +15,7 @@ use VulcaTrack\Repository\ServiceRequestRepository;
 use VulcaTrack\Repository\VehicleRepository;
 use VulcaTrack\Support\Geo;
 use VulcaTrack\Support\Validator;
+use VulcaTrack\Support\VehicleType;
 
 require __DIR__ . '/../includes/bootstrap.php';
 require __DIR__ . '/../includes/auth.php';
@@ -91,15 +92,6 @@ if ($vehicles && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-/** Tile icon from the vehicle's own free-text type (display only). */
-function rb_vehicle_icon(?string $type): string
-{
-    $motor = preg_match('/motor|bike|scooter|tricycle/i', (string) $type) === 1;
-    return $motor
-        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="16.5" r="3"/><circle cx="18.5" cy="16.5" r="3"/><path d="M5.5 16.5 9 10h5l4.5 6.5M9 10 7.5 7H5M14 10l1.5-3H18"/></svg>'
-        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16V11l2-5h10l2 5v5M5 16h14M5 16v2.5M19 16v2.5M4 11h16"/><circle cx="8" cy="13.5" r=".6"/><circle cx="16" cy="13.5" r=".6"/></svg>';
-}
-
 $pageTitle = 'Book a Rescue';
 $navActive = 'rescue';
 $useMap = true;
@@ -137,7 +129,7 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
           <?php $details = array_filter([$veh['make'] ?? '', $veh['model'] ?? '']); ?>
           <label class="rb-vehicle">
             <input type="radio" name="vehicle_id" value="<?= (int) $veh['vehicle_id'] ?>" required<?= (string) $old['vehicle_id'] === (string) $veh['vehicle_id'] ? ' checked' : '' ?>>
-            <span class="rb-vehicle__art"><?= rb_vehicle_icon($veh['vehicle_type'] ?? null) ?></span>
+            <span class="rb-vehicle__art"><?= VehicleType::icon($veh['vehicle_type'] ?? null) ?></span>
             <span class="rb-vehicle__name"><?= $details ? e(implode(' ', $details)) : e($veh['vehicle_type'] ?: 'Vehicle') ?></span>
             <span class="rb-vehicle__plate">Plate # <?= e($veh['plate_number']) ?><?= $details && !empty($veh['vehicle_type']) ? ' &middot; ' . e($veh['vehicle_type']) : '' ?></span>
           </label>
