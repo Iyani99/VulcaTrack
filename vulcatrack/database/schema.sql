@@ -3,6 +3,8 @@
 -- Phase 2 — Database Schema (v1)
 -- Structural revision: Phase 7.3d-a (2026-09-28) — sales.service_request_id
 --   (optional link from a sale to one Rescue request; see the sales table).
+-- Structural revision: Phase 7.4b-e2 (2026-09-29) — customers.avatar_filename
+--   (optional profile picture reference; see the customers table).
 --
 -- Source of truth : docs/ERD/schema.dbml               (structure)
 -- Rationale       : docs/VulcaTrack-Database-Notes_1.md (field-by-field)
@@ -54,6 +56,9 @@ DROP TABLE IF EXISTS `customers`;
 -- Public self-registration. Separate from admins — no shared user table.
 -- contact_number is MANDATORY (Decision 2): direct phone contact for OTG.
 -- email is unique within customers only (independent of admins).
+-- avatar_filename (Phase 7.4b-e2, Decision 77): optional profile picture —
+-- ONLY the server-generated file name (<customer_id>_<32 hex>.<jpg|png|webp>)
+-- of a private file under storage/avatars/; never a path or URL. NULL = none.
 -- -----------------------------------------------------------------------------
 CREATE TABLE `customers` (
   `customer_id`    INT           NOT NULL AUTO_INCREMENT,
@@ -61,6 +66,7 @@ CREATE TABLE `customers` (
   `email`          VARCHAR(190)  NOT NULL,
   `contact_number` VARCHAR(30)   NOT NULL,
   `password_hash`  VARCHAR(255)  NOT NULL,
+  `avatar_filename` VARCHAR(64)  NULL DEFAULT NULL,
   `created_at`     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`customer_id`),

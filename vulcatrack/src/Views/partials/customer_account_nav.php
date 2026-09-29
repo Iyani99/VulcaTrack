@@ -5,11 +5,13 @@
  * are sections of profile.php; Your Vehicles is vehicles.php; Log out is the
  * same POST + CSRF logout as the header. No Notifications (not a feature).
  *
- * The portrait is a neutral initials placeholder — no photo is stored yet.
+ * The portrait is the customer's own uploaded picture (served by
+ * customer/avatar.php, Decision 77) or, without one, their initials.
  *
  * Expects:  string $accountName    the signed-in customer's name
  * Optional: string $accountActive  (info|security|vehicles)
  *           string $accountSince   customers.created_at (shown as "Member since")
+ *           string $accountAvatarUrl  display URL of the picture; null/absent = initials
  */
 $accountActive = $accountActive ?? '';
 $accountInitials = '';
@@ -28,7 +30,11 @@ $accountLinks = [
 ?>
 <aside class="ac-side cu-card" aria-label="Account">
   <div class="ac-id">
-    <span class="ac-avatar" aria-hidden="true"><?= e($accountInitials !== '' ? $accountInitials : '?') ?></span>
+    <?php if (!empty($accountAvatarUrl)): ?>
+      <img class="ac-avatar ac-avatar--photo" src="<?= e($accountAvatarUrl) ?>" alt="" width="58" height="58">
+    <?php else: ?>
+      <span class="ac-avatar" aria-hidden="true"><?= e($accountInitials !== '' ? $accountInitials : '?') ?></span>
+    <?php endif; ?>
     <div class="ac-id__text">
       <p class="ac-id__name"><?= e($accountName) ?></p>
       <?php if ($accountSinceTs !== false): ?>

@@ -22,6 +22,7 @@ define('VULCATRACK_APP_ROOT', dirname(__DIR__));
 require __DIR__ . '/lib/Assert.php';
 require __DIR__ . '/lib/TestDb.php';
 require __DIR__ . '/lib/HttpClient.php';
+require __DIR__ . '/lib/ImageFixtures.php';
 
 // The application's own bootstrap: config, PSR-4-ish autoloader, e()/vulcatrack_url().
 require VULCATRACK_APP_ROOT . '/includes/bootstrap.php';

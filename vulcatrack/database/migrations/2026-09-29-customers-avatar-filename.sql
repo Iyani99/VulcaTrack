@@ -1,0 +1,43 @@
+-- =============================================================================
+-- VulcaTrack — one-off migration (Phase 7.4b-e2, 2026-09-29, Decision 77)
+-- Adds the optional customer profile picture reference to `customers`.
+--
+--   customers.avatar_filename  VARCHAR(64) NULL DEFAULT NULL
+--     ONLY the server-generated file name (<customer_id>_<32 hex>.<jpg|png|webp>)
+--     of a private image under vulcatrack/storage/avatars/ — never a path or URL.
+--
+-- Every existing customer keeps avatar_filename = NULL (initials placeholder).
+-- Nothing is backfilled.
+--
+-- WHO NEEDS THIS: an EXISTING database built from the schema.sql that came
+-- before Phase 7.4b-e2. A FRESH install does not — database/schema.sql already
+-- creates the column.
+--
+-- HOW (run ONCE, with MySQL started, against the VulcaTrack database):
+--   C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-29-customers-avatar-filename.sql
+-- or phpMyAdmin: select the database, SQL tab, paste the ALTER TABLE below.
+--
+-- 1. PRE-CHECK (optional) — is it already applied?
+--      SELECT COUNT(*) FROM information_schema.COLUMNS
+--       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'customers'
+--         AND COLUMN_NAME = 'avatar_filename';
+--    0 = not applied yet (run the ALTER); 1 = already applied (do not run it).
+--
+-- 2. APPLY — ONE ALTER TABLE statement, so it is all-or-nothing. Running it a
+--    second time stops with
+--      ERROR 1060 (42S21): Duplicate column name 'avatar_filename'
+--    and changes nothing — that error means the migration was already applied.
+--    It never drops or recreates a table.
+--
+-- 3. VERIFY — SHOW CREATE TABLE customers;  should list
+--      `avatar_filename` varchar(64) DEFAULT NULL   (after password_hash)
+--
+-- ROLLBACK:
+--      ALTER TABLE customers DROP COLUMN avatar_filename;
+--   This forgets every customer's profile picture; application code that reads
+--   the column (Phase 7.4b-e2) must be reverted first. The image files under
+--   storage/avatars/ are then unreferenced and can be deleted by hand.
+-- =============================================================================
+
+ALTER TABLE `customers`
+  ADD COLUMN `avatar_filename` VARCHAR(64) NULL DEFAULT NULL AFTER `password_hash`;

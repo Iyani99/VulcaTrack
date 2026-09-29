@@ -18,6 +18,9 @@
 // Structural change 2026-09-28 (Phase 7.3d-a, owner-approved): sales gains the
 // nullable, UNIQUE service_request_id -> service_requests.request_id (zero-or-one
 // sale per Rescue request). Existing databases: vulcatrack/database/migrations/.
+// Structural change 2026-09-29 (Phase 7.4b-e2, Decision 77, owner-approved):
+// customers gains the nullable avatar_filename (a generated file name only; the
+// image file itself lives in private storage). Still exactly 8 tables.
 // v1 scope reminder — NOT modeled: online/gateway payment, payment-transaction
 // tables, GPS telemetry / route polylines, Tireman authentication, technician
 // scheduling / ratings / payroll, status-history / audit tables.
@@ -38,6 +41,7 @@ Table customers {
   email           varchar(190)  [not null, unique, note: 'login identifier; unique within customers only']
   contact_number  varchar(30)   [not null, note: 'MANDATORY — direct phone contact for OTG coordination']
   password_hash   varchar(255)  [not null, note: 'bcrypt / password_hash() — never plain text']
+  avatar_filename varchar(64)   [null, note: 'optional profile picture (Decision 77): ONLY the server-generated file name <customer_id>_<32 hex>.<jpg|png|webp> of a private file under storage/avatars/ — never a path or URL; NULL = initials placeholder']
   created_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
   updated_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
 

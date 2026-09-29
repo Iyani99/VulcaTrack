@@ -46,7 +46,7 @@ $old = [
 $legacyType = VehicleType::legacyValue($vehicle['vehicle_type'] ?? null);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!Csrf::check($_POST['_csrf'] ?? null)) {
+    if (!Csrf::check(vf_post('_csrf'))) {
         $errors['form'] = 'Your session expired. Please try again.';
     } else {
         $v = new Validator();
@@ -58,11 +58,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $v->add('vehicle_type', 'Choose a vehicle type from the list.');
         }
 
+        // redisplay only string input: a forged array (plate_number[]=…) is
+        // already a validation error above and must not reach e() as an array
         $old = [
-            'plate_number' => $_POST['plate_number'] ?? '',
-            'vehicle_type' => $_POST['vehicle_type'] ?? '',
-            'make'         => $_POST['make'] ?? '',
-            'model'        => $_POST['model'] ?? '',
+            'plate_number' => vf_post('plate_number'),
+            'vehicle_type' => vf_post('vehicle_type'),
+            'make'         => vf_post('make'),
+            'model'        => vf_post('model'),
         ];
 
         if ($v->passes()) {
@@ -78,6 +80,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+/** A posted field as a string ('' when missing or not a string). */
+function vf_post(string $key): string
+{
+    return is_string($_POST[$key] ?? null) ? $_POST[$key] : '';
+}
+
 /** aria wiring for a field that may carry an error message. */
 function vf_invalid(array $errors, string $field): string
 {
@@ -88,7 +96,7 @@ $typeOptions = VehicleType::CHOICES;
 if ($legacyType !== null) {
     array_unshift($typeOptions, $legacyType);
 }
-$selectedType = is_string($old['vehicle_type']) ? trim($old['vehicle_type']) : '';
+$selectedType = trim($old['vehicle_type']);
 
 $pageTitle = $editing ? 'Edit vehicle' : 'Add a vehicle';
 $navActive = 'profile';

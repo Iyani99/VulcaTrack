@@ -7,6 +7,7 @@
 use VulcaTrack\Auth\Csrf;
 use VulcaTrack\Repository\CustomerRepository;
 use VulcaTrack\Repository\VehicleRepository;
+use VulcaTrack\Support\AvatarStore;
 use VulcaTrack\Support\VehicleType;
 
 require __DIR__ . '/../includes/bootstrap.php';
@@ -63,6 +64,7 @@ function vehicle_added(string $datetime): string
 $record = (new CustomerRepository(vulcatrack_db()))->findById((int) $customer['id']);
 $accountName = (string) ($customer['name'] ?? '');
 $accountSince = $record['created_at'] ?? null;
+$accountAvatarUrl = AvatarStore::forApp()->displayUrl($record['avatar_filename'] ?? null, (int) $customer['id']);
 $accountActive = 'vehicles';
 
 $pageTitle = 'My Vehicles';

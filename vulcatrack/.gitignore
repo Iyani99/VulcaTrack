@@ -6,6 +6,8 @@
 !/storage/logs/.gitkeep
 /storage/cache/*
 !/storage/cache/.gitkeep
+# customer profile pictures (private runtime files, created on demand — Decision 77)
+/storage/avatars/
 *.log
 Thumbs.db
 .DS_Store

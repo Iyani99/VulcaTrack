@@ -830,6 +830,43 @@ before this, a sale could not be traced back to the Rescue it came from.
     official BIR invoice (Decision 50). GCash / online payment remains out of scope
     (Decision 12).
 
+## Confirmed Project Decisions — 2026-09-29 (Phase 7.4b-e2: customer profile picture)
+
+Approved by the owner for Phase 7.4b-e2 (the Customer Profile Figma alignment).
+**One structural change:** the nullable `customers.avatar_filename` column — still
+exactly the 8 tables; no avatar / media / upload table.
+
+77. **A customer may upload their own profile picture; it is private and optional.**
+    - **Who / where:** only a signed-in customer, for their own account, from the
+      Profile page (upload / replace / remove; POST + CSRF, each its own form).
+      Admins, Tiremen and guests have no avatar feature.
+    - **Stored reference:** `customers.avatar_filename VARCHAR(64) NULL` holds only
+      the server-generated file name `<customer_id>_<32 random hex>.<jpg|png|webp>` —
+      never a path, URL or the uploader's own file name. `NULL` = no picture.
+      Existing databases are upgraded with
+      `vulcatrack/database/migrations/2026-09-29-customers-avatar-filename.sql`.
+    - **Files are private:** kept under `vulcatrack/storage/avatars/` (created on
+      demand, git-ignored, denied to the web by `storage/.htaccess`) and delivered
+      only by `customer/avatar.php`, which serves the **signed-in customer's own**
+      picture and takes no id / file name / path from the request. There is no
+      public avatar URL, gallery or directory listing.
+    - **Accepted files:** JPEG, PNG or WebP up to **5 MB**, identified from the file
+      contents (`finfo` + `getimagesize`, which must agree) — never from the file
+      name or the browser's Content-Type. GIF, SVG, BMP, PDF and everything else
+      are refused. No resizing, cropping or re-encoding (no GD / Imagick
+      dependency): the original is kept and cropped for display by CSS.
+    - **Replace / remove order:** a new picture is written under a new name, then
+      recorded in the database, and only then is the old file deleted; a failed
+      database update removes the new file and keeps the old picture. Remove clears
+      the column, then deletes the file. A file that cannot be deleted is left as a
+      harmless, unreferenced orphan.
+    - **Display:** only the shared account panel (Profile and My Vehicles). If there
+      is no picture, or the stored name is malformed, or the file is missing /
+      unreadable, the customer's **initials** are shown — never a broken image.
+      Not shown in the header, Dashboard, Rescue screens, or anywhere in Admin.
+    - **Not part of this decision:** Notifications, Tracking, a Settings module,
+      editable email, avatars for admins / Tiremen, galleries or multiple pictures.
+
 Unless explicitly approved later, do **not** introduce:
 
 - Live technician / Tireman GPS tracking
@@ -914,6 +951,9 @@ Key rules (from the Database Notes / schema / decisions):
 - `email` is unique within `customers` and within `admins`, checked independently — a
   customer and an admin may share an address (Decision 42). Login identifier is
   `email` only (Decision 41).
+- `customers.avatar_filename` is nullable (Decision 77): only a generated file name
+  for the customer's own private profile picture under `storage/avatars/`; `NULL`
+  = no picture (initials shown). The image itself is never stored in the database.
 
 **Do not alter the database structure merely because of a UI element.**
 
@@ -1062,7 +1102,11 @@ Do not turn these into confirmed requirements without approval.
   and linked to the request (`sales.service_request_id`); Sales History shows its
   source and the Transaction Summary its request. Committed as `b7e595d` (schema),
   `0d2f86e` (domain rules) and `7d158e6` (UI), and re-checked after commit with a
-  browser run of the whole workflow. Next: 7.4 responsive / mobile refinement.
+  browser run of the whole workflow. Chunk 7.4 (2026-09-29): admin / POS
+  responsive refinement (7.4a) and the customer area aligned with the Figma
+  (7.4b: shell + Dashboard, Log in / Sign up, Book a Rescue, request status + My
+  Bookings, My Vehicles under Profile, and Profile with an optional private
+  profile picture — **Decision 77**, `customers.avatar_filename`).
   Its deferred-item backlog is consolidated in
   `docs/PROJECT-CONTEXT.md` §16.5.
 - Repo on `main` at `C:\IPT102`, pushed to
@@ -1173,7 +1217,7 @@ PNGs and the Figma prototype were not modified).
 
 | ID | Artifact | Classification | Required change |
 |---|---|---|---|
-| D1 | `docs/ERD/VulcaTrack-ERD_1.png` | POSSIBLY OUTDATED | Regenerate from `docs/ERD/schema.dbml`. Must show: (a) new `tiremen` table (`tireman_id` PK, `name`, `contact_number`, `is_active`, `created_at`, `updated_at`); (b) `service_requests.tireman_id` nullable FK → `tiremen`; (c) `items.is_active` and `vehicles.is_active`; (d) `customers → service_requests` as **`1 : 0..N`** (not `1 : 1..N`); (e) *(Decision 70)* `sales.service_request_id` — nullable, UNIQUE FK → `service_requests`, drawn as **`service_requests 1 : 0..1 sales`**. |
+| D1 | `docs/ERD/VulcaTrack-ERD_1.png` | POSSIBLY OUTDATED | Regenerate from `docs/ERD/schema.dbml`. Must show: (a) new `tiremen` table (`tireman_id` PK, `name`, `contact_number`, `is_active`, `created_at`, `updated_at`); (b) `service_requests.tireman_id` nullable FK → `tiremen`; (c) `items.is_active` and `vehicles.is_active`; (d) `customers → service_requests` as **`1 : 0..N`** (not `1 : 1..N`); (e) *(Decision 70)* `sales.service_request_id` — nullable, UNIQUE FK → `service_requests`, drawn as **`service_requests 1 : 0..1 sales`**; (f) *(Decision 77)* `customers.avatar_filename` — nullable `varchar(64)`, no relationship. |
 | D2 | `docs/VulcaTrack-Use-Case-Diagram_1.png` | POSSIBLY OUTDATED | (a) Collapse "Manage Inventory" + "Manage Products" into one "Manage Inventory" use case (products + services). (b) Add admin use cases "Manage Tiremen" and "Assign Tireman to Request". (c) Keep "Manage Customer Accounts" flagged as proposed/unresolved. |
 | D3 | `docs/flows/VulcaTrack-2-Customer-Flow.png`, `docs/flows/VulcaTrack-5-OTG-Request-Flow.png` | POSSIBLY OUTDATED | Admin branch: add an "Assign Tireman" step after "Set Status: Accepted" *(per Decision 66 the Tireman is chosen in the same step as acceptance; also show accepted → rejected and the final states, Decision 65)*. Customer view after acceptance: show assigned Tireman name + contact number, "Tireman is on the way", the stored ETA, and the route/map. |
 | D4 | `docs/flows/VulcaTrack-4-POS-Flow.png` | POSSIBLY OUTDATED *(was CONSISTENT — annotate)* | Note that "Enter Payment Amount / Payment Sufficient? / Calculate Change" are UI-only (not persisted) and "Generate Receipt" is a printable HTML view with no receipt table. *(Decisions 70–76)* Add the optional Rescue entry: *Record sale in POS* from an accepted / completed request → customer locked to the request's customer → the same cart and checkout → sale linked to the request; the request's status is not changed by the sale. |
@@ -1183,6 +1227,19 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-29 — Phase 7.4b-e2: customer profile picture (**decision change: Decision 77 added**)
+
+- **Decision change (owner-approved):** added **Decision 77** — a signed-in customer
+  may upload / replace / remove their own profile picture; JPEG / PNG / WebP up to
+  5 MB verified from the file contents; files private under `storage/avatars/`,
+  served only to their owner by `customer/avatar.php`; initials when there is no
+  usable picture; no resizing. No existing decision was renumbered.
+- **Schema:** one nullable column `customers.avatar_filename VARCHAR(64)` —
+  `schema.dbml`, `schema.sql` and a one-off migration
+  (`2026-09-29-customers-avatar-filename.sql`) updated. Still exactly 8 tables.
+- **Status:** Current Project Status (Chunk 7.4), Database Context and Required
+  Diagram Changes (D1 item (f)) updated. ERD image not regenerated (Phase 7.5).
 
 ### 2026-09-28 — Phase 7.3d: Rescue sales (**decision change: Decisions 70–76 added**)
 

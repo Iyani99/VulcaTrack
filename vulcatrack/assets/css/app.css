@@ -1564,11 +1564,13 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
 /* ---- customer Account: My Vehicles + Add / Edit Vehicle (Phase 7.4b-e1) ----
    The Account Settings (Your Vehicles) and Add New Vehicle Figma frames on
    the .cust system. My Vehicles sits under Profile: an account side panel
-   (initials placeholder, no photo; no Notifications) beside the vehicle cards.
-   Remove / Restore stay real POST + CSRF forms; only their look changed. */
+   (the customer's own photo or initials, Phase 7.4b-e2; no Notifications)
+   beside the vehicle cards. Remove / Restore stay real POST + CSRF forms; only
+   their look changed. The .vf-* form parts are shared with Profile (.pf). */
 
 .cust .ac :focus-visible,
-.cust .vf :focus-visible { outline: 2px solid var(--cu-red); outline-offset: 2px; }
+.cust .vf :focus-visible,
+.cust .pf :focus-visible { outline: 2px solid var(--cu-red); outline-offset: 2px; }
 .cust .ac-head { margin: 0 0 1.5rem; }
 .cust .ac-head h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2rem); font-weight: 800; letter-spacing: -.01em; text-transform: uppercase; }
 .cust .ac-sub { margin: .35rem 0 0; color: #555; font-size: .9rem; }
@@ -1582,6 +1584,8 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
   display: flex; align-items: center; justify-content: center; width: 3.6rem; height: 3.6rem; flex: none;
   background: #e8e8e8; border: 1.5px solid var(--cu-ink); color: var(--cu-ink); font-size: 1.2rem; font-weight: 800; letter-spacing: .02em;
 }
+/* the uploaded picture fills the same square frame, cropped (no server-side resizing) */
+.cust img.ac-avatar { display: block; object-fit: cover; background: #e8e8e8; }
 .cust .ac-id__text { min-width: 0; }
 .cust .ac-id__name { margin: 0; font-size: 1.2rem; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
 .cust .ac-id__since { margin: .25rem 0 0; font-family: var(--cu-mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: #555; }
@@ -1661,21 +1665,27 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
 .cust .vf-card h1 { margin: 0; font-size: clamp(1.35rem, 2.6vw, 1.6rem); font-weight: 800; text-transform: uppercase; }
 .cust .vf-sub { margin: .45rem 0 1.4rem; color: #555; font-size: .92rem; }
 .cust .vf-field { min-width: 0; margin: 0 0 1.15rem; }
-.cust .vf label {
+.cust .vf label,
+.cust .pf label {
   display: block; margin: 0 0 .45rem; color: var(--cu-ink);
   font-family: var(--cu-mono); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
 }
 .cust .vf-req { color: var(--cu-red-dark); }
 .cust .vf-opt { font-weight: 400; letter-spacing: 0; text-transform: none; color: #888; }
 .cust .vf input[type="text"],
-.cust .vf select {
+.cust .vf select,
+.cust .pf input:is([type="text"], [type="email"], [type="tel"], [type="password"]) {
   display: block; width: 100%; min-height: 2.9rem; padding: .6rem .8rem; border: 1px solid #cfcfcf; border-radius: 2px;
   background: #fff; color: var(--cu-ink); font-size: 1rem;
 }
 .cust .vf input::placeholder { color: #999; font-family: var(--cu-mono); font-size: .85rem; }
 .cust .vf input:focus,
-.cust .vf select:focus { outline: 2px solid var(--cu-ink); outline-offset: 0; border-color: var(--cu-ink); }
-.cust .vf [aria-invalid="true"] { border-color: var(--cu-red-dark); }
+.cust .vf select:focus,
+.cust .pf input:focus { outline: 2px solid var(--cu-ink); outline-offset: 0; border-color: var(--cu-ink); }
+/* element-qualified so it outranks the input / select rules above */
+.cust .vf input[aria-invalid="true"],
+.cust .vf select[aria-invalid="true"],
+.cust .pf input[aria-invalid="true"] { border-color: var(--cu-red-dark); }
 .cust .vf-plate { position: relative; }
 .cust .vf-plate svg {
   position: absolute; left: .8rem; top: 50%; width: 1.15rem; height: 1.15rem; transform: translateY(-50%);
@@ -1683,7 +1693,8 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
 }
 .cust .vf-plate input[type="text"] { padding-left: 2.6rem; font-family: var(--cu-mono); letter-spacing: .04em; }
 .cust .vf-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1.25rem; }
-.cust .vf small.error { margin-top: .4rem; color: #a3121a; font-size: .85rem; font-weight: 600; overflow-wrap: anywhere; }
+.cust .vf small.error,
+.cust .pf small.error { margin-top: .4rem; color: #a3121a; font-size: .85rem; font-weight: 600; overflow-wrap: anywhere; }
 .cust .vf-hint { margin: 0; font-size: .78rem; color: var(--cu-muted); }
 .cust .vf-hint span { color: var(--cu-red-dark); }
 .cust .vf-actions {
@@ -1691,7 +1702,8 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
   border-top: 1px solid var(--cu-line);
 }
 .cust .vf-actions .cu-btn { min-height: 2.9rem; min-width: 8.5rem; }
-.cust .vf button.cu-btn { width: auto; margin: 0; font-family: inherit; cursor: pointer; }
+.cust .vf button.cu-btn,
+.cust .pf button.cu-btn { width: auto; margin: 0; font-family: inherit; cursor: pointer; }
 .cust .vf-save { width: 1.05rem; height: 1.05rem; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
 
 /* the account panel stacks above the vehicles once two columns get tight;
@@ -1711,4 +1723,54 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
   /* full-width buttons in DOM (= Tab) order; side by side "Save vehicle" wrapped at 390px */
   .cust .vf-actions { flex-direction: column; }
   .cust .vf-actions .cu-btn { width: 100%; }
+}
+
+/* ---- customer Profile + profile picture (Phase 7.4b-e2) -------------------
+   The Customer Profile / Account Settings Figma frame: the shared account
+   panel (.ac-*) beside two cards, Personal Information (picture + name /
+   email / contact) and Security & Password. Field parts reuse the .vf-*
+   rules above. No Notifications; the Figma portrait is not used — the
+   customer's own upload or their initials. */
+
+.cust .pf-card { margin: 0 0 1.5rem; padding: 1.5rem 1.6rem 1.6rem; border-left: 4px solid #d4d4d4; }
+.cust .pf-card__title {
+  display: flex; align-items: center; gap: .6rem; margin: 0 0 1.25rem; padding-bottom: .65rem;
+  border-bottom: 1px solid var(--cu-line); font-size: 1.2rem; font-weight: 800; text-transform: uppercase;
+}
+.cust .pf-card__title svg { width: 1.35rem; height: 1.35rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.cust #personal .pf-card__title svg { stroke: var(--cu-red-dark); }
+.cust .pf input:is([type="text"], [type="email"], [type="tel"], [type="password"]) { background: #f7f7f7; }
+.cust .pf input:focus { background: #fff; }
+.cust .pf input:disabled { background: #ececec; color: #666; cursor: not-allowed; }
+.cust .pf-actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.1rem 0 0; }
+.cust .pf-actions .cu-btn { min-height: 2.9rem; min-width: 10rem; }
+
+/* profile picture */
+.cust .pf-photo { display: flex; align-items: flex-start; gap: 1.1rem; margin: 0 0 1.35rem; padding: 0 0 1.35rem; border-bottom: 1px solid var(--cu-line-soft); }
+.cust .pf-photo__img {
+  display: flex; align-items: center; justify-content: center; width: 5rem; height: 5rem; flex: none; object-fit: cover;
+  background: #e8e8e8; border: 1.5px solid var(--cu-ink); color: var(--cu-ink); font-size: 1.6rem; font-weight: 800;
+}
+.cust .pf-photo__body { flex: 1 1 auto; min-width: 0; }
+.cust .pf-photo__form .pf-actions { margin-top: .75rem; }
+.cust .pf input[type="file"] {
+  display: block; width: 100%; max-width: 100%; margin: 0 0 .35rem; padding: 0; border: 0; font-size: .88rem;
+}
+.cust .pf input[type="file"]::file-selector-button {
+  margin-right: .75rem; padding: .8rem .9rem; border: 1.5px solid var(--cu-ink); border-radius: 2px; background: #fff; color: var(--cu-ink);
+  font-family: var(--cu-mono); font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+}
+.cust .pf input[type="file"]::file-selector-button:hover { background: var(--cu-ink); color: #fff; }
+.cust .pf-photo__remove { margin: .35rem 0 0; }
+.cust .pf-link {
+  display: inline-flex; align-items: center; min-height: 2.75rem; width: auto; margin: 0; padding: 0; border: 0; border-radius: 0;
+  background: none; color: var(--cu-red-dark); font: inherit; font-size: .85rem; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
+.cust .pf-link:hover { background: none; color: #9d1017; }
+
+@media (max-width: 30rem) {
+  .cust .pf-card { padding: 1.2rem 1rem 1.3rem; }
+  .cust .pf-photo { gap: .85rem; }
+  .cust .pf-photo__img { width: 4rem; height: 4rem; font-size: 1.3rem; }
+  .cust .pf-actions button.cu-btn { width: 100%; min-width: 0; }
 }

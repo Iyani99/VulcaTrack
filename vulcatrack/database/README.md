@@ -50,13 +50,25 @@ applied and how to roll it back.
 | File | Change |
 |---|---|
 | `migrations/2026-09-28-sales-service-request.sql` | Phase 7.3d-a: adds nullable `sales.service_request_id` (UNIQUE, FK → `service_requests.request_id`, RESTRICT). Existing sales stay `NULL`. |
+| `migrations/2026-09-29-customers-avatar-filename.sql` | Phase 7.4b-e2 (Decision 77): adds nullable `customers.avatar_filename VARCHAR(64)` — the generated file name of a customer's private profile picture. Existing customers stay `NULL`. |
 
 ```
 C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-28-sales-service-request.sql
+C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-29-customers-avatar-filename.sql
 ```
 
 Running a migration a second time fails with a clear error (e.g. `Duplicate
 column name`) and changes nothing.
+
+## Profile picture files (`storage/avatars/`)
+
+The database stores only each picture's file name; the images themselves live in
+`vulcatrack/storage/avatars/` (created on the first upload, git-ignored, and denied
+to the web by `storage/.htaccess` — they are served only through
+`customer/avatar.php`). Back this folder up together with the database, keep it
+when redeploying the code, and make sure PHP can write to it. After rebuilding the
+database from `schema.sql`, the files left in the folder are no longer referenced
+and can be deleted.
 
 ## Creating an admin account
 

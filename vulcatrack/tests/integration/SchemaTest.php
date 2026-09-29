@@ -29,6 +29,20 @@ test('customers has the mandatory-contact-number shape and a unique email', func
     assert_true(schema_has_unique_index($pdo, 'customers', 'email'), 'customers.email must be UNIQUE');
 });
 
+test('customers.avatar_filename is an optional short file-name column (Decision 77)', function () {
+    $pdo = test_pdo();
+    $cols = schema_columns($pdo, 'customers');
+    assert_true(isset($cols['avatar_filename']), 'customers.avatar_filename must exist (run the 2026-09-29 migration)');
+    assert_same('YES', $cols['avatar_filename']['IS_NULLABLE'], 'no picture = NULL; existing customers stay valid');
+    $stmt = $pdo->prepare(
+        "SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'customers' AND COLUMN_NAME = 'avatar_filename'"
+    );
+    $stmt->execute();
+    assert_same('varchar(64)', $stmt->fetchColumn(), 'room for <customer_id>_<32 hex>.<ext>, never a path');
+    assert_null($cols['avatar_filename']['COLUMN_DEFAULT'] === 'NULL' ? null : $cols['avatar_filename']['COLUMN_DEFAULT'], 'defaults to NULL');
+});
+
 test('admins has a unique email independent of customers', function () {
     $pdo = test_pdo();
     assert_true(schema_has_unique_index($pdo, 'admins', 'email'), 'admins.email must be UNIQUE (Decision 42)');

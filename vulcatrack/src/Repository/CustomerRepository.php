@@ -26,11 +26,11 @@ final class CustomerRepository
         return $row === false ? null : $row;
     }
 
-    /** @return array{customer_id:int,full_name:string,email:string,contact_number:string,password_hash:string,created_at:string}|null */
+    /** @return array{customer_id:int,full_name:string,email:string,contact_number:string,password_hash:string,avatar_filename:?string,created_at:string}|null */
     public function findById(int $customerId): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT customer_id, full_name, email, contact_number, password_hash, created_at
+            'SELECT customer_id, full_name, email, contact_number, password_hash, avatar_filename, created_at
              FROM customers WHERE customer_id = ? LIMIT 1'
         );
         $stmt->execute([$customerId]);
@@ -113,5 +113,18 @@ final class CustomerRepository
             'UPDATE customers SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE customer_id = ?'
         );
         $stmt->execute([$passwordHash, $customerId]);
+    }
+
+    /**
+     * Point the customer at a stored profile picture, or clear it (null).
+     * Database state only: the image file itself is written / deleted by
+     * AvatarStore, in the order the caller controls (Decision 77).
+     */
+    public function updateAvatarFilename(int $customerId, ?string $filename): void
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE customers SET avatar_filename = ?, updated_at = CURRENT_TIMESTAMP WHERE customer_id = ?'
+        );
+        $stmt->execute([$filename, $customerId]);
     }
 }

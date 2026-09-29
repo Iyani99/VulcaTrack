@@ -97,7 +97,8 @@ Tireman/Staff login.
 | Page | Notes |
 |---|---|
 | `customer/dashboard.php` | Home: vehicle count, open-request count, latest request, "Book a Rescue" CTA |
-| `customer/profile.php` | Edit full name + contact number (mandatory); change password (current + new). Email is the login id and is read-only in v1. |
+| `customer/profile.php` | Edit full name + contact number (mandatory); change password (current + new). Email is the login id and is read-only in v1. **Profile picture** (Decision 77): upload / replace / remove a JPEG, PNG or WebP up to 5 MB (checked from the file contents), stored privately in `storage/avatars/`; initials when there is none. |
+| `customer/avatar.php` | Serves the signed-in customer's **own** profile picture only (no id / file name in the request; 404 when there is none). The only web path to `storage/avatars/`. |
 | `customer/vehicles.php` | List active vehicles; **soft-delete** (`is_active = 0`) and restore. Removed vehicles stay on past requests. |
 | `customer/vehicle-edit.php` | Add (`?id` absent) / edit (`?id=N`, ownership-checked). `plate_number` required; type/make/model optional. |
 | `customer/rescue.php` | OTG submission: pick an active vehicle, describe the problem, set the location by **browser geolocation** or **landmark/address search**, then confirm on the map (the marker is draggable — its final position wins). ETA is computed **once** here and stored frozen. Request is always created `status = 'pending'`. |

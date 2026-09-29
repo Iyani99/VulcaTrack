@@ -91,6 +91,7 @@ Registered accounts for the public/customer-facing side of the system. Required 
 | `email` *(unique)* | Login identifier and contact |
 | `contact_number` **(required)** | Phone contact for coordinating service directly with the customer — confirmed mandatory, not optional |
 | `password_hash` | Hashed password — never plain text (see §9) |
+| `avatar_filename` *(nullable — added 2026-09-29, Decision 77)* | Optional profile picture: only the server-generated file name (`<customer_id>_<32 hex>.<jpg\|png\|webp>`) of a private image under `vulcatrack/storage/avatars/`, served to its owner by `customer/avatar.php`. Never a path or URL; `NULL` = no picture (initials shown). The image itself is not stored in the database. |
 | `created_at` / `updated_at` | Account timestamps |
 
 ### `admins`

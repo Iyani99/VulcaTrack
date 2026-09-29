@@ -103,7 +103,8 @@ final class HttpServer
     }
 
     /**
-     * @param array<string,string>|null $post          null => GET, array => form POST
+     * @param array<string,string|\CURLFile>|null $post  null => GET, array => form POST
+     *        (any \CURLFile value => multipart/form-data upload)
      * @param array<int,string>          $extraHeaders  extra raw request headers,
      *        e.g. ['Host: vulcatrack.lan'] to simulate a LAN / other-host client
      * @return array{status:int,headers:string,body:string,location:?string}
@@ -128,7 +129,10 @@ final class HttpServer
         ]);
         if ($post !== null) {
             curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post));
+            // a \CURLFile value makes it a multipart/form-data upload (flat fields only);
+            // otherwise the usual urlencoded form body
+            $multipart = (bool) array_filter($post, static fn ($v) => $v instanceof \CURLFile);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $multipart ? $post : http_build_query($post));
         }
         $raw = curl_exec($ch);
         if ($raw === false) {
