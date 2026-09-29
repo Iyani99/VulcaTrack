@@ -34,6 +34,16 @@ test('Csrf::check does a constant-time match and rejects everything else', funct
     assert_false(Csrf::check('deadbeef'));
 });
 
+test('Csrf::check refuses a forged non-string token (e.g. _csrf[]) instead of throwing', function () {
+    $_SESSION = [];
+    $token = Csrf::token();
+    assert_false(Csrf::check([$token]), 'an array holding the real token is still refused');
+    assert_false(Csrf::check(['_csrf' => $token]));
+    assert_false(Csrf::check(12345));
+    assert_false(Csrf::check(new \stdClass()));
+    assert_true(Csrf::check($token), 'the real token still passes');
+});
+
 test('Csrf::check fails closed when the session has no token', function () {
     $_SESSION = [];
     assert_false(Csrf::check('anything'), 'no session token => every check must fail');

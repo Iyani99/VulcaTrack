@@ -189,6 +189,48 @@ test('service_requests locks the four statuses and keeps admin/tireman FKs nulla
     }
 });
 
+test('service_requests carries optional one-time feedback with a named 1..5 CHECK (Decision 78)', function () {
+    $pdo = test_pdo();
+    $cols = schema_columns($pdo, 'service_requests');
+    $types = [];
+    $stmt = $pdo->query(
+        "SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'service_requests' AND COLUMN_NAME LIKE 'feedback%'"
+    );
+    foreach ($stmt->fetchAll() as $r) {
+        $types[$r['COLUMN_NAME']] = $r['COLUMN_TYPE'];
+    }
+    foreach (['feedback_rating' => 'tinyint(3) unsigned', 'feedback_comment' => 'varchar(500)', 'feedback_submitted_at' => 'datetime'] as $col => $type) {
+        assert_true(isset($cols[$col]), "service_requests.{$col} must exist (run the 2026-09-29 feedback migration)");
+        assert_same('YES', $cols[$col]['IS_NULLABLE'], "{$col} is NULL until feedback is given");
+        assert_same($type, $types[$col]);
+    }
+
+    $s = $pdo->query(
+        "SELECT CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS
+         WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'service_requests'
+           AND CONSTRAINT_NAME = 'chk_service_requests_feedback_rating'"
+    );
+    $clause = (string) $s->fetchColumn();
+    assert_contains('between 1 and 5', strtolower($clause), 'the named CHECK limits the rating to 1..5');
+
+    // and MariaDB enforces it
+    TestDb::rollback($pdo, function () use ($pdo) {
+        $pdo->prepare('INSERT INTO customers (full_name, email, contact_number, password_hash) VALUES (?,?,?,?)')
+            ->execute(['Schema Feedback', TestDb::email('schema-fb'), '09170000000', 'x']);
+        $cid = (int) $pdo->lastInsertId();
+        $pdo->prepare('INSERT INTO vehicles (customer_id, plate_number) VALUES (?,?)')->execute([$cid, 'SCH-FB']);
+        $vid = (int) $pdo->lastInsertId();
+        $pdo->prepare("INSERT INTO service_requests (customer_id, vehicle_id, problem_description, status) VALUES (?,?,'p','completed')")->execute([$cid, $vid]);
+        $rid = (int) $pdo->lastInsertId();
+        foreach ([0, 6] as $bad) {
+            assert_throws(function () use ($pdo, $rid, $bad) {
+                $pdo->prepare('UPDATE service_requests SET feedback_rating = ? WHERE request_id = ?')->execute([$bad, $rid]);
+            }, \PDOException::class, null, "rating {$bad} is rejected by the database");
+        }
+    });
+});
+
 test('tiremen is identity/contact only -- no login columns', function () {
     $pdo = test_pdo();
     $cols = schema_columns($pdo, 'tiremen');

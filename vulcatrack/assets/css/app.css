@@ -850,6 +850,11 @@ body.admin .rescue-sale { margin: 0 0 1.25rem; }
 body.admin .rescue-sale form { margin: .5rem 0 0; }
 body.admin .rescue-sale__state { margin: 0 0 .6rem; font-size: 1.2rem; font-weight: 800; }
 body.admin .rescue-sale__total { font-weight: 800; color: var(--adm-red); }
+/* Rescue detail: the customer's feedback, read-only (Phase 7.4c) */
+body.admin .rescue-feedback { margin: 0 0 1.25rem; }
+body.admin .rescue-feedback__rating { margin: 0 0 .4rem; font-size: 1.2rem; font-weight: 800; }
+body.admin .rescue-feedback__stars { color: var(--adm-red); letter-spacing: .08em; }
+body.admin .rescue-feedback .kv dd { overflow-wrap: anywhere; }
 body.admin .rescue-actions__assign > p,
 body.admin .rescue-actions__close > p { margin: 0; }
 
@@ -1773,4 +1778,118 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
   .cust .pf-photo { gap: .85rem; }
   .cust .pf-photo__img { width: 4rem; height: 4rem; font-size: 1.3rem; }
   .cust .pf-actions button.cu-btn { width: 100%; min-width: 0; }
+}
+
+/* ---- customer Rescue feedback (Phase 7.4c) --------------------------------
+   The RATE x FEEDBACK Figma frame, real data only: a summary of the completed
+   request + who serviced it (name only), then a required 1–5 star rating and
+   an optional comment. No tips, payment, categories or Tireman scores. The
+   stars are five native radios (focusable, arrow keys) drawn with CSS :has(). */
+
+.cust .fb :focus-visible { outline: 2px solid var(--cu-red); outline-offset: 2px; }
+.cust .fb-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 1rem 2rem; margin: 0 0 1.5rem; }
+.cust .fb-head h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 1.9rem); font-weight: 800; letter-spacing: -.01em; text-transform: uppercase; }
+.cust .fb-sub { margin: .35rem 0 0; color: #555; font-size: .9rem; }
+.cust .fb-done {
+  display: inline-flex; align-items: center; gap: .4rem; margin: 0; padding: .45rem .75rem; background: #eef6f0; border: 1px solid #b9d9c1; color: #1c6b32;
+  font-family: var(--cu-mono); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.cust .fb-done svg { width: 1rem; height: 1rem; flex: none; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.cust .fb-grid { display: grid; grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+.cust .fb-side { display: grid; gap: 1.25rem; min-width: 0; }
+.cust .fb-main { min-width: 0; }
+.cust .fb-summary, .cust .fb-tireman { padding: 1.2rem 1.3rem 1.3rem; }
+.cust .fb-summary__title { margin: 0 0 1rem; }
+.cust .fb-tireman .rs-person { margin: 0; }
+.cust .fb-plate {
+  display: block; width: fit-content; max-width: 100%; margin: .35rem 0 0; padding: .2rem .5rem; background: var(--cu-ink); color: #fff; overflow-wrap: anywhere;
+  font-family: var(--cu-mono); font-size: .74rem; font-weight: 700; letter-spacing: .08em;
+}
+.cust .fb-muted { display: block; margin-top: .25rem; font-size: .82rem; font-weight: 400; color: var(--cu-muted); }
+.cust .fb-summary .rs-details dd { font-weight: 600; }
+.cust .fb-summary .rs-details dd:has(> .fb-plate) { display: block; }
+
+/* rating */
+.cust .fb-section {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; width: 100%; margin: 0; padding: 0;
+  font-family: var(--cu-mono); font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--cu-ink);
+}
+.cust .fb-req { font-weight: 400; color: var(--cu-muted); }
+.cust .fb-opt { font-weight: 400; letter-spacing: 0; text-transform: none; color: #888; }
+.cust .fb-rate { margin: 0 0 1.25rem; padding: 1.25rem 1.4rem 1.4rem; min-width: 0; text-align: center; }
+.cust .fb-rate > legend { float: left; width: 100%; margin: 0 0 1rem; padding: 0 0 .6rem; border-bottom: 1px solid var(--cu-line); text-align: left; }
+.cust .fb-rate--error { border-color: var(--cu-red-dark); border-left-width: 4px; }
+.cust .fb-rate__hint { clear: both; margin: .25rem 0 .75rem; font-family: var(--cu-mono); font-size: .76rem; letter-spacing: .06em; text-transform: uppercase; color: #444; }
+.cust .fb-stars { position: relative; display: flex; justify-content: center; gap: .25rem; }
+/* the radios stay in the page (focusable, announced) but invisible; the labels are the stars */
+.cust .fb-stars input { position: absolute; top: 50%; left: 50%; width: 1px; height: 1px; margin: 0; opacity: 0; }
+.cust .fb-stars label {
+  display: flex; align-items: center; justify-content: center; width: 3.25rem; height: 3.25rem; margin: 0; padding: 0;
+  color: #d2d2d2; cursor: pointer; transition: color .1s;
+}
+.cust .fb-stars svg { width: 2.6rem; height: 2.6rem; fill: currentColor; }
+.cust .fb-stars input:focus-visible + label { outline: 2px solid var(--cu-red); outline-offset: 0; }
+.cust .fb-stars:has(#rating-1:checked) label:nth-of-type(-n+1),
+.cust .fb-stars:has(#rating-2:checked) label:nth-of-type(-n+2),
+.cust .fb-stars:has(#rating-3:checked) label:nth-of-type(-n+3),
+.cust .fb-stars:has(#rating-4:checked) label:nth-of-type(-n+4),
+.cust .fb-stars:has(#rating-5:checked) label:nth-of-type(-n+5) { color: #f2a31b; }
+/* pointer preview (hover wins over the current choice until the mouse leaves) */
+.cust .fb-stars:has(label:hover) label { color: #d2d2d2; }
+.cust .fb-stars:has(label:nth-of-type(1):hover) label:nth-of-type(-n+1),
+.cust .fb-stars:has(label:nth-of-type(2):hover) label:nth-of-type(-n+2),
+.cust .fb-stars:has(label:nth-of-type(3):hover) label:nth-of-type(-n+3),
+.cust .fb-stars:has(label:nth-of-type(4):hover) label:nth-of-type(-n+4),
+.cust .fb-stars:has(label:nth-of-type(5):hover) label:nth-of-type(-n+5) { color: #f7c46a; }
+.cust .fb-rate__value { margin: .6rem 0 0; font-size: .86rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.cust .fb-rate__none { color: var(--cu-muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
+.cust .fb-rate__is { display: none; }
+.cust .fb-rate:has(.fb-stars input:checked) .fb-rate__none { display: none; }
+.cust .fb-rate:has(#rating-1:checked) .fb-rate__is--1,
+.cust .fb-rate:has(#rating-2:checked) .fb-rate__is--2,
+.cust .fb-rate:has(#rating-3:checked) .fb-rate__is--3,
+.cust .fb-rate:has(#rating-4:checked) .fb-rate__is--4,
+.cust .fb-rate:has(#rating-5:checked) .fb-rate__is--5 { display: inline; }
+.cust .fb small.error { display: block; margin-top: .5rem; color: #a3121a; font-size: .85rem; font-weight: 600; overflow-wrap: anywhere; }
+
+/* comment */
+.cust .fb-comment { margin: 0 0 1rem; padding: 1.2rem 1.4rem 1.3rem; }
+.cust .fb-comment__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .25rem 1rem; margin: 0 0 .6rem; }
+.cust .fb-comment__head .fb-section { width: auto; }
+.cust .fb-count { font-size: .8rem; color: var(--cu-muted); }
+.cust .fb textarea {
+  display: block; width: 100%; min-height: 8rem; padding: .8rem .9rem; border: 1px solid #cfcfcf; border-radius: 2px;
+  background: #fff; color: var(--cu-ink); font-size: .95rem; resize: vertical;
+}
+.cust .fb textarea::placeholder { color: #888; }
+.cust .fb textarea:focus { outline: 2px solid var(--cu-ink); outline-offset: 0; border-color: var(--cu-ink); }
+.cust .fb textarea[aria-invalid="true"] { border-color: var(--cu-red-dark); }
+.cust .fb-note { margin: 0 0 1.25rem; font-size: .82rem; color: var(--cu-muted); }
+.cust .fb-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .9rem; }
+.cust .fb-actions .cu-btn { min-height: 3rem; min-width: 10rem; }
+.cust .fb button.cu-btn { width: auto; margin: 0; font-family: inherit; cursor: pointer; }
+.cust .fb-unavailable { padding: 1.5rem 1.4rem; }
+.cust .fb-unavailable h2 { margin: 0 0 .4rem; font-size: 1.15rem; font-weight: 800; }
+.cust .fb-unavailable p { margin: 0 0 .5rem; color: #555; }
+.cust .fb-unavailable p:last-child { margin: 1rem 0 0; }
+
+/* Request Status: the Rate button icon + the read-only "Your feedback" card */
+.cust .rs-banner__actions .rs-star { fill: currentColor; stroke: none; }
+.cust .rs-feedback__rating { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; margin: 0; font-weight: 800; }
+.cust .rs-feedback__stars { color: #f2a31b; font-size: 1.35rem; letter-spacing: .06em; line-height: 1; }
+.cust .rs-feedback__off { color: #d2d2d2; }
+.cust .rs-feedback__comment { margin: .8rem 0 0; padding: .1rem 0 .1rem .8rem; border-left: 3px solid var(--cu-line); color: #333; font-size: .92rem; overflow-wrap: anywhere; }
+
+@media (max-width: 56rem) {
+  .cust .fb-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 30rem) {
+  .cust .fb-rate, .cust .fb-comment { padding: 1.1rem 1rem 1.2rem; }
+  .cust .fb-stars { gap: 0; }
+  .cust .fb-stars label { width: 2.9rem; height: 2.9rem; }
+  .cust .fb-stars svg { width: 2.3rem; height: 2.3rem; }
+  /* full-width, in DOM (= Tab) order: Skip, then the primary Submit */
+  .cust .fb-actions { flex-direction: column; }
+  .cust .fb-actions a.cu-btn,
+  .cust .fb-actions button.cu-btn { width: 100%; min-width: 0; }
 }

@@ -11,6 +11,8 @@
  * live tracking (Phase 7.4b-d: Request Status Figma, for all four statuses).
  * ?new=1 (right after submitting) shows the confirmation view while the
  * request is still pending, else a short "submitted" notice on this page.
+ * Phase 7.4c (Decision 78): a completed request offers "Rate this service"
+ * (customer/feedback.php) until feedback is given, then shows it read-only.
  */
 
 use VulcaTrack\Repository\CustomerRepository;
@@ -87,10 +89,19 @@ switch ($status) {
         $lead = 'Request submitted. The shop will review your request.';
 }
 $final = OtgStatus::isFinal($status);
+// Phase 7.4c (Decision 78): a completed, serviced request can get one piece of
+// customer feedback; once given it is shown read-only below (no edit / resubmit).
+$hasFeedback = $request['feedback_submitted_at'] !== null;
+$canRate = $status === 'completed' && $tiremanAssigned && !$hasFeedback;
 ?>
 <div class="rs">
 <?php if (isset($_GET['new'])): ?>
   <p class="cu-notice" role="status">Your rescue request was submitted.</p>
+<?php endif; ?>
+<?php if ($hasFeedback && isset($_GET['rated'])): ?>
+  <p class="cu-notice" role="status">Thank you, your feedback was submitted.</p>
+<?php elseif ($hasFeedback && isset($_GET['feedback'])): ?>
+  <p class="cu-notice" role="status">Feedback for this request was already submitted.</p>
 <?php endif; ?>
 
 <div class="rs-titlebar">
@@ -115,6 +126,10 @@ $final = OtgStatus::isFinal($status);
     <div class="rs-banner__actions">
       <a class="cu-btn cu-btn--red" href="<?= e(vulcatrack_url('/customer/rescue.php')) ?>">Book a new rescue</a>
     </div>
+  <?php elseif ($canRate): ?>
+    <div class="rs-banner__actions">
+      <a class="cu-btn cu-btn--red" href="<?= e(vulcatrack_url('/customer/feedback.php?id=' . (int) $request['request_id'])) ?>"><svg class="cu-btn__icon rs-star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>Rate this service</a>
+    </div>
   <?php endif; ?>
 </section>
 
@@ -137,6 +152,18 @@ $final = OtgStatus::isFinal($status);
         <?php else: ?>
           <p class="rs-card__text">Not assigned yet. A Tireman is assigned when the shop accepts your request.</p>
         <?php endif; ?>
+      </section>
+    <?php endif; ?>
+
+    <?php if ($hasFeedback): ?>
+      <?php $fbRating = (int) $request['feedback_rating']; ?>
+      <section class="cu-card rs-card rs-feedback" aria-labelledby="rs-feedback-title">
+        <h2 class="cu-label rs-card__title" id="rs-feedback-title"><svg class="cu-label__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>Your feedback</h2>
+        <p class="rs-feedback__rating"><span class="rs-feedback__stars" aria-hidden="true"><?= str_repeat('&#9733;', $fbRating) ?><span class="rs-feedback__off"><?= str_repeat('&#9733;', 5 - $fbRating) ?></span></span><?= $fbRating ?> out of 5</p>
+        <?php if ($request['feedback_comment'] !== null): ?>
+          <blockquote class="rs-feedback__comment"><?= nl2br(e($request['feedback_comment'])) ?></blockquote>
+        <?php endif; ?>
+        <p class="rs-card__note">Submitted <?= e(booking_when((string) $request['feedback_submitted_at'])) ?></p>
       </section>
     <?php endif; ?>
 

@@ -25,7 +25,9 @@ use VulcaTrack\Support\OtgStatus;
  * `updated_at` (no ON UPDATE clause on this column). `tireman_id` is kept on
  * final requests as history. Phase 7.3d: reject() also refuses a request
  * that has a linked sale; lockForUpdate() is SaleService's read-only lock on
- * the request while it records a Rescue sale.
+ * the request while it records a Rescue sale. Phase 7.4c: submitFeedback() is
+ * the one customer-side write after creation — a guarded one-time UPDATE of the
+ * feedback_* columns on the customer's own completed request (Decision 78).
  *
  * `eta_minutes` is written once, at creation, as a frozen snapshot and is never
  * updated (Decisions 32/33). No route geometry is stored.
@@ -94,6 +96,7 @@ final class ServiceRequestRepository
             'SELECT sr.request_id, sr.customer_id, sr.vehicle_id, sr.tireman_id,
                     sr.problem_description, sr.latitude, sr.longitude, sr.eta_minutes,
                     sr.status, sr.requested_at, sr.updated_at,
+                    sr.feedback_rating, sr.feedback_comment, sr.feedback_submitted_at,
                     v.plate_number, v.vehicle_type, v.make, v.model, v.is_active AS vehicle_active,
                     t.name AS tireman_name, t.contact_number AS tireman_contact
              FROM service_requests sr
@@ -184,6 +187,7 @@ final class ServiceRequestRepository
             'SELECT sr.request_id, sr.customer_id, sr.vehicle_id, sr.admin_id, sr.tireman_id,
                     sr.problem_description, sr.latitude, sr.longitude, sr.eta_minutes,
                     sr.status, sr.requested_at, sr.updated_at,
+                    sr.feedback_rating, sr.feedback_comment, sr.feedback_submitted_at,
                     c.full_name AS customer_name, c.email AS customer_email,
                     c.contact_number AS customer_contact,
                     v.plate_number, v.vehicle_type, v.make, v.model, v.is_active AS vehicle_active,
@@ -329,6 +333,44 @@ final class ServiceRequestRepository
               WHERE request_id = :id AND status = 'accepted' AND tireman_id IS NOT NULL"
         );
         $stmt->execute([':admin' => $adminId, ':id' => $requestId]);
+
+        return $stmt->rowCount() === 1;
+    }
+
+    // --- Phase 7.4c: customer feedback on a completed request (Decision 78) ---
+
+    /**
+     * Save the requesting customer's one-time feedback on their own COMPLETED
+     * request: ONE guarded UPDATE whose WHERE re-checks ownership, status,
+     * that a Tireman serviced it, and that no feedback exists yet — so a
+     * second tab or a double submit can never overwrite the first feedback.
+     * True only when exactly one row changed; on false the caller re-reads
+     * the request to say why (already submitted / not eligible / not found).
+     *
+     * Feedback is extra data on a final request: it never changes status,
+     * tireman_id, admin_id or updated_at (updated_at keeps meaning the last
+     * admin status / assignment change). The time comes from the database.
+     *
+     * @param string|null $comment blank / whitespace-only is stored as NULL
+     * @throws InvalidArgumentException when $rating is not 1..5
+     */
+    public function submitFeedback(int $requestId, int $customerId, int $rating, ?string $comment): bool
+    {
+        if ($rating < 1 || $rating > 5) {
+            throw new InvalidArgumentException('A feedback rating must be 1 to 5.');
+        }
+        if ($comment !== null && trim($comment) === '') {
+            $comment = null;
+        }
+        $stmt = $this->pdo->prepare(
+            "UPDATE service_requests
+                SET feedback_rating = :rating, feedback_comment = :comment,
+                    feedback_submitted_at = CURRENT_TIMESTAMP
+              WHERE request_id = :id AND customer_id = :cid
+                AND status = 'completed' AND tireman_id IS NOT NULL
+                AND feedback_submitted_at IS NULL"
+        );
+        $stmt->execute([':rating' => $rating, ':comment' => $comment, ':id' => $requestId, ':cid' => $customerId]);
 
         return $stmt->rowCount() === 1;
     }

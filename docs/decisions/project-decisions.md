@@ -158,6 +158,10 @@ Added during the Decision Review & Documentation Update. These are settled.
     live GPS tracking, no location telemetry/history, no schedules, no ratings, no payroll,
     no employee records. "Tireman is on the way" remains status wording for the `accepted`
     state.
+    *(Clarified 2026-09-29 by **Decision 78**: a customer's one-time feedback on their own
+    completed Rescue is stored on the request and may name the Tireman who serviced it as
+    context. That is not a Tireman rating — there are still no Tireman scores, averages,
+    rankings or effects on dispatch.)*
 
 > **Actor model (clarification, reaffirmed 2026-08-31):** three distinct actors —
 > **Customer** (requests OTG service), **Admin** (system user who manages the system and
@@ -867,6 +871,45 @@ exactly the 8 tables; no avatar / media / upload table.
     - **Not part of this decision:** Notifications, Tracking, a Settings module,
       editable email, avatars for admins / Tiremen, galleries or multiple pictures.
 
+## Confirmed Project Decisions — 2026-09-29 (Phase 7.4c: completed Rescue feedback)
+
+Approved by the owner for Phase 7.4c. **One structural change:** three nullable
+feedback columns on `service_requests` plus a named rating CHECK — still exactly the
+8 tables and the four statuses of Decision 10; no feedback / review / rating table.
+
+78. **A customer may give one-time feedback on their own completed Rescue — feedback
+    on the request, not a Tireman rating system.**
+    - **Who / when:** only the signed-in customer who owns the request, only once it is
+      `completed` with a Tireman on record (`tireman_id` set), and only once. Pending,
+      accepted and rejected requests cannot be rated. It is optional: the customer may
+      rate later or never ("Skip for now" writes nothing; there is no "skipped" state).
+    - **What:** a required rating of **1–5** whole stars and an optional comment of up
+      to **500 characters** (a line break counts as one; blank / whitespace-only is
+      stored as `NULL`). Stored on the request as `feedback_rating TINYINT UNSIGNED`,
+      `feedback_comment VARCHAR(500)` and `feedback_submitted_at DATETIME` (set by the
+      database), all nullable; the named CHECK `chk_service_requests_feedback_rating`
+      allows only NULL or 1–5. Existing databases are upgraded with
+      `vulcatrack/database/migrations/2026-09-29-service-requests-feedback.sql`.
+    - **One-time, never overwritten:** saved by one guarded UPDATE that re-checks owner,
+      `completed`, Tireman set and "no feedback yet"; a second tab or double submit
+      changes nothing. No editing, deleting or resubmitting in v1.
+    - **Changes nothing else:** submitting feedback never changes the request's status,
+      Tireman, `admin_id` or `updated_at` (which keeps meaning the last admin status /
+      assignment change — Decision 67), and never touches sales, sale lines, stock or the
+      Transaction Summary. Eligibility does not depend on a sale (Decision 71 still lets
+      the sale be recorded before or after).
+    - **The Tireman is context only:** the feedback page shows who serviced the request
+      by name (never the phone number after completion — Decision 66's customer view).
+      The browser never supplies a Tireman, customer, status or sale.
+    - **Who sees it:** the customer on Request Status ("Your feedback", read-only) and
+      the admin on the Rescue detail page ("Customer feedback", read-only — no reply,
+      moderation, edit or delete).
+    - **Still NOT part of the system:** Tireman average scores, rankings, leaderboards,
+      public technician review profiles, feedback categories, tips, automated quality
+      scoring, or any effect on dispatch or assignment. This clarifies (does not
+      overturn) Decision 26 and the "Technician … ratings" out-of-scope item — see
+      conflict **C8**.
+
 Unless explicitly approved later, do **not** introduce:
 
 - Live technician / Tireman GPS tracking
@@ -884,6 +927,8 @@ Unless explicitly approved later, do **not** introduce:
 - A separate Staff role
 - Tireman login portal, Tireman dashboard, Tireman authentication
 - Technician scheduling, ratings, payroll, or employee-management features
+  *(Clarified by **Decision 78**: customer feedback on a completed Rescue request is in
+  scope; a Tireman rating / scoring system still is not.)*
 - Advanced dispatch / routing-optimization algorithms
 - Distance-matrix APIs, multi-stop routing, and turn-by-turn navigation.
   *(**Revised by Decision 60:** a single origin→destination road-routing call —
@@ -954,6 +999,10 @@ Key rules (from the Database Notes / schema / decisions):
 - `customers.avatar_filename` is nullable (Decision 77): only a generated file name
   for the customer's own private profile picture under `storage/avatars/`; `NULL`
   = no picture (initials shown). The image itself is never stored in the database.
+- `service_requests.feedback_rating` / `feedback_comment` / `feedback_submitted_at` are
+  nullable (Decision 78): the owner's one-time feedback on a completed request, rating
+  limited to 1–5 by `chk_service_requests_feedback_rating`. All NULL = no feedback.
+  Submitting it never changes the request's status, Tireman, `admin_id` or `updated_at`.
 
 **Do not alter the database structure merely because of a UI element.**
 
@@ -1106,7 +1155,9 @@ Do not turn these into confirmed requirements without approval.
   responsive refinement (7.4a) and the customer area aligned with the Figma
   (7.4b: shell + Dashboard, Log in / Sign up, Book a Rescue, request status + My
   Bookings, My Vehicles under Profile, and Profile with an optional private
-  profile picture — **Decision 77**, `customers.avatar_filename`).
+  profile picture — **Decision 77**, `customers.avatar_filename`). 7.4c added
+  one-time customer feedback on a completed Rescue (**Decision 78**,
+  `service_requests.feedback_*`; read-only for the admin; not a Tireman rating).
   Its deferred-item backlog is consolidated in
   `docs/PROJECT-CONTEXT.md` §16.5.
 - Repo on `main` at `C:\IPT102`, pushed to
@@ -1194,6 +1245,7 @@ each item below.
 | N8 | Figma not cross-checked | **OPEN (informational)** | Prototype is external and not provided this session. Cross-check needed before frontend work for: POS payment/receipt UI, inventory module layout, OTG map view (customer + admin), saved-vehicle management UI, admin dashboard contents. |
 | C7 | "In-shop sales" wording (scope area 3, Decision 13, Database Notes §1 / §2 / §4) vs Rescue-linked sales | **RESOLVED** | Logged 2026-09-28 with Decisions 70–76: the older wording read as if every sale were an in-shop counter transaction, which became **AMBIGUOUS** once a sale can be the one recorded for an on-site Rescue job. Resolved by clarification, not rewrite: Decision 13 and scope area 3 carry a note pointing to Decision 70 (sales are still recorded only by an admin at the POS), and the Database Notes got a revision note plus inline additions. *Walk-in* stays a customer-identity term (`customer_id` NULL), never a synonym for *in-shop* (`service_request_id` NULL). |
 | C6 | `service_requests.tireman_id` / `admin_id` note wording vs Decisions 65–68 | **RESOLVED** | Logged 2026-09-28 when Decisions 65–68 were added: the notes in `docs/ERD/schema.dbml`, the `vulcatrack/database/schema.sql` comments and `docs/VulcaTrack-Database-Notes_1.md` (§2, §3, §11) still described the older "assign after acceptance / NULL while rejected" wording. Corrected the same day on owner approval — **comment / note wording only**, no table, column, type, constraint, FK, CHECK or index changed. |
+| C8 | Decision 26 / out-of-scope "no ratings" for Tiremen vs customer feedback on completed Rescues (Phase 7.4c) | **RESOLVED** | Logged 2026-09-29 with **Decision 78**: Decision 26 ("Tiremen … no ratings"), the out-of-scope item "Technician … ratings" and PROJECT-CONTEXT §7 read as if any rating were excluded, which **CONFLICTED** with the owner-approved customer feedback feature. Resolved by clarification, not rewrite: Decision 78 defines the feature as one-time feedback on the customer's own completed request, stored on `service_requests`, with the Tireman shown only as context and no Tireman scores / averages / rankings / dispatch effects; Decision 26 and the out-of-scope item carry a note pointing to it. |
 
 ### Remaining conflicts after this update
 
@@ -1217,7 +1269,7 @@ PNGs and the Figma prototype were not modified).
 
 | ID | Artifact | Classification | Required change |
 |---|---|---|---|
-| D1 | `docs/ERD/VulcaTrack-ERD_1.png` | POSSIBLY OUTDATED | Regenerate from `docs/ERD/schema.dbml`. Must show: (a) new `tiremen` table (`tireman_id` PK, `name`, `contact_number`, `is_active`, `created_at`, `updated_at`); (b) `service_requests.tireman_id` nullable FK → `tiremen`; (c) `items.is_active` and `vehicles.is_active`; (d) `customers → service_requests` as **`1 : 0..N`** (not `1 : 1..N`); (e) *(Decision 70)* `sales.service_request_id` — nullable, UNIQUE FK → `service_requests`, drawn as **`service_requests 1 : 0..1 sales`**; (f) *(Decision 77)* `customers.avatar_filename` — nullable `varchar(64)`, no relationship. |
+| D1 | `docs/ERD/VulcaTrack-ERD_1.png` | POSSIBLY OUTDATED | Regenerate from `docs/ERD/schema.dbml`. Must show: (a) new `tiremen` table (`tireman_id` PK, `name`, `contact_number`, `is_active`, `created_at`, `updated_at`); (b) `service_requests.tireman_id` nullable FK → `tiremen`; (c) `items.is_active` and `vehicles.is_active`; (d) `customers → service_requests` as **`1 : 0..N`** (not `1 : 1..N`); (e) *(Decision 70)* `sales.service_request_id` — nullable, UNIQUE FK → `service_requests`, drawn as **`service_requests 1 : 0..1 sales`**; (f) *(Decision 77)* `customers.avatar_filename` — nullable `varchar(64)`, no relationship; (g) *(Decision 78)* `service_requests.feedback_rating` / `feedback_comment` / `feedback_submitted_at` — nullable, no relationship. |
 | D2 | `docs/VulcaTrack-Use-Case-Diagram_1.png` | POSSIBLY OUTDATED | (a) Collapse "Manage Inventory" + "Manage Products" into one "Manage Inventory" use case (products + services). (b) Add admin use cases "Manage Tiremen" and "Assign Tireman to Request". (c) Keep "Manage Customer Accounts" flagged as proposed/unresolved. |
 | D3 | `docs/flows/VulcaTrack-2-Customer-Flow.png`, `docs/flows/VulcaTrack-5-OTG-Request-Flow.png` | POSSIBLY OUTDATED | Admin branch: add an "Assign Tireman" step after "Set Status: Accepted" *(per Decision 66 the Tireman is chosen in the same step as acceptance; also show accepted → rejected and the final states, Decision 65)*. Customer view after acceptance: show assigned Tireman name + contact number, "Tireman is on the way", the stored ETA, and the route/map. |
 | D4 | `docs/flows/VulcaTrack-4-POS-Flow.png` | POSSIBLY OUTDATED *(was CONSISTENT — annotate)* | Note that "Enter Payment Amount / Payment Sufficient? / Calculate Change" are UI-only (not persisted) and "Generate Receipt" is a printable HTML view with no receipt table. *(Decisions 70–76)* Add the optional Rescue entry: *Record sale in POS* from an accepted / completed request → customer locked to the request's customer → the same cart and checkout → sale linked to the request; the request's status is not changed by the sale. |
@@ -1227,6 +1279,22 @@ PNGs and the Figma prototype were not modified).
 ---
 
 ## Revision History
+
+### 2026-09-29 — Phase 7.4c: completed Rescue feedback (**decision change: Decision 78 added**)
+
+- **Decision change (owner-approved):** added **Decision 78** — the owner of a completed,
+  serviced Rescue request may give one-time feedback (1–5 stars + optional comment ≤ 500
+  characters), stored on the request; read-only for the customer and the admin; never
+  changes the request or its sale; not a Tireman rating system. **Decision 26** and the
+  "Technician … ratings" out-of-scope item gained a clarification note (no rewrite).
+- **Conflict:** new **C8** (Decision 26 "no ratings" vs the feedback feature) — resolved
+  by clarification.
+- **Schema:** three nullable columns + CHECK `chk_service_requests_feedback_rating` on
+  `service_requests` — `schema.dbml`, `schema.sql` and a one-off migration
+  (`2026-09-29-service-requests-feedback.sql`) updated. Still exactly 8 tables and four
+  statuses.
+- **Status:** Current Project Status (Chunk 7.4), Database Context and Required Diagram
+  Changes (D1 item (g)) updated. ERD image not regenerated (Phase 7.5).
 
 ### 2026-09-29 — Phase 7.4b-e2: customer profile picture (**decision change: Decision 77 added**)
 

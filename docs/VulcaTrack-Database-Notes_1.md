@@ -189,6 +189,7 @@ An on-the-go request submitted by a logged-in customer.
 | `eta_minutes` *(nullable)* | Estimated travel time from the shop to the customer, calculated **once** at submission and then **frozen**. Never recomputed or updated for display afterward. |
 | `status` | See §11 |
 | `requested_at` / `updated_at` | Timestamps. No per-status timestamp columns in v1 (no `accepted_at`/`completed_at`/`rejected_at`). |
+| `feedback_rating` / `feedback_comment` / `feedback_submitted_at` *(nullable — added 2026-09-29, Decision 78)* | The requesting customer's optional **one-time** feedback on the **completed** request: rating 1–5 (CHECK `chk_service_requests_feedback_rating`), comment up to 500 characters (`NULL` when blank), and the time the server saved it. All `NULL` = no feedback. Submitting it never changes `status`, `tireman_id`, `admin_id` or `updated_at`. Feedback on the request — not a Tireman rating (no scores, averages or rankings). |
 
 ---
 

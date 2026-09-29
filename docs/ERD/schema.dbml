@@ -21,6 +21,9 @@
 // Structural change 2026-09-29 (Phase 7.4b-e2, Decision 77, owner-approved):
 // customers gains the nullable avatar_filename (a generated file name only; the
 // image file itself lives in private storage). Still exactly 8 tables.
+// Structural change 2026-09-29 (Phase 7.4c, Decision 78, owner-approved):
+// service_requests gains nullable feedback_rating (1..5, CHECK) /
+// feedback_comment / feedback_submitted_at. Still exactly 8 tables.
 // v1 scope reminder — NOT modeled: online/gateway payment, payment-transaction
 // tables, GPS telemetry / route polylines, Tireman authentication, technician
 // scheduling / ratings / payroll, status-history / audit tables.
@@ -146,6 +149,9 @@ Table service_requests {
   status              varchar(10)   [not null, note: "'pending' | 'accepted' | 'rejected' | 'completed' (Decision 10). Admin transitions: pending -> accepted | rejected; accepted -> completed (Tireman required) | rejected; rejected and completed are final (Decision 65)"]
   requested_at        datetime      [not null, default: `CURRENT_TIMESTAMP`]
   updated_at          datetime      [not null, default: `CURRENT_TIMESTAMP`]
+  feedback_rating     tinyint       [null, note: 'unsigned; the requesting customer\'s one-time feedback on the COMPLETED request, 1..5 (CHECK chk_service_requests_feedback_rating); NULL = no feedback (Decision 78). Not a Tireman rating — no scores, averages or rankings']
+  feedback_comment    varchar(500)  [null, note: 'optional feedback text; NULL when blank (Decision 78)']
+  feedback_submitted_at datetime    [null, note: 'set by the server when the feedback is saved; submitting feedback never changes status, tireman_id, admin_id or updated_at (Decision 78)']
 
   Note: 'No per-status timestamps and no status-history table in v1 (Decision 34). No route geometry / polyline persisted (Decision 33). Shop endpoint for route/ETA comes from config/shop.php (Decision 37).'
 }

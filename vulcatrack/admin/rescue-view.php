@@ -24,6 +24,10 @@
  * is linked it is shown here ("Sale recorded" — no payment method is stored)
  * and Reject is no longer offered (the repository refuses it too).
  * Recording a sale never changes the request; completing stays separate.
+ *
+ * Customer feedback (Phase 7.4c, Decision 78): on a completed request, the
+ * customer's one-time rating / comment is shown READ-ONLY — no reply, edit,
+ * delete or moderation, and no Tireman score.
  */
 
 use VulcaTrack\Auth\Csrf;
@@ -262,6 +266,23 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <input type="hidden" name="request_id" value="<?= (int) $request['request_id'] ?>">
       <button type="submit" class="secondary">Record sale in POS</button>
     </form>
+  </section>
+<?php endif; ?>
+
+<?php /* Phase 7.4c: the customer's feedback on this completed request — read-only, no admin actions (Decision 78) */ ?>
+<?php if ($status === 'completed'): ?>
+  <section class="card rescue-feedback" aria-labelledby="rescue-feedback-title">
+    <h2 class="rescue-panel__title" id="rescue-feedback-title">Customer feedback</h2>
+    <?php if ($request['feedback_submitted_at'] !== null): ?>
+      <?php $fbRating = (int) $request['feedback_rating']; ?>
+      <p class="rescue-feedback__rating"><span class="rescue-feedback__stars" aria-hidden="true"><?= str_repeat('&#9733;', $fbRating) . str_repeat('&#9734;', 5 - $fbRating) ?></span> <?= $fbRating ?> / 5</p>
+      <dl class="kv">
+        <dt>Comment</dt><dd><?= $request['feedback_comment'] !== null ? nl2br(e($request['feedback_comment'])) : '<span class="muted">No comment.</span>' ?></dd>
+        <dt>Submitted</dt><dd><?= e($request['feedback_submitted_at']) ?></dd>
+      </dl>
+    <?php else: ?>
+      <p class="muted">No feedback yet.</p>
+    <?php endif; ?>
   </section>
 <?php endif; ?>
 

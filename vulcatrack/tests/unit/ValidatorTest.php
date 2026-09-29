@@ -137,3 +137,30 @@ test('Validator::itemType accepts only product or service', function () {
     assert_null($v->itemType('d', ''));
     assert_true(isset($v->errors()['c'], $v->errors()['d']));
 });
+
+test('Validator::rating accepts whole numbers 1 to 5 only (Decision 78)', function () {
+    $v = new Validator();
+    assert_same(1, $v->rating('a', '1'));
+    assert_same(5, $v->rating('b', '5'));
+    assert_same(3, $v->rating('c', 3));
+    assert_same(4, $v->rating('d', ' 4 '), 'surrounding spaces are tolerated');
+    assert_true($v->passes());
+    foreach (['0', '6', '-1', '4.5', '5.0', '', '  ', 'five', '5x', '99999999999999999999', null, ['5'], 4.0, true] as $i => $bad) {
+        $w = new Validator();
+        assert_null($w->rating('r', $bad), 'must refuse ' . var_export($bad, true));
+        assert_true(isset($w->errors()['r']), 'and record an error for ' . var_export($bad, true));
+    }
+});
+
+test('Validator::optionalMultilineText counts a CRLF line break as one character', function () {
+    $v = new Validator();
+    $text = str_repeat('a', 249) . "\r\n" . str_repeat('b', 250); // 500 chars as the browser counts them
+    assert_same(str_repeat('a', 249) . "\n" . str_repeat('b', 250), $v->optionalMultilineText('c', $text, 'Comment', 500));
+    assert_true($v->passes(), 'exactly 500 characters is fine');
+    assert_null($v->optionalMultilineText('d', "  \r\n\t ", 'Comment', 500), 'whitespace only -> null');
+    assert_null($v->optionalMultilineText('e', null, 'Comment', 500));
+    assert_true($v->passes());
+    assert_null($v->optionalMultilineText('f', str_repeat('x', 501), 'Comment', 500));
+    assert_null($v->optionalMultilineText('g', ['hello'], 'Comment', 500));
+    assert_true(isset($v->errors()['f'], $v->errors()['g']), '501 characters and arrays are refused');
+});

@@ -5,6 +5,8 @@
 --   (optional link from a sale to one Rescue request; see the sales table).
 -- Structural revision: Phase 7.4b-e2 (2026-09-29) — customers.avatar_filename
 --   (optional profile picture reference; see the customers table).
+-- Structural revision: Phase 7.4c (2026-09-29) — service_requests.feedback_*
+--   (optional customer feedback on a completed request; see service_requests).
 --
 -- Source of truth : docs/ERD/schema.dbml               (structure)
 -- Rationale       : docs/VulcaTrack-Database-Notes_1.md (field-by-field)
@@ -173,6 +175,13 @@ CREATE TABLE `vehicles` (
 --            rejected; accepted -> completed (Tireman required) | rejected;
 --            rejected and completed are final.
 -- No per-status timestamp columns and no status-history table in v1 (Decision 34).
+-- feedback_rating / feedback_comment / feedback_submitted_at (Phase 7.4c,
+--            Decision 78) — the requesting customer's optional one-time feedback
+--            on the COMPLETED request: rating 1–5 (chk_service_requests_feedback_rating),
+--            comment up to 500 characters (NULL when blank), time set by the
+--            server. All NULL = no feedback. Not a Tireman rating: no scores,
+--            averages or rankings. Submitting it never changes status,
+--            tireman_id, admin_id or updated_at.
 -- Shop endpoint for route/ETA comes from config/shop.php (Decision 37) — not a table.
 -- Created before `sales`, which references it (sales.service_request_id).
 -- -----------------------------------------------------------------------------
@@ -189,6 +198,9 @@ CREATE TABLE `service_requests` (
   `status`              VARCHAR(10)    NOT NULL,
   `requested_at`        DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`          DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `feedback_rating`     TINYINT UNSIGNED   NULL,
+  `feedback_comment`    VARCHAR(500)       NULL,
+  `feedback_submitted_at` DATETIME         NULL,
   PRIMARY KEY (`request_id`),
   KEY `ix_service_requests_customer` (`customer_id`),
   KEY `ix_service_requests_vehicle` (`vehicle_id`),
@@ -207,7 +219,9 @@ CREATE TABLE `service_requests` (
     FOREIGN KEY (`tireman_id`) REFERENCES `tiremen` (`tireman_id`)
     ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `chk_service_requests_status`
-    CHECK (`status` IN ('pending','accepted','rejected','completed'))
+    CHECK (`status` IN ('pending','accepted','rejected','completed')),
+  CONSTRAINT `chk_service_requests_feedback_rating`
+    CHECK (`feedback_rating` IS NULL OR `feedback_rating` BETWEEN 1 AND 5)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------

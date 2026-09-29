@@ -51,10 +51,12 @@ applied and how to roll it back.
 |---|---|
 | `migrations/2026-09-28-sales-service-request.sql` | Phase 7.3d-a: adds nullable `sales.service_request_id` (UNIQUE, FK → `service_requests.request_id`, RESTRICT). Existing sales stay `NULL`. |
 | `migrations/2026-09-29-customers-avatar-filename.sql` | Phase 7.4b-e2 (Decision 77): adds nullable `customers.avatar_filename VARCHAR(64)` — the generated file name of a customer's private profile picture. Existing customers stay `NULL`. |
+| `migrations/2026-09-29-service-requests-feedback.sql` | Phase 7.4c (Decision 78): adds nullable `service_requests.feedback_rating` (TINYINT UNSIGNED, CHECK 1–5 `chk_service_requests_feedback_rating`), `feedback_comment` (VARCHAR(500)) and `feedback_submitted_at` (DATETIME). Existing requests stay `NULL` (no feedback). |
 
 ```
 C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-28-sales-service-request.sql
 C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-29-customers-avatar-filename.sql
+C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-29-service-requests-feedback.sql
 ```
 
 Running a migration a second time fails with a clear error (e.g. `Duplicate

@@ -182,6 +182,34 @@ final class Validator
         return $n;
     }
 
+    /**
+     * A required whole-number rating from 1 to 5 (Rescue feedback, Decision 78).
+     * Rejects blank, 0, 6, "4.5", "5.0", arrays and anything else.
+     */
+    public function rating(string $field, $value): ?int
+    {
+        $n = $this->wholeNumber($value, 1);
+        if ($n === null || $n > 5) {
+            $this->add($field, 'Choose a rating from 1 to 5 stars.');
+            return null;
+        }
+        return $n;
+    }
+
+    /**
+     * Optional multi-line text (a <textarea>): browsers send line breaks as
+     * "\r\n" but count them as ONE character for maxlength, so they are
+     * normalised to "\n" before the length check — the server limit then
+     * matches what the page allowed. Blank / whitespace-only returns null.
+     */
+    public function optionalMultilineText(string $field, $value, string $label, int $max): ?string
+    {
+        if (is_string($value)) {
+            $value = str_replace(["\r\n", "\r"], "\n", $value);
+        }
+        return $this->optionalText($field, $value, $label, $max);
+    }
+
     /** The unified items table's type discriminator: 'product' or 'service'. */
     public function itemType(string $field, $value): ?string
     {

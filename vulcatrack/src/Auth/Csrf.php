@@ -25,8 +25,14 @@ final class Csrf
             . htmlspecialchars(self::token(), ENT_QUOTES, 'UTF-8') . '">';
     }
 
-    /** Constant-time check of a submitted token against the session token. */
-    public static function check(?string $submitted): bool
+    /**
+     * Constant-time check of a submitted token against the session token.
+     * Takes the raw $_POST value: anything that is not a string (missing, or a
+     * forged `_csrf[]=…` array) is simply a failed check, never a TypeError.
+     *
+     * @param mixed $submitted
+     */
+    public static function check($submitted): bool
     {
         $expected = $_SESSION[self::SESSION_KEY] ?? '';
         return is_string($submitted)
