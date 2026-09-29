@@ -355,39 +355,98 @@ button.loc-result:hover { background: #eef2fb; }
 #items { margin-top: 1.5rem; }
 
 /* Transaction Summary (admin/transaction-summary.php) — the printable sale
-   document. Screen view reuses the card / datatable look; print view drops the
-   app chrome and prints the document plainly on normal paper. */
-.txn-doc { max-width: 40rem; }
-.txn-head { text-align: center; margin-bottom: 1rem; }
+   document (Phase 7.4d look): a screen-only dark band + Transaction Actions
+   panel around a receipt-style paper. Print drops everything but the paper
+   (.no-print + the admin print rules) and prints it plainly. */
+.txn-band {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem;
+  margin: 0 0 1.5rem; padding: 1.1rem 1.4rem; background: #1b1c1e; color: #fff;
+}
+.txn-band__main { display: flex; align-items: center; gap: .9rem; min-width: 0; }
+.txn-band__icon { flex: none; width: 2.1rem; height: 2.1rem; padding: .3rem; background: #e31b23; fill: #fff; }
+.txn-band h1 { margin: 0; color: #fff; font-size: clamp(1.15rem, 2.2vw, 1.45rem); font-weight: 800; letter-spacing: .02em; text-transform: uppercase; line-height: 1.2; }
+.txn-band__no { color: #ff5a5f; white-space: nowrap; }
+.txn-band__meta { margin: .3rem 0 0; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .74rem; letter-spacing: .05em; text-transform: uppercase; color: #cfd0d2; overflow-wrap: anywhere; }
+.txn-band__total { margin: 0; font-size: 1.35rem; font-weight: 800; white-space: nowrap; }
+.txn-band__total span { display: block; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .68rem; font-weight: 400; letter-spacing: .08em; text-transform: uppercase; color: #cfd0d2; }
+
+/* the actions come first in the source, so stacked screens show them
+   above the receipt; wide screens place them in the right-hand column */
+.txn-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.txn-actions { display: flex; flex-wrap: wrap; gap: .6rem; padding: 1rem 1.1rem; background: #1b1c1e; color: #fff; }
+.txn-actions h2 { flex: 1 0 100%; margin: 0; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .74rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #cfd0d2; }
+.txn-actions .txn-actions__print { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; flex: 1 1 100%; min-height: 2.75rem; cursor: pointer; }
+.txn-actions__print svg { width: 1.1rem; height: 1.1rem; fill: currentColor; }
+.txn-actions__link {
+  display: flex; align-items: center; flex: 1 1 9rem; min-height: 2.75rem; padding: .5rem .8rem;
+  border: 1px solid #55575b; color: #fff; text-decoration: none;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .78rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+}
+.txn-actions__link:hover,
+.txn-actions__link:focus-visible { background: #26282b; border-color: #fff; color: #fff; }
+.txn-actions__link--rescue { border-color: #e31b23; }
+.txn-actions__note { flex: 1 0 100%; margin: .1rem 0 0; font-size: .75rem; color: #a3a5a9; }
+@media (min-width: 56rem) {
+  .txn-layout { grid-template-columns: minmax(0, 42rem) minmax(14rem, 17rem); }
+  .txn-actions { grid-column: 2; grid-row: 1; flex-direction: column; flex-wrap: nowrap; }
+  .txn-actions__link { flex: none; }
+  .txn-doc { grid-column: 1; grid-row: 1; }
+}
+
+.txn-doc {
+  min-width: 0; padding: 1.75rem 1.75rem 1.4rem; background: #fff;
+  border: 1px solid #dadada; border-top: 6px solid #111; border-bottom: 2px dashed #111;
+}
+.txn-head { text-align: center; margin-bottom: 1.25rem; }
 .txn-head p { margin: 0; }
-.txn-shop { font-weight: 700; font-size: 1.1rem; }
-.txn-address { color: #555; }
-.txn-head h1 { margin: .75rem 0 0; font-size: 1.15rem; letter-spacing: .02em; }
-.txn-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .5rem 1rem; margin: 0 0 .5rem; }
-.txn-meta dt { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: #666; }
-.txn-meta dd { margin: .1rem 0 0; overflow-wrap: anywhere; }
-.table-scroll > .datatable.txn-lines { min-width: 0; } /* 4 narrow columns fit a phone; scroll only if truly needed */
-.datatable .txn-totalrow th,
-.datatable .txn-totalrow td { font-size: 1.05rem; font-weight: 700; color: #1a1a1a; text-transform: none; letter-spacing: 0; border-bottom: 0; }
-.txn-note { margin: 1rem 0 0; font-size: .85rem; color: #555; text-align: center; font-style: italic; }
+.txn-head .txn-brand { display: inline-flex; align-items: center; gap: .3rem; margin: 0 0 .55rem; font-size: 1.4rem; font-weight: 800; letter-spacing: -.01em; }
+.txn-brand__pin { width: 1.6rem; height: 1.6rem; fill: #e31b23; }
+.txn-brand__red { color: #e31b23; }
+.txn-shop { font-weight: 800; font-size: .95rem; letter-spacing: .04em; text-transform: uppercase; overflow-wrap: anywhere; }
+.txn-head .txn-address { margin-top: .15rem; font-size: .82rem; color: #555; }
+.txn-head .txn-title { /* .txn-head prefix: outranks the base `.app h2` size + margin */
+  display: inline-block; margin: .85rem 0 0; padding: .25rem .7rem; background: #111; color: #fff;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .74rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+}
+.txn-meta { margin: 0 0 1.1rem; padding-top: .9rem; border-top: 2px dashed #111; }
+.txn-meta > div { display: flex; justify-content: space-between; align-items: baseline; gap: .4rem 1rem; padding: .22rem 0; }
+.txn-meta dt { flex: none; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: #666; }
+.txn-meta dd { min-width: 0; margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; }
+.txn-doc .table-scroll { margin: 0; }
+.txn-lines { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.txn-lines thead th {
+  padding: .5rem .4rem; border-top: 2px solid #111; border-bottom: 1px solid #111; text-align: left;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #333;
+}
+.txn-lines th.num,
+.txn-lines td.num { text-align: right; }
+.txn-lines td { padding: .6rem .4rem; border-bottom: 1px solid #ececec; vertical-align: top; }
+.txn-lines td.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.txn-item { display: block; font-weight: 700; overflow-wrap: anywhere; }
+.txn-kind { display: block; margin-top: .1rem; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; color: #666; }
+.txn-total { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .25rem 1rem; padding: .95rem 0 .2rem; border-top: 2px solid #111; }
+.txn-total p { margin: 0; }
+.txn-total__label { font-size: 1.05rem; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+.txn-total__amount { font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 800; color: #e31b23; white-space: nowrap; }
+.txn-note { margin: 1.2rem 0 0; padding-top: .9rem; border-top: 1px dashed #bbb; font-size: .82rem; color: #555; text-align: center; font-style: italic; }
 @media (max-width: 30rem) { /* phones: keep all four columns + the total in view */
-  /* body.admin prefix: must outrank the admin theme's .card / .datatable
-     padding (added in 7.3a), which had pushed Subtotal + Total off-screen */
-  body.admin .txn-doc { padding: 1rem .8rem; }
-  body.admin .datatable.txn-lines th,
-  body.admin .datatable.txn-lines td { padding: .45rem .3rem; }
-  body.admin .datatable.txn-lines thead th { letter-spacing: .03em; }
-  body.admin .datatable.txn-lines th.num { white-space: normal; }
+  .txn-band { padding: .9rem 1rem; }
+  body.admin .txn-doc { padding: 1.1rem .8rem 1rem; }
+  .txn-lines { font-size: .85rem; }
+  .txn-lines th,
+  .txn-lines td { padding-left: .25rem; padding-right: .25rem; }
+  .txn-lines thead th { letter-spacing: .03em; }
+  .txn-lines th.num { white-space: normal; }
 }
 
 @media print {
   body.is-printdoc { background: #fff; }
-  body.is-printdoc .no-print { display: none !important; } /* the admin shell itself: see "admin area" print rules below */
+  body.is-printdoc .no-print { display: none !important; } /* band, actions — and the admin shell: see "admin area" print rules below */
   body.is-printdoc .app { max-width: none; margin: 0; padding: 0; }
+  body.is-printdoc .txn-layout { display: block; }
   body.is-printdoc .txn-doc { max-width: none; margin: 0; border: 0; padding: 0; }
+  body.is-printdoc .txn-head .txn-title { background: none; color: #000; border: 1px solid #000; }
   body.is-printdoc .table-scroll { overflow: visible; }
-  body.is-printdoc .datatable th,
-  body.is-printdoc .datatable td { border-bottom-color: #999; }
   body.is-printdoc a { color: inherit; text-decoration: none; }
 }
 
@@ -799,6 +858,54 @@ body.admin .card--stat .card__label { margin: 0 0 .7rem; font-size: .78rem; }
 body.admin .card--stat .card__num { font-size: 1.9rem; }
 body.admin .card--accent { border-left: 3px solid var(--adm-red); }
 
+/* Reports visuals (Phase 7.4d): Sales Performance chart beside Sales by Source
+   on wide screens, stacked below. The chart is server-rendered SVG — bars in
+   % across, px down — on the Figma's dark plot; every value is a real total. */
+body.admin .rpt-visuals { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; align-items: start; margin: 0 0 1.25rem; }
+@media (min-width: 64rem) {
+  body.admin .rpt-visuals { grid-template-columns: minmax(0, 2fr) minmax(15rem, 1fr); }
+}
+body.admin .rpt-chart .panel__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; }
+body.admin .rpt-chart__window { margin: 0; font-size: .85rem; color: #444; }
+body.admin .rpt-chart__total { color: #444; }
+body.admin .rpt-chart__scope { margin: 0 1.1rem .6rem; padding: .5rem .7rem; border-left: 3px solid var(--adm-ink); background: #f6f6f6; font-size: .82rem; color: #333; }
+body.admin .rpt-plot { display: flex; padding: 0 0 0 .75rem; background: var(--adm-side); container-type: inline-size; }
+/* the chart's width follows its column, not the viewport: thin out the day labels when the plot is narrow */
+@container (max-width: 34rem) {
+  body.admin .rpt-xlabel--minor { display: none; }
+}
+body.admin .rpt-plot svg { display: block; overflow: visible; }
+body.admin .rpt-plot__bars { flex: 1 1 0; min-width: 0; }
+body.admin .rpt-plot__axis { flex: 0 0 4.75rem; width: 4.75rem; border-left: 1px solid var(--adm-side-line); }
+body.admin .rpt-grid { stroke: #34363a; stroke-width: 1; shape-rendering: crispEdges; }
+body.admin .rpt-base { stroke: #74767a; stroke-width: 1; shape-rendering: crispEdges; }
+body.admin .rpt-bar { fill: var(--adm-red); }
+body.admin .rpt-hit { fill: rgba(255, 255, 255, 0); }
+body.admin .rpt-day:hover .rpt-hit { fill: rgba(255, 255, 255, .07); }
+body.admin .rpt-day:hover .rpt-bar { fill: #ff3b42; }
+body.admin .rpt-xlabel,
+body.admin .rpt-ytick { fill: #b9bbbe; font-family: var(--adm-mono); font-size: 11px; }
+body.admin .rpt-peak { fill: #fff; font-family: var(--adm-mono); font-size: 12px; font-weight: 700; }
+body.admin .rpt-empty { fill: #b9bbbe; font-size: 13px; }
+
+body.admin .rpt-src { list-style: none; margin: 0; padding: .35rem 1.1rem .9rem; }
+body.admin .rpt-src__row { padding: .7rem 0; border-bottom: 1px solid var(--adm-line-soft); }
+body.admin .rpt-src__row:last-child { border-bottom: 0; }
+body.admin .rpt-src__head { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; margin: 0 0 .4rem; }
+body.admin .rpt-src__name { font-family: var(--adm-mono); font-size: .85rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+body.admin .rpt-src__share { font-weight: 800; white-space: nowrap; }
+body.admin .rpt-src__share small { font-size: .72rem; font-weight: 400; color: var(--adm-muted); }
+body.admin .rpt-src__meter { height: .7rem; background: #ececec; }
+body.admin .rpt-src__meter span { display: block; height: 100%; max-width: 100%; background: var(--adm-ink); }
+body.admin .rpt-src__row--rescue .rpt-src__meter span { background: var(--adm-red); }
+body.admin .rpt-src__facts { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin: .55rem 0 0; }
+body.admin .rpt-src__facts dt { font-family: var(--adm-mono); font-size: .68rem; letter-spacing: .07em; text-transform: uppercase; color: #555; }
+body.admin .rpt-src__facts dd { margin: .1rem 0 0; font-weight: 700; overflow-wrap: anywhere; }
+@media (max-width: 30rem) {
+  body.admin .rpt-plot { padding-left: .4rem; }
+  body.admin .rpt-plot__axis { flex-basis: 4.25rem; width: 4.25rem; }
+}
+
 /* Dashboard: Needs Attention lists */
 body.admin .dash-section { margin: 0 0 .9rem; font-size: 1.15rem; font-weight: 800; }
 body.admin .attn-list { list-style: none; margin: 0; padding: 0; }
@@ -1035,6 +1142,14 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
   body.admin .datatable tbody tr:nth-child(even) > * { background: none; }
   body.admin .badge { background: none !important; color: #000 !important; border: 1px solid #000 !important; }
   body.admin.is-printdoc .txn-doc { max-width: none; margin: 0; border: 0; padding: 0; }
+  /* Reports chart: the dark plot background would not print — use ink text on paper */
+  body.admin .rpt-plot { background: none; border: 1px solid #999; }
+  body.admin .rpt-xlabel,
+  body.admin .rpt-ytick,
+  body.admin .rpt-peak,
+  body.admin .rpt-empty { fill: #000; }
+  body.admin .rpt-grid { stroke: #ccc; }
+  body.admin .rpt-src__meter { border: 1px solid #999; }
 }
 
 /* ---- customer area (Phase 7.4b-a) -----------------------------------------

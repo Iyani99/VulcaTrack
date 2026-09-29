@@ -274,6 +274,12 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         assert_same(200, $summary['status']);
         assert_contains('Transaction Summary', $summary['body']);
         assert_contains('&#8369;820.50', $summary['body'], 'the linked document shows the recorded total');
+        // Decision 54: cash received / change live only on the one-time POS card above (from the
+        // session); the stored document — even opened straight from that card — never has them.
+        assert_not_contains('&#8369;1000.00', $summary['body'], 'no cash received on the Transaction Summary');
+        assert_not_contains('&#8369;179.50', $summary['body'], 'no change on the Transaction Summary');
+        assert_not_contains('Cash received', $summary['body']);
+        assert_not_contains('Cash received', $page(), 'nor on the POS once the one-time card has been shown');
         assert_same($custId, (int) $sale['customer_id'], 'linked customer recorded');
         assert_same('820.50', $sale['total_amount']);
         $lines = $q('SELECT item_id, quantity, unit_price, subtotal FROM sale_items WHERE sale_id = ? ORDER BY item_id', [$sale['sale_id']])->fetchAll(\PDO::FETCH_ASSOC);

@@ -17,9 +17,16 @@
  *
  * Read-only: GET, admin guard, no form handling.
  *
- * A sale recorded for a Rescue request (Phase 7.3d) shows one extra row,
- * "Rescue request #N" — traceability only; still no payment method or cash
- * data (none is stored).
+ * Every sale shows its Source: "In-shop", or "Rescue #N" for a sale recorded
+ * for a Rescue request (Phase 7.3d) — traceability only; still no payment
+ * method or cash data (none is stored). The one-time cash received / change
+ * figures stay on the POS "Sale recorded" card, from the session, right after
+ * checkout (Decision 54); this page never has them and never shows them.
+ *
+ * Phase 7.4d layout (presentation only): a screen-only header band, a
+ * screen-only Transaction Actions panel (Print, Back to POS, Sales History,
+ * View Rescue #N on a Rescue sale) and the receipt-style document itself —
+ * the only part that prints (body.is-printdoc + .no-print).
  */
 
 use VulcaTrack\Repository\SaleRepository;
@@ -35,6 +42,19 @@ $shop  = require VULCATRACK_ROOT . '/config/shop.php';
 function txn_peso(int $centavos): string
 {
     return '&#8369;' . e(Money::format($centavos));
+}
+
+/** Stored 'Y-m-d H:i:s' → "Sep 29, 2026 · 4:51 PM" (presentation only), escaped. */
+function txn_datetime(string $datetime): string
+{
+    $t = strtotime($datetime);
+    return e($t === false ? $datetime : date('M j, Y · g:i A', $t));
+}
+
+/** items.item_type (fixed once sold — Decision 69) → the line's sub-label. */
+function txn_kind(?string $type): string
+{
+    return $type === 'service' ? 'Service' : ($type === 'product' ? 'Product' : '');
 }
 
 // A positive whole number that fits sales.sale_id (signed INT); anything else is "not found".
@@ -64,50 +84,81 @@ $navActive = 'pos';
 $bodyClass = 'is-printdoc';
 require __DIR__ . '/../src/Views/partials/admin_top.php';
 ?>
-<div class="pagehead no-print">
-  <a href="<?= e(vulcatrack_url('/admin/pos.php')) ?>">&larr; Back to POS</a>
-  <button type="button" class="btnlink" onclick="window.print();">Print</button>
-</div>
-
-<article class="card txn-doc">
-  <header class="txn-head">
-    <p class="txn-shop"><?= e($shop['name']) ?></p>
-    <p class="txn-address"><?= e($shop['address']) ?></p>
-    <h1>Transaction Summary</h1>
-  </header>
-
-  <dl class="txn-meta">
-    <div><dt>Sale no.</dt><dd><?= (int) $sale['sale_id'] ?></dd></div>
-    <div><dt>Date / time</dt><dd><?= e($sale['sale_date']) ?></dd></div>
-    <div><dt>Cashier</dt><dd><?= e($sale['admin_name']) ?></dd></div>
-    <div><dt>Customer</dt><dd><?= $sale['customer_name'] !== null ? e($sale['customer_name']) : 'Walk-in' ?></dd></div>
-    <?php if ($sale['service_request_id'] !== null): /* Phase 7.3d traceability; prints as plain text */ ?>
-      <div><dt>Rescue request</dt><dd><a href="<?= e(vulcatrack_url('/admin/rescue-view.php?id=' . (int) $sale['service_request_id'])) ?>">#<?= (int) $sale['service_request_id'] ?></a></dd></div>
-    <?php endif; ?>
-  </dl>
-
-  <div class="table-scroll">
-  <table class="datatable txn-lines">
-    <thead>
-      <tr><th>Item / service</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Subtotal</th></tr>
-    </thead>
-    <tbody>
-    <?php foreach ($lines as $line): ?>
-      <tr>
-        <td><?= e($line['item_name']) ?></td>
-        <td class="num"><?= (int) $line['quantity'] ?></td>
-        <td class="num"><?= txn_peso((int) $line['unit_price_centavos']) ?></td>
-        <td class="num"><?= txn_peso((int) $line['subtotal_centavos']) ?></td>
-      </tr>
-    <?php endforeach; ?>
-    </tbody>
-    <tfoot>
-      <tr class="txn-totalrow"><th colspan="3">Total</th><td class="num"><?= txn_peso((int) $sale['total_amount_centavos']) ?></td></tr>
-    </tfoot>
-  </table>
+<?php
+$saleNo   = (int) $sale['sale_id'];
+$rescueId = $sale['service_request_id'] !== null ? (int) $sale['service_request_id'] : null;
+$when     = txn_datetime((string) $sale['sale_date']);
+?>
+<header class="txn-band no-print">
+  <div class="txn-band__main">
+    <svg class="txn-band__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
+    <div>
+      <h1>Transaction Summary <span class="txn-band__no">&middot; Sale #<?= $saleNo ?></span></h1>
+      <p class="txn-band__meta">Recorded <?= $when ?> &middot; Cashier: <?= e($sale['admin_name']) ?></p>
+    </div>
   </div>
+  <p class="txn-band__total"><span>Total</span> <?= txn_peso((int) $sale['total_amount_centavos']) ?></p>
+</header>
 
-  <p class="txn-note">For transaction reference only. Not an official BIR invoice.</p>
-</article>
+<div class="txn-layout">
+  <aside class="txn-actions no-print" aria-labelledby="txn-actions-h">
+    <h2 id="txn-actions-h">Transaction Actions</h2>
+    <button type="button" class="btnlink txn-actions__print" onclick="window.print();">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8H5a3 3 0 0 0-3 3v6h4v4h12v-4h4v-6a3 3 0 0 0-3-3zm-3 11H8v-5h8v5zm3-7a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM18 3H6v4h12z"/></svg>
+      Print Summary
+    </button>
+    <a class="txn-actions__link" href="<?= e(vulcatrack_url('/admin/pos.php')) ?>">&larr; Back to POS</a>
+    <a class="txn-actions__link" href="<?= e(vulcatrack_url('/admin/sales.php')) ?>">Sales History</a>
+    <?php if ($rescueId !== null): ?>
+      <a class="txn-actions__link txn-actions__link--rescue" href="<?= e(vulcatrack_url('/admin/rescue-view.php?id=' . $rescueId)) ?>">View Rescue #<?= $rescueId ?></a>
+    <?php endif; ?>
+    <p class="txn-actions__note">Only the summary itself is printed.</p>
+  </aside>
+
+  <article class="txn-doc">
+    <header class="txn-head">
+      <p class="txn-brand">
+        <svg class="txn-brand__pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+        <span>Vulca<span class="txn-brand__red">Track</span></span>
+      </p>
+      <p class="txn-shop"><?= e($shop['name']) ?></p>
+      <p class="txn-address"><?= e($shop['address']) ?></p>
+      <h2 class="txn-title">Transaction Summary</h2>
+    </header>
+
+    <dl class="txn-meta">
+      <div><dt>Sale no.</dt><dd><?= $saleNo ?></dd></div>
+      <div><dt>Date / time</dt><dd><?= $when ?></dd></div>
+      <div><dt>Cashier</dt><dd><?= e($sale['admin_name']) ?></dd></div>
+      <div><dt>Customer</dt><dd><?= $sale['customer_name'] !== null ? e($sale['customer_name']) : 'Walk-in' ?></dd></div>
+      <div><dt>Source</dt><dd><?= $rescueId !== null ? 'Rescue #' . $rescueId : 'In-shop' ?></dd></div>
+    </dl>
+
+    <div class="table-scroll">
+    <table class="txn-lines">
+      <thead>
+        <tr><th scope="col">Item / service</th><th scope="col" class="num">Qty</th><th scope="col" class="num">Unit price</th><th scope="col" class="num">Subtotal</th></tr>
+      </thead>
+      <tbody>
+      <?php foreach ($lines as $line): $kind = txn_kind($line['item_type'] ?? null); ?>
+        <tr>
+          <td><span class="txn-item"><?= e($line['item_name']) ?></span><?php if ($kind !== ''): ?> <span class="txn-kind"><?= $kind ?></span><?php endif; ?></td>
+          <td class="num"><?= (int) $line['quantity'] ?></td>
+          <td class="num"><?= txn_peso((int) $line['unit_price_centavos']) ?></td>
+          <td class="num"><?= txn_peso((int) $line['subtotal_centavos']) ?></td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="txn-total">
+      <p class="txn-total__label">Total</p>
+      <p class="txn-total__amount"><?= txn_peso((int) $sale['total_amount_centavos']) ?></p>
+    </div>
+
+    <p class="txn-note">For transaction reference only. Not an official BIR invoice.</p>
+  </article>
+</div>
 
 <?php require __DIR__ . '/../src/Views/partials/admin_bottom.php'; ?>

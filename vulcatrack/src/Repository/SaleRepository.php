@@ -293,6 +293,40 @@ class SaleRepository
     }
 
     /**
+     * Sales by source for the range (Phase 7.4d): 'in_shop' — sales with no
+     * Rescue request (service_request_id IS NULL) — and 'rescue' — sales
+     * recorded for one (IS NOT NULL). Each has count and total_centavos (SUM of
+     * the stored total_amount); a source with no sales in the range is 0 / 0,
+     * and both keys are always present.
+     *
+     * @return array{in_shop: array{count: int, total_centavos: int}, rescue: array{count: int, total_centavos: int}}
+     * @throws InvalidArgumentException when $from or $to is not a valid day
+     */
+    public function summarizeBySource(?string $from = null, ?string $to = null): array
+    {
+        [$where, $params] = $this->saleDateRange($from, $to);
+        $stmt = $this->pdo->prepare(
+            'SELECT s.service_request_id IS NOT NULL AS is_rescue, COUNT(*) AS sale_count, SUM(s.total_amount) AS total
+             FROM sales s' . $where . '
+             GROUP BY is_rescue'
+        );
+        $stmt->execute($params);
+
+        $out = [
+            'in_shop' => ['count' => 0, 'total_centavos' => 0],
+            'rescue'  => ['count' => 0, 'total_centavos' => 0],
+        ];
+        foreach ($stmt->fetchAll() as $row) {
+            $out[(int) $row['is_rescue'] === 1 ? 'rescue' : 'in_shop'] = [
+                'count'          => (int) $row['sale_count'],
+                'total_centavos' => Money::toCentavos((string) $row['total']),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * One row per item sold in the range: item_id, item_name, quantity (units
      * sold) and revenue_centavos (SUM of the frozen sale_items.subtotal).
      * Grouped by item_id, so a renamed item stays one row; the name itself is

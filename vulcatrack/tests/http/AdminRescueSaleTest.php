@@ -379,7 +379,11 @@ test('admin Rescue sale: entry point, start_rescue checks, clean-cart rule, cust
 
         // ================= 57-60: Transaction Summary =================
         $ts = $server->request('/vulcatrack/admin/transaction-summary.php?id=' . $saleA)['body'];
-        assert_contains('<dt>Rescue request</dt><dd><a href="/vulcatrack/admin/rescue-view.php?id=' . $RA . '">#' . $RA . '</a></dd>', $ts, '57.');
+        // Phase 7.4d layout: the source row names the Rescue (plain text on the printed
+        // document); the link to it is the screen-only "View Rescue #N" action
+        assert_contains('<dt>Source</dt><dd>Rescue #' . $RA . '</dd>', $ts, '57. Source: Rescue #N');
+        assert_contains('<a class="txn-actions__link txn-actions__link--rescue" href="/vulcatrack/admin/rescue-view.php?id=' . $RA . '">View Rescue #' . $RA . '</a>', $ts, '57. View Rescue action');
+        assert_true(preg_match('~<aside class="txn-actions no-print".*?View Rescue #' . $RA . '.*?</aside>~s', $ts) === 1, '57. the Rescue action is in the screen-only panel');
         assert_contains('Not an official BIR invoice', $ts, '60.');
         assert_contains('window.print()', $ts, '59. print button intact');
         assert_contains('class="admin is-printdoc"', $ts, '59. print styling hook intact');
@@ -387,7 +391,9 @@ test('admin Rescue sale: entry point, start_rescue checks, clean-cart rule, cust
             assert_not_contains("<dt>{$never}</dt>", $ts, "no {$never} row");   // ("Cashier" is the existing cashier row)
         }
         $plain = $server->request('/vulcatrack/admin/transaction-summary.php?id=' . $inshopReg)['body'];
-        assert_not_contains('Rescue request', $plain, '58. no Rescue row on an in-shop sale');
+        assert_contains('<dt>Source</dt><dd>In-shop</dd>', $plain, '58. an in-shop sale says In-shop');
+        assert_not_contains('View Rescue', $plain, '58. no Rescue action on an in-shop sale');
+        assert_not_contains('rescue-view.php', $plain, '58. no Rescue link at all');
         $assertClean($ts, 'transaction-summary');
 
         $log = $server->serverStderr();

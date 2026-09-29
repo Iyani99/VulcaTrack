@@ -1,7 +1,7 @@
 <?php
 /**
  * Integration tests for the Sales Reports reads on SaleRepository —
- * summarize(), listDailyTotals(), listItemTotals(). Each test runs inside a
+ * summarize(), listDailyTotals(), listItemTotals(), summarizeBySource(). Each test runs inside a
  * transaction that is rolled back, so the database is left untouched.
  *
  * Sales are seeded through createSale() / addSaleItem() with fixed 2001 dates
@@ -13,6 +13,7 @@ namespace VulcaTrack\Tests;
 
 use VulcaTrack\Auth\Password;
 use VulcaTrack\Repository\AdminRepository;
+use VulcaTrack\Repository\CustomerRepository;
 use VulcaTrack\Repository\ItemRepository;
 use VulcaTrack\Repository\SaleRepository;
 
@@ -154,9 +155,55 @@ test('Sales Reports figures agree: summary total = sum of daily totals = sum of 
     });
 });
 
+test('SaleRepository::summarizeBySource splits In-shop (no Rescue) from Rescue sales; one-source, empty and ₱0 ranges', function () {
+    $pdo = test_pdo();
+    TestDb::rollback($pdo, function () use ($pdo) {
+        report_fixture($pdo); // four July 2001 in-shop sales, 3782.00 in all
+        $adminId = (new AdminRepository($pdo))->create('Source Cashier', TestDb::email('r'), Password::hash('password123'));
+        $custId  = (new CustomerRepository($pdo))->create('Source Customer', TestDb::email('c'), '0917', Password::hash('password123'));
+        $pdo->prepare("INSERT INTO vehicles (customer_id, plate_number) VALUES (?, 'SRC-1')")->execute([$custId]);
+        $vehicleId = (int) $pdo->lastInsertId();
+        $rescue = function () use ($pdo, $custId, $vehicleId): int {
+            $pdo->prepare("INSERT INTO service_requests (customer_id, vehicle_id, problem_description, status) VALUES (?, ?, 'flat', 'completed')")
+                ->execute([$custId, $vehicleId]);
+            return (int) $pdo->lastInsertId();
+        };
+        $repo = new SaleRepository($pdo);
+        $repo->createSale($adminId, $custId, '2001-07-05 11:00:00', 120000, $rescue()); // Rescue, July
+        $repo->createSale($adminId, $custId, '2001-08-10 11:00:00', 50000, $rescue());  // Rescue only, August
+        $repo->createSale($adminId, $custId, '2001-09-01 08:00:00', 0);                  // a ₱0 in-shop sale (a free service), registered customer
+
+        assert_same([
+            'in_shop' => ['count' => 4, 'total_centavos' => 378200],
+            'rescue'  => ['count' => 1, 'total_centavos' => 120000],
+        ], $repo->summarizeBySource('2001-07-01', '2001-07-31'), 'both sources');
+        assert_same([
+            'in_shop' => ['count' => 0, 'total_centavos' => 0],
+            'rescue'  => ['count' => 1, 'total_centavos' => 50000],
+        ], $repo->summarizeBySource('2001-08-01', '2001-08-31'), 'only Rescue sales: in_shop is still present as 0 / 0');
+        assert_same([
+            'in_shop' => ['count' => 1, 'total_centavos' => 0],
+            'rescue'  => ['count' => 0, 'total_centavos' => 0],
+        ], $repo->summarizeBySource('2001-09-01', '2001-09-30'),
+            'a ₱0 sale still counts; a registered customer alone does not make a sale "Rescue"');
+        assert_same([
+            'in_shop' => ['count' => 0, 'total_centavos' => 0],
+            'rescue'  => ['count' => 0, 'total_centavos' => 0],
+        ], $repo->summarizeBySource('2001-01-01', '2001-01-31'), 'empty range');
+
+        // the split always adds up to the page's summary figures
+        foreach ([['2001-07-01', '2001-07-31'], ['2001-07-01', '2001-09-30'], ['2001-08-01', '2001-08-31']] as [$from, $to]) {
+            $by  = $repo->summarizeBySource($from, $to);
+            $sum = $repo->summarize($from, $to);
+            assert_same($sum['count'], $by['in_shop']['count'] + $by['rescue']['count'], "counts add up {$from}..{$to}");
+            assert_same($sum['total_centavos'], $by['in_shop']['total_centavos'] + $by['rescue']['total_centavos'], "totals add up {$from}..{$to}");
+        }
+    });
+});
+
 test('SaleRepository report reads reject malformed dates like listForHistory', function () {
     $repo = new SaleRepository(test_pdo());
-    foreach (['summarize', 'listDailyTotals', 'listItemTotals'] as $method) {
+    foreach (['summarize', 'listDailyTotals', 'listItemTotals', 'summarizeBySource'] as $method) {
         foreach (['2026-02-31', "2026-09-28' OR '1'='1", '2026-9-8'] as $bad) {
             assert_throws(fn () => $repo->$method($bad, null), \InvalidArgumentException::class, null, "{$method}: malformed from");
             assert_throws(fn () => $repo->$method(null, $bad), \InvalidArgumentException::class, null, "{$method}: malformed to");

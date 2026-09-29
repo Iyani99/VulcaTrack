@@ -10,6 +10,11 @@
  * stock and active state change, output escaping, the print structure and the
  * non-official note, and clean output + server log.
  *
+ * Phase 7.4d layout: the friendlier date, the In-shop source, Product / Service
+ * line labels, the screen-only band + Transaction Actions (no Rescue action on
+ * an in-shop sale — the Rescue case is in AdminRescueSaleTest), and none of the
+ * Figma receipt's unsupported claims (BIR / payment / tender / fake actions).
+ *
  * Sales are recorded through the real SaleService (committed), then every row
  * the throwaway admin created is deleted afterwards, FK-safe order.
  */
@@ -114,7 +119,11 @@ test('transaction summary: guards, id validation, frozen historical values, esca
         assert_contains('Gerald Tabayag Vulcanizing Shop', $html);
         assert_contains('504 San Jose St. Baliwag, Bulacan', $html, 'shop address from config/shop.php');
         assert_contains('<dd>' . $linked['sale_id'] . '</dd>', $html, 'sale number');
-        assert_contains(e($saleDate), $html, 'recorded sale date/time');
+        // Phase 7.4d: the recorded sale_date, shown in the friendlier "Sep 29, 2026 · 4:51 PM" form
+        $shownDate = e(date('M j, Y · g:i A', strtotime($saleDate)));
+        assert_contains('<dt>Date / time</dt><dd>' . $shownDate . '</dd>', $html, 'recorded sale date/time on the document');
+        assert_contains('Recorded ' . $shownDate, $html, 'and in the header band');
+        assert_contains('<h1>Transaction Summary <span class="txn-band__no">&middot; Sale #' . $linked['sale_id'] . '</span></h1>', $html, 'header band names the sale');
         // in its field: the signed-in admin (this cashier) is also named in the sidebar
         assert_contains('<dd>' . e("{$tag} Cashier <i>Jo</i>") . '</dd>', $html, 'cashier name, escaped');
         assert_contains(e("{$tag} <b>Ana</b> & Co"), $html, 'linked customer name, escaped');
@@ -132,6 +141,11 @@ test('transaction summary: guards, id validation, frozen historical values, esca
         assert_not_contains('99.99', $html, 'the current product price is never shown as the sale price');
         assert_not_contains('175.00', $html, 'the current service price is never shown as the sale price');
         assert_not_contains('Walk-in', $html);
+        assert_contains('<dt>Source</dt><dd>In-shop</dd>', $html, 'a sale with no Rescue request is In-shop');
+        // Product / Service sub-labels from items.item_type (fixed once sold — Decision 69)
+        assert_contains(e("{$tag} Valve <img src=x onerror=alert(1)>") . '</span> <span class="txn-kind">Product</span>', $html, 'product line label');
+        assert_contains(e("{$tag} Hot Patch") . '</span> <span class="txn-kind">Service</span>', $html, 'service line label');
+        assert_contains('<p class="txn-total__amount">&#8369;286.50</p>', $html, 'the document total');
 
         // non-official scope + print structure
         assert_contains('For transaction reference only. Not an official BIR invoice.', $html);
@@ -139,10 +153,28 @@ test('transaction summary: guards, id validation, frozen historical values, esca
         foreach (['TIN', 'VAT'] as $absent) {
             assert_not_contains('>' . $absent, $html, "no {$absent} field");
         }
+        // none of the Figma receipt's unsupported claims or fake actions
+        foreach (['bir-approved', 'official sales invoice', 'e-invoice', 'payment verified', 'gcash', 'gateway',
+                  'authoriz', 'vt-pos', 'barcode', 'audit', 'sms', 'receipt sent', 'online', 'start new', 'email', '[f1]'] as $never) {
+            assert_not_contains($never, strtolower($html), "no '{$never}' on the Transaction Summary");
+        }
+        foreach (['<dt>Cash</dt>', '<dt>Cash received', '<dt>Payment', '<dt>Change', '<dt>Tendered', '<dt>Amount tendered'] as $never) {
+            assert_not_contains($never, $html, "no {$never} field — tender / change are never stored (Decision 54)"); // ("Cashier" is the cashier row)
+        }
         assert_contains('window.print()', $html, 'Print button');
         assert_contains('<body class="admin is-printdoc">', $html, 'print styles are scoped to this document (on the admin shell)');
-        assert_contains('pagehead no-print', $html, 'screen-only controls are hidden when printing');
-        assert_contains('Back to POS', $html);
+        // Phase 7.4d: the band and the actions panel are screen-only; the document itself prints
+        assert_contains('<header class="txn-band no-print">', $html, 'the header band is hidden when printing');
+        assert_contains('<aside class="txn-actions no-print" aria-labelledby="txn-actions-h">', $html, 'the actions panel is hidden when printing');
+        assert_contains('<article class="txn-doc">', $html, 'the document has no no-print class');
+        $actions = preg_match('~<aside class="txn-actions.*?</aside>~s', $html, $m) === 1 ? $m[0] : '';
+        assert_contains('Print Summary', $actions);
+        assert_contains('href="/vulcatrack/admin/pos.php">&larr; Back to POS</a>', $actions);
+        assert_contains('href="/vulcatrack/admin/sales.php">Sales History</a>', $actions);
+        assert_not_contains('rescue-view.php', $html, 'an in-shop sale gets no Rescue action or link');
+        assert_not_contains('View Rescue', $html);
+        assert_true(strpos($html, 'class="txn-actions') < strpos($html, 'class="txn-doc"'),
+            'actions come first in the source (above the receipt when stacked)');
 
         // ================= walk-in sale =================
         $html = $server->request($URL . '?id=' . $walkIn['sale_id'])['body'];
