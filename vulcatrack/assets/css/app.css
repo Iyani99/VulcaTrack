@@ -1217,3 +1217,84 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
   .cust .cu-table th { font-size: .64rem; letter-spacing: .04em; }
   .cust .cu-status { font-size: .62rem; letter-spacing: .03em; }
 }
+
+/* ---- customer Log in / Sign up (Phase 7.4b-b) ------------------------------
+   The Customer auth Figma: white page, top-right red back action, centered
+   brand over a thin bordered card, compact monospace labels, red full-width
+   submit. Scoped to .cauth (which also carries .cust for the shared customer
+   tokens); the admin login keeps the plain partials/top.php shell + base rules. */
+
+.cust.cauth { background: #fff; }
+.cauth :focus-visible { outline: 2px solid var(--cu-red); outline-offset: 2px; }
+
+.cauth .cauth-top { display: flex; justify-content: flex-end; padding: 1.75rem 2.5rem 0; }
+.cauth .cauth-back {
+  display: inline-flex; align-items: center; gap: .45rem; min-height: 2.5rem; padding: .5rem 1rem;
+  background: var(--cu-red); color: #fff; border-radius: 3px; text-decoration: none;
+  font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+}
+.cauth .cauth-back:hover { background: var(--cu-red-dark); color: #fff; }
+.cauth .cauth-back svg { width: 1rem; height: 1rem; flex: none; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+/* the page grows with its content (validation errors, short screens) */
+.cauth .cauth-main {
+  flex: 1 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 1.5rem 1rem 3.5rem;
+}
+.cauth .cauth-brand { display: flex; align-items: center; gap: .6rem; margin: 0 0 1.25rem; color: var(--cu-ink); text-decoration: none; }
+.cauth .cauth-brand__pin { width: 3.4rem; height: 3.4rem; flex: none; fill: var(--cu-red); }
+.cauth .cauth-brand__text { display: flex; flex-direction: column; line-height: 1.05; }
+.cauth .cauth-brand__name { font-size: 2.1rem; font-weight: 800; letter-spacing: -.02em; }
+.cauth .cauth-brand__sub {
+  margin-top: .35rem; padding-top: .3rem; border-top: 2px solid var(--cu-red); align-self: flex-start;
+  font-family: var(--cu-mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: #555;
+}
+
+.cauth .cauth-card { width: min(100%, 27rem); padding: 1.75rem 1.75rem 1.5rem; background: #fff; border: 1px solid #8f8f8f; border-radius: 4px; }
+.cauth .cauth-title { margin: 0 0 1.1rem; font-size: 1.2rem; font-weight: 800; text-align: center; }
+
+/* sign up: a static "Customer account" bar where the Figma had its Admin |
+   Customer toggle (no toggle anywhere — log in and sign up are customer-only) */
+.cauth .cauth-switch {
+  display: flex; align-items: center; justify-content: center; min-height: 2.4rem; margin: 0 0 1.1rem; padding: .35rem .5rem;
+  border: 1.5px solid var(--cu-ink); border-radius: 3px; background: var(--cu-ink); color: #fff;
+  font-family: var(--cu-mono); font-size: .8rem;
+}
+
+.cauth .cauth-notice { margin: 0 0 1rem; padding: .6rem .75rem; background: #eef6f0; border-left: 3px solid #1c6b32; color: #154d25; font-size: .88rem; }
+.cauth .cauth-alert { margin: 0 0 1rem; padding: .6rem .75rem; background: #fdecec; border-left: 3px solid var(--cu-red-dark); color: #8c0f15; font-size: .88rem; font-weight: 600; }
+
+.cauth .cauth-form label {
+  margin: 1rem 0 .3rem; font-family: var(--cu-mono); font-size: .78rem; font-weight: 500; color: var(--cu-ink);
+}
+.cauth .cauth-form label:first-of-type { margin-top: 0; }
+.cauth .cauth-form input {
+  width: 100%; min-height: 2.75rem; padding: .55rem .7rem;
+  border: 1px solid #8f8f8f; border-radius: 3px; background: #fff; color: var(--cu-ink); font: inherit; font-size: 1rem;
+}
+.cauth .cauth-form input:focus { outline: 2px solid var(--cu-ink); outline-offset: 0; border-color: var(--cu-ink); }
+.cauth .cauth-form input[aria-invalid="true"] { border-color: var(--cu-red-dark); }
+.cauth .cauth-form small.error { margin-top: .3rem; font-size: .82rem; font-weight: 600; color: #a3121a; }
+.cauth .cauth-hint { display: block; margin-top: .3rem; font-size: .8rem; color: var(--cu-muted); }
+.cauth .cauth-submit {
+  margin: 1.5rem 0 0; width: 100%; min-height: 2.9rem; padding: .7rem 1rem; border: 0; border-radius: 3px;
+  background: var(--cu-red); color: #fff;
+  font-family: var(--cu-mono); font-size: .85rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+}
+.cauth .cauth-submit:hover { background: var(--cu-red-dark); }
+.cauth .cauth-alt { margin: 1rem 0 0; font-size: .85rem; color: #555; }
+.cauth .cauth-alt a { color: var(--cu-ink); font-weight: 700; text-underline-offset: 2px; }
+.cauth .cauth-alt a:hover { color: var(--cu-red-dark); }
+/* log in: the subtle path for admins to their separate login (navigation only) —
+   quieter than the Log in button and the Sign up link on purpose */
+.cauth .cauth-admin { margin: .6rem 0 0; font-size: .78rem; }
+.cauth .cauth-admin a { display: inline-block; padding: .2rem 0; color: #666; font-weight: 400; text-underline-offset: 2px; }
+.cauth .cauth-admin a:hover { color: var(--cu-ink); }
+
+@media (max-width: 30rem) {
+  .cauth .cauth-top { padding: 1rem 1rem 0; }
+  .cauth .cauth-main { padding: 1.25rem .75rem 2.5rem; }
+  .cauth .cauth-brand__pin { width: 2.7rem; height: 2.7rem; }
+  .cauth .cauth-brand__name { font-size: 1.75rem; }
+  .cauth .cauth-card { padding: 1.35rem 1.1rem 1.25rem; }
+}

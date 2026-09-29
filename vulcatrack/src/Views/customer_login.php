@@ -1,34 +1,40 @@
 <?php
 /**
- * Customer login form.
+ * Customer login form (Phase 7.4b-b: follows the Customer Login Figma).
  * Expects: string $pageTitle, array<string,string> $errors, array<string,string> $old, ?string $notice
+ *
+ * Figma differences, on purpose: no Admin | Customer toggle — this form
+ * authenticates customers only, and admins get a subtle text link to the
+ * separate admin login (navigation only); the identifier is email only (no
+ * phone login); there is no "Forgot password?" link (no reset flow exists).
  */
-require __DIR__ . '/partials/top.php';
+$backLink = ['Back to home page', '/'];
+require __DIR__ . '/partials/customer_auth_top.php';
 ?>
-<h1>Log in</h1>
+<h1 class="cauth-title" id="cauth-title">Welcome! Please log in.</h1>
 
 <?php if (!empty($notice)): ?>
-  <p class="notice"><?= e($notice) ?></p>
+  <p class="cauth-notice" role="status"><?= e($notice) ?></p>
 <?php endif; ?>
 
 <?php if (!empty($errors['form'])): ?>
-  <p class="error"><?= e($errors['form']) ?></p>
+  <p class="cauth-alert" role="alert"><?= e($errors['form']) ?></p>
 <?php endif; ?>
 
-<form method="post" action="<?= e(vulcatrack_url('/login.php')) ?>" novalidate>
+<form method="post" action="<?= e(vulcatrack_url('/login.php')) ?>" class="cauth-form" novalidate>
   <?= \VulcaTrack\Auth\Csrf::field() ?>
 
-  <label for="email">Email</label>
+  <label for="email">Email address</label>
   <input type="email" id="email" name="email" maxlength="190"
          value="<?= e($old['email'] ?? '') ?>" required autofocus autocomplete="email">
 
   <label for="password">Password</label>
   <input type="password" id="password" name="password" required autocomplete="current-password">
 
-  <button type="submit">Log in</button>
+  <button type="submit" class="cauth-submit">Log in</button>
 </form>
 
-<p class="muted"><a href="<?= e(vulcatrack_url('/register.php')) ?>">Need an account? Register</a></p>
-<p class="muted"><a href="<?= e(vulcatrack_url('/admin/login.php')) ?>">Admin? Sign in here</a></p>
+<p class="cauth-alt">Don't have an account? <a href="<?= e(vulcatrack_url('/register.php')) ?>">Sign up</a></p>
+<p class="cauth-admin"><a href="<?= e(vulcatrack_url('/admin/login.php')) ?>">Admin? Sign in here</a></p>
 
-<?php require __DIR__ . '/partials/bottom.php'; ?>
+<?php require __DIR__ . '/partials/customer_auth_bottom.php'; ?>
