@@ -1,248 +1,133 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1520" viewBox="0 0 2000 1520" font-family="Segoe UI, Helvetica, Arial, sans-serif">
-<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#33383d"/></marker></defs>
-<rect width="2000" height="1520" fill="#fff"/>
-<text x="1000" y="40" text-anchor="middle" font-size="21" font-weight="700" fill="#1a1a1a">VulcaTrack: Sales and Inventory with On-the-Go Services</text>
-<text x="1000" y="63" text-anchor="middle" font-size="14" font-weight="400" fill="#5b6b7b">Data Flow Diagram &#8211; Level 1</text>
-
-<!-- ============================ PROCESSES ============================ -->
-<circle cx="905" cy="215" r="88" fill="#fff" stroke="#123a6b" stroke-width="2.4"/>
-<text x="905" y="209" text-anchor="middle" font-size="15.5" font-weight="600" fill="#1a1a1a">Authenticate &amp;</text>
-<text x="905" y="231" text-anchor="middle" font-size="15.5" font-weight="600" fill="#1a1a1a">Manage Accounts</text>
-<circle cx="905" cy="147" r="12.5" fill="#123a6b"/>
-<text x="905" y="151.5" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">1</text>
-
-<circle cx="410" cy="525" r="88" fill="#fff" stroke="#123a6b" stroke-width="2.4"/>
-<text x="410" y="519" text-anchor="middle" font-size="15.5" font-weight="600" fill="#1a1a1a">Manage</text>
-<text x="410" y="541" text-anchor="middle" font-size="15.5" font-weight="600" fill="#1a1a1a">Vehicles</text>
-<circle cx="410" cy="457" r="12.5" fill="#123a6b"/>
-<text x="410" y="461.5" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">2</text>
-
-<circle cx="525" cy="945" r="88" fill="#fff" stroke="#123a6b" stroke-width="2.4"/>
-<text x="525" y="939" text-anchor="middle" font-size="15.5" font-weight="600" fill="#1a1a1a">Process OTG</text>
-<text x="525" y="961" text-anchor="middle" font-size="15.5" font-weight="600" fill="#1a1a1a">Request</text>
-<circle cx="525" cy="877" r="12.5" fill="#123a6b"/>
-<text x="525" y="881.5" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">3</text>
-
-<circle cx="1380" cy="955" r="88" fill="#fff" stroke="#123a6b" stroke-width="2.4"/>
-<text x="1380" y="949" text-anchor="middle" font-size="15.5" font-weight="600" fill="#1a1a1a">Manage Service</text>
-<text x="1380" y="971" text-anchor="middle" font-size="15.5" font-weight="600" fill="#1a1a1a">Requests</text>
-<circle cx="1380" cy="887" r="12.5" fill="#123a6b"/>
-<text x="1380" y="891.5" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">4</text>
-
-<circle cx="1540" cy="575" r="88" fill="#fff" stroke="#123a6b" stroke-width="2.4"/>
-<text x="1540" y="569" text-anchor="middle" font-size="15.5" font-weight="600" fill="#1a1a1a">Process Sale</text>
-<text x="1540" y="591" text-anchor="middle" font-size="15.5" font-weight="600" fill="#1a1a1a">(POS)</text>
-<circle cx="1540" cy="507" r="12.5" fill="#123a6b"/>
-<text x="1540" y="511.5" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">5</text>
-
-<circle cx="1500" cy="245" r="88" fill="#fff" stroke="#123a6b" stroke-width="2.4"/>
-<text x="1500" y="239" text-anchor="middle" font-size="15.5" font-weight="600" fill="#1a1a1a">Manage</text>
-<text x="1500" y="261" text-anchor="middle" font-size="15.5" font-weight="600" fill="#1a1a1a">Inventory</text>
-<circle cx="1500" cy="177" r="12.5" fill="#123a6b"/>
-<text x="1500" y="181.5" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">6</text>
-
-<!-- ============================ EXTERNAL ENTITIES ============================ -->
-<rect x="60" y="380" width="130" height="320" fill="#eef0f3" stroke="#1a1a1a" stroke-width="2"/>
-<text x="125" y="546" text-anchor="middle" font-size="18" font-weight="700" fill="#1a1a1a">Customer</text>
-<rect x="1810" y="380" width="130" height="320" fill="#eef0f3" stroke="#1a1a1a" stroke-width="2"/>
-<text x="1875" y="546" text-anchor="middle" font-size="18" font-weight="700" fill="#1a1a1a">Admin</text>
-
-<!-- ============================ DATA STORES ============================ -->
-<!-- D1 customers -->
-<path d="M994,398 L812,398 L812,448 L994,448" fill="#fff" stroke="#123a6b" stroke-width="2"/>
-<line x1="852" y1="398" x2="852" y2="448" stroke="#123a6b" stroke-width="2"/>
-<text x="832" y="428" text-anchor="middle" font-size="13" font-weight="700" fill="#123a6b">D1</text>
-<text x="923" y="428" text-anchor="middle" font-size="13.5" fill="#1a1a1a">customers</text>
-<!-- D2 admins -->
-<path d="M1260,188 L1090,188 L1090,238 L1260,238" fill="#fff" stroke="#123a6b" stroke-width="2"/>
-<line x1="1130" y1="188" x2="1130" y2="238" stroke="#123a6b" stroke-width="2"/>
-<text x="1110" y="218" text-anchor="middle" font-size="13" font-weight="700" fill="#123a6b">D2</text>
-<text x="1195" y="218" text-anchor="middle" font-size="13.5" fill="#1a1a1a">admins</text>
-<!-- D3 vehicles -->
-<path d="M426,650 L246,650 L246,700 L426,700" fill="#fff" stroke="#123a6b" stroke-width="2"/>
-<line x1="286" y1="650" x2="286" y2="700" stroke="#123a6b" stroke-width="2"/>
-<text x="266" y="680" text-anchor="middle" font-size="13" font-weight="700" fill="#123a6b">D3</text>
-<text x="356" y="680" text-anchor="middle" font-size="13.5" fill="#1a1a1a">vehicles</text>
-<!-- D4 items -->
-<path d="M1495,405 L1315,405 L1315,455 L1495,455" fill="#fff" stroke="#123a6b" stroke-width="2"/>
-<line x1="1355" y1="405" x2="1355" y2="455" stroke="#123a6b" stroke-width="2"/>
-<text x="1335" y="435" text-anchor="middle" font-size="13" font-weight="700" fill="#123a6b">D4</text>
-<text x="1425" y="435" text-anchor="middle" font-size="13.5" fill="#1a1a1a">items</text>
-<!-- D5 Sales & Line Items -->
-<path d="M1296,592 L1070,592 L1070,642 L1296,642" fill="#fff" stroke="#123a6b" stroke-width="2"/>
-<line x1="1110" y1="592" x2="1110" y2="642" stroke="#123a6b" stroke-width="2"/>
-<text x="1090" y="622" text-anchor="middle" font-size="13" font-weight="700" fill="#123a6b">D5</text>
-<text x="1203" y="622" text-anchor="middle" font-size="12.5" fill="#1a1a1a">Sales &amp; Line Items</text>
-<!-- D6 service_requests -->
-<path d="M882,1198 L700,1198 L700,1248 L882,1248" fill="#fff" stroke="#123a6b" stroke-width="2"/>
-<line x1="740" y1="1198" x2="740" y2="1248" stroke="#123a6b" stroke-width="2"/>
-<text x="720" y="1228" text-anchor="middle" font-size="13" font-weight="700" fill="#123a6b">D6</text>
-<text x="811" y="1226" text-anchor="middle" font-size="12" fill="#1a1a1a">service_requests</text>
-<!-- D7 tiremen -->
-<path d="M1240,1198 L1060,1198 L1060,1248 L1240,1248" fill="#fff" stroke="#123a6b" stroke-width="2"/>
-<line x1="1100" y1="1198" x2="1100" y2="1248" stroke="#123a6b" stroke-width="2"/>
-<text x="1080" y="1228" text-anchor="middle" font-size="13" font-weight="700" fill="#123a6b">D7</text>
-<text x="1170" y="1226" text-anchor="middle" font-size="13.5" fill="#1a1a1a">tiremen</text>
-
-<!-- ============================ DATA FLOWS ============================ -->
-
-<!-- Admin login -> P1 (orthogonal, over the top) -->
-<polyline points="1875,380 1875,112 908,112 908,127" fill="none" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="1322" y="95" width="136" height="18" fill="#fff" fill-opacity="0.9"/>
-<text x="1390" y="107" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Login Credentials</text>
-
-<!-- Customer <-> P1 -->
-<line x1="190" y1="418" x2="834" y2="268" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="352" y="320" width="190" height="32" fill="#fff" fill-opacity="0.9"/>
-<text x="447" y="333" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Login Credentials, Registration,</text>
-<text x="447" y="348" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Profile Data</text>
-<line x1="838" y1="290" x2="190" y2="464" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="360" y="392" width="188" height="18" fill="#fff" fill-opacity="0.9"/>
-<text x="454" y="405" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Account &amp; Profile Information</text>
-
-<!-- Customer <-> P2 -->
-<line x1="190" y1="500" x2="318" y2="500" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="194" y="482" width="122" height="16" fill="#fff" fill-opacity="0.9"/>
-<text x="255" y="494" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Vehicle Information</text>
-<line x1="318" y1="532" x2="190" y2="532" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="196" y="536" width="118" height="16" fill="#fff" fill-opacity="0.9"/>
-<text x="255" y="548" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Saved Vehicle List</text>
-
-<!-- Customer <-> P3 -->
-<line x1="190" y1="672" x2="452" y2="886" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="232" y="732" width="202" height="32" fill="#fff" fill-opacity="0.9"/>
-<text x="333" y="745" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Service Request, Selected Vehicle,</text>
-<text x="333" y="760" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Location Coordinates</text>
-<line x1="470" y1="1010" x2="190" y2="706" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="196" y="866" width="204" height="32" fill="#fff" fill-opacity="0.9"/>
-<text x="298" y="879" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Request Confirmation, Frozen ETA,</text>
-<text x="298" y="894" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Status &amp; History</text>
-
-<!-- P1 <-> D1 (read / write) -->
-<line x1="905" y1="303" x2="905" y2="396" stroke="#33383d" stroke-width="1.6" marker-start="url(#ah)" marker-end="url(#ah)"/>
-<rect x="913" y="342" width="150" height="16" fill="#fff" fill-opacity="0.9"/>
-<text x="917" y="354" text-anchor="start" font-size="11" fill="#1a1a1a">Customer Account Data</text>
-
-<!-- P1 <-> D2 (read / write) -->
-<line x1="993" y1="213" x2="1088" y2="213" stroke="#33383d" stroke-width="1.6" marker-start="url(#ah)" marker-end="url(#ah)"/>
-<rect x="982" y="188" width="118" height="16" fill="#fff" fill-opacity="0.9"/>
-<text x="1041" y="200" text-anchor="middle" font-size="11" fill="#1a1a1a">Admin Credentials</text>
-
-<!-- P2 <-> D3 (read / write) -->
-<line x1="395" y1="613" x2="357" y2="650" stroke="#33383d" stroke-width="1.6" marker-start="url(#ah)" marker-end="url(#ah)"/>
-<rect x="196" y="620" width="108" height="16" fill="#fff" fill-opacity="0.9"/>
-<text x="250" y="632" text-anchor="middle" font-size="11" fill="#1a1a1a">Vehicle Records</text>
-
-<!-- D3 -> P3 (read) -->
-<line x1="416" y1="698" x2="470" y2="874" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="330" y="804" width="140" height="16" fill="#fff" fill-opacity="0.9"/>
-<text x="400" y="816" text-anchor="middle" font-size="11" fill="#1a1a1a">Vehicle Details (read)</text>
-
-<!-- P3 <-> D6 (write request / read status) -->
-<line x1="572" y1="1019" x2="706" y2="1196" stroke="#33383d" stroke-width="1.6" marker-start="url(#ah)" marker-end="url(#ah)"/>
-<rect x="492" y="1074" width="244" height="32" fill="#fff" fill-opacity="0.9"/>
-<text x="614" y="1087" text-anchor="middle" font-size="11" fill="#1a1a1a">Service Request (pending), Frozen ETA,</text>
-<text x="614" y="1102" text-anchor="middle" font-size="11" fill="#1a1a1a">Request Status &amp; History</text>
-
-<!-- D7 -> P3 (read, orthogonal along the bottom) -->
-<polyline points="1150,1248 1150,1315 520,1315 520,1035" fill="none" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="704" y="1300" width="270" height="16" fill="#fff" fill-opacity="0.9"/>
-<text x="839" y="1312" text-anchor="middle" font-size="11" fill="#1a1a1a">Assigned Tireman Name &amp; Contact (read)</text>
-
-<!-- P4 -> Admin (pending queue out) -->
-<line x1="1452" y1="900" x2="1806" y2="636" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="1546" y="706" width="160" height="32" fill="#fff" fill-opacity="0.9"/>
-<text x="1626" y="719" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Pending Requests,</text>
-<text x="1626" y="734" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Location &amp; Details</text>
-
-<!-- Admin -> P4 (request handling + roster) -->
-<line x1="1806" y1="664" x2="1452" y2="905" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="1462" y="890" width="296" height="32" fill="#fff" fill-opacity="0.9"/>
-<text x="1610" y="903" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Tireman Details, Accept / Reject Decision,</text>
-<text x="1610" y="918" text-anchor="middle" font-size="11.5" fill="#1a1a1a">Tireman Assignment, Request Completion</text>
-
-<!-- P4 <-> D6 (read / write) -->
-<line x1="1294" y1="1000" x2="884" y2="1214" stroke="#33383d" stroke-width="1.6" marker-start="url(#ah)" marker-end="url(#ah)"/>
-<rect x="956" y="1114" width="220" height="32" fill="#fff" fill-opacity="0.9"/>
-<text x="1066" y="1127" text-anchor="middle" font-size="11" fill="#1a1a1a">Service Request Record</text>
-<text x="1066" y="1142" text-anchor="middle" font-size="11" fill="#1a1a1a">(status, admin_id, tireman_id)</text>
-
-<!-- P4 <-> D7 (read / write) -->
-<line x1="1338" y1="1040" x2="1198" y2="1196" stroke="#33383d" stroke-width="1.6" marker-start="url(#ah)" marker-end="url(#ah)"/>
-<rect x="1250" y="1108" width="104" height="16" fill="#fff" fill-opacity="0.9"/>
-<text x="1302" y="1120" text-anchor="middle" font-size="11" fill="#1a1a1a">Tireman Records</text>
-
-<!-- D1 -> P4 (read) -->
-<line x1="856" y1="448" x2="1317" y2="894" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="1002" y="656" width="140" height="16" fill="#fff" fill-opacity="0.9"/>
-<text x="1072" y="668" text-anchor="middle" font-size="11" fill="#1a1a1a">Customer Details (read)</text>
-
-<!-- D1 -> P5 (read, optional link) -->
-<line x1="998" y1="420" x2="1454" y2="552" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="1040" y="430" width="230" height="18" fill="#fff" fill-opacity="0.9"/>
-<text x="1155" y="443" text-anchor="middle" font-size="11" fill="#1a1a1a">Customer Details (optional customer link)</text>
-
-<!-- P5 <-> D4 (read prices / deduct stock) -->
-<line x1="1494" y1="496" x2="1450" y2="454" stroke="#33383d" stroke-width="1.6" marker-start="url(#ah)" marker-end="url(#ah)"/>
-<rect x="1180" y="484" width="240" height="32" fill="#fff" fill-opacity="0.9"/>
-<text x="1300" y="497" text-anchor="middle" font-size="11" fill="#1a1a1a">Item Prices (read),</text>
-<text x="1300" y="512" text-anchor="middle" font-size="11" fill="#1a1a1a">Stock Deduction (product lines)</text>
-
-<!-- P5 -> D5 (write) -->
-<line x1="1452" y1="590" x2="1298" y2="614" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="1286" y="568" width="180" height="16" fill="#fff" fill-opacity="0.9"/>
-<text x="1376" y="580" text-anchor="middle" font-size="11" fill="#1a1a1a">Sale &amp; Line-Item Records</text>
-
-<!-- P6 <-> D4 (read / write) -->
-<line x1="1486" y1="328" x2="1440" y2="402" stroke="#33383d" stroke-width="1.6" marker-start="url(#ah)" marker-end="url(#ah)"/>
-<rect x="1344" y="352" width="96" height="16" fill="#fff" fill-opacity="0.9"/>
-<text x="1392" y="364" text-anchor="middle" font-size="11" fill="#1a1a1a">Item Records</text>
-
-<!-- Admin <-> P6 -->
-<line x1="1580" y1="266" x2="1806" y2="428" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="1686" y="281" width="120" height="32" fill="#fff" fill-opacity="0.9"/>
-<text x="1802" y="294" text-anchor="end" font-size="11.5" fill="#1a1a1a">Inventory List,</text>
-<text x="1802" y="309" text-anchor="end" font-size="11.5" fill="#1a1a1a">Low-Stock Alerts</text>
-<line x1="1806" y1="446" x2="1576" y2="288" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="1612" y="366" width="194" height="32" fill="#fff" fill-opacity="0.9"/>
-<text x="1802" y="379" text-anchor="end" font-size="11.5" fill="#1a1a1a">Product / Service Details,</text>
-<text x="1802" y="394" text-anchor="end" font-size="11.5" fill="#1a1a1a">Stock Updates, Item Activation</text>
-
-<!-- Admin <-> P5 -->
-<line x1="1626" y1="542" x2="1806" y2="506" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="1688" y="480" width="118" height="32" fill="#fff" fill-opacity="0.9"/>
-<text x="1802" y="493" text-anchor="end" font-size="11.5" fill="#1a1a1a">Running Total,</text>
-<text x="1802" y="508" text-anchor="end" font-size="11.5" fill="#1a1a1a">Printable Receipt</text>
-<line x1="1806" y1="570" x2="1632" y2="600" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<rect x="1618" y="610" width="188" height="32" fill="#fff" fill-opacity="0.9"/>
-<text x="1802" y="623" text-anchor="end" font-size="11.5" fill="#1a1a1a">Selected Items, Quantities,</text>
-<text x="1802" y="638" text-anchor="end" font-size="11.5" fill="#1a1a1a">Cash Tendered, Customer Link</text>
-
-<!-- ============================ LEGEND ============================ -->
-<rect x="55" y="1352" width="1890" height="156" fill="#fafafa" stroke="#dcdfe3"/>
-<text x="80" y="1378" text-anchor="start" font-size="13" font-weight="700" fill="#1a1a1a">Notation</text>
-<circle cx="96" cy="1400" r="11" fill="#fff" stroke="#123a6b" stroke-width="1.8"/>
-<text x="118" y="1404" text-anchor="start" font-size="11.5" fill="#1a1a1a">Process</text>
-<rect x="84" y="1416" width="24" height="16" fill="#eef0f3" stroke="#1a1a1a" stroke-width="1.6"/>
-<text x="118" y="1429" text-anchor="start" font-size="11.5" fill="#1a1a1a">External Entity</text>
-<path d="M108,1448 h-24 v16 h24" fill="none" stroke="#123a6b" stroke-width="1.8"/>
-<text x="118" y="1460" text-anchor="start" font-size="11.5" fill="#1a1a1a">Data Store</text>
-<line x1="84" y1="1482" x2="114" y2="1482" stroke="#33383d" stroke-width="1.6" marker-end="url(#ah)"/>
-<text x="118" y="1486" text-anchor="start" font-size="11.5" fill="#1a1a1a">Data flow</text>
-<line x1="200" y1="1482" x2="230" y2="1482" stroke="#33383d" stroke-width="1.6" marker-start="url(#ah)" marker-end="url(#ah)"/>
-<text x="234" y="1486" text-anchor="start" font-size="11.5" fill="#1a1a1a">Read / write access</text>
-<text x="360" y="1378" text-anchor="start" font-size="13" font-weight="700" fill="#1a1a1a">Data stores  (VulcaTrack database &#8211; see docs/ERD/schema.dbml)</text>
-<text x="360" y="1400" text-anchor="start" font-size="11.5" fill="#5b6b7b">D1 customers     D2 admins     D3 vehicles     D4 items</text>
-<text x="360" y="1419" text-anchor="start" font-size="11.5" fill="#5b6b7b">D5 Sales &amp; Line Items  (sales + sale_items)     D6 service_requests     D7 tiremen</text>
-<text x="360" y="1447" text-anchor="start" font-size="13" font-weight="700" fill="#1a1a1a">Actors</text>
-<text x="360" y="1467" text-anchor="start" font-size="11.5" fill="#5b6b7b">Customer &#8211; submits OTG service requests; manages own profile and vehicles.</text>
-<text x="360" y="1485" text-anchor="start" font-size="11.5" fill="#5b6b7b">Admin &#8211; runs the shop: POS, inventory, and OTG request handling (incl. the Tireman roster).</text>
-<text x="1170" y="1378" text-anchor="start" font-size="13" font-weight="700" fill="#1a1a1a">Scope notes</text>
-<text x="1170" y="1399" text-anchor="start" font-size="11" fill="#5b6b7b">&#8226;  OTG requires an authenticated customer, a saved vehicle and a shared location (latitude /</text>
-<text x="1170" y="1416" text-anchor="start" font-size="11" fill="#5b6b7b">   longitude). The ETA is calculated once at request time and stored as a frozen snapshot &#8211;</text>
-<text x="1170" y="1433" text-anchor="start" font-size="11" fill="#5b6b7b">   never recalculated. No live GPS tracking; no route geometry is stored.</text>
-<text x="1170" y="1450" text-anchor="start" font-size="11" fill="#5b6b7b">&#8226;  Request statuses: pending, accepted, rejected, completed. A Tireman is a record in D7</text>
-<text x="1170" y="1467" text-anchor="start" font-size="11" fill="#5b6b7b">   assigned by the Admin &#8211; not a system user (no Tireman login or dashboard).</text>
-<text x="1170" y="1484" text-anchor="start" font-size="11" fill="#5b6b7b">&#8226;  POS: online / GCash payment is out of scope; walk-in sales need no customer account.</text>
-<text x="1170" y="1501" text-anchor="start" font-size="11" fill="#5b6b7b">   Product sale lines deduct D4 stock; service lines do not. Deactivation replaces delete (D3, D4, D7).</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1165" viewBox="0 0 1600 1165" font-family="Segoe UI, Arial, Helvetica, sans-serif">
+<defs>
+<marker id="ah" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L12,6 L0,12 z" fill="#2b2f33"/></marker>
+</defs>
+<rect width="1600" height="1165" fill="#ffffff"/>
+<text x="800" y="38" font-size="28" font-weight="700" fill="#111" text-anchor="middle"><tspan x="800" dy="0">VulcaTrack: Sales and Inventory with On-the-Go Services</tspan></text>
+<text x="800" y="66" font-size="20" font-weight="400" fill="#444" text-anchor="middle"><tspan x="800" dy="0">Data Flow Diagram — Level 1</tspan></text>
+<path d="M70,330 L70,150 L722,150" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M711,210 L110,210 L110,330" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M800,285 L800,360" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M878,150 L930,140" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1560,330 L1560,90 L800,90 L800,105" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M145,345 L331,345" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M345,380 L145,380" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M420,420 L420,500" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M420,544 L420,740" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M145,790 L340,790" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M344,870 L80,870 L80,860" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M470,905 L590,1050" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M960,1094 L960,1130 L290,1130 L290,905 L362,905" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M800,404 L812,730" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M762,889 L700,1050" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M878,889 L930,1050" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1470,820 L910,820" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M903,855 L1470,855" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M884,757 L1106,625" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M880,404 L1105,560" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M1190,500 L1190,444" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1190,680 L1190,735" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1279,600 L1470,600" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M1470,645 L1261,645" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M1500,330 L1500,215 L1276,215" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M1273,275 L1478,275 L1478,330" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M1190,335 L1190,400" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1190,779 L1190,895" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M1280,985 L1500,985 L1500,860" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<rect x="20" y="330" width="125" height="530" rx="0" fill="#eef0f3" stroke="#1f3a5a" stroke-width="3"/>
+<text x="82.5" y="603.1" font-size="23" font-weight="700" fill="#111" text-anchor="middle"><tspan x="82.5" dy="0">Customer</tspan></text>
+<rect x="1470" y="330" width="110" height="530" rx="0" fill="#eef0f3" stroke="#1f3a5a" stroke-width="3"/>
+<text x="1525" y="603.1" font-size="23" font-weight="700" fill="#111" text-anchor="middle"><tspan x="1525" dy="0">Admin</tspan></text>
+<circle cx="800" cy="195" r="90" fill="#fff" stroke="#1f3a5a" stroke-width="3"/>
+<circle cx="800" cy="129" r="15" fill="#1f3a5a"/>
+<text x="800" y="135.3" font-size="18" font-weight="700" fill="#fff" text-anchor="middle"><tspan x="800" dy="0">1</tspan></text>
+<text x="800" y="202.3" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="800" dy="0">Authenticate &amp;</tspan><tspan x="800" dy="24.2">Manage Accounts</tspan></text>
+<circle cx="420" cy="330" r="90" fill="#fff" stroke="#1f3a5a" stroke-width="3"/>
+<circle cx="420" cy="264" r="15" fill="#1f3a5a"/>
+<text x="420" y="270.3" font-size="18" font-weight="700" fill="#fff" text-anchor="middle"><tspan x="420" dy="0">2</tspan></text>
+<text x="420" y="337.3" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="420" dy="0">Manage</tspan><tspan x="420" dy="24.2">Vehicles</tspan></text>
+<circle cx="420" cy="830" r="90" fill="#fff" stroke="#1f3a5a" stroke-width="3"/>
+<circle cx="420" cy="764" r="15" fill="#1f3a5a"/>
+<text x="420" y="770.3" font-size="18" font-weight="700" fill="#fff" text-anchor="middle"><tspan x="420" dy="0">3</tspan></text>
+<text x="420" y="837.3" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="420" dy="0">Process Rescue</tspan><tspan x="420" dy="24.2">Request</tspan></text>
+<circle cx="820" cy="820" r="90" fill="#fff" stroke="#1f3a5a" stroke-width="3"/>
+<circle cx="820" cy="754" r="15" fill="#1f3a5a"/>
+<text x="820" y="760.3" font-size="18" font-weight="700" fill="#fff" text-anchor="middle"><tspan x="820" dy="0">4</tspan></text>
+<text x="820" y="827.3" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="820" dy="0">Manage Rescue</tspan><tspan x="820" dy="24.2">Requests</tspan></text>
+<circle cx="1190" cy="590" r="90" fill="#fff" stroke="#1f3a5a" stroke-width="3"/>
+<circle cx="1190" cy="524" r="15" fill="#1f3a5a"/>
+<text x="1190" y="530.3" font-size="18" font-weight="700" fill="#fff" text-anchor="middle"><tspan x="1190" dy="0">5</tspan></text>
+<text x="1190" y="597.3" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="1190" dy="0">Process Sale</tspan><tspan x="1190" dy="24.2">(POS)</tspan></text>
+<circle cx="1190" cy="245" r="90" fill="#fff" stroke="#1f3a5a" stroke-width="3"/>
+<circle cx="1190" cy="179" r="15" fill="#1f3a5a"/>
+<text x="1190" y="185.3" font-size="18" font-weight="700" fill="#fff" text-anchor="middle"><tspan x="1190" dy="0">6</tspan></text>
+<text x="1190" y="252.3" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="1190" dy="0">Manage</tspan><tspan x="1190" dy="24.2">Inventory</tspan></text>
+<circle cx="1190" cy="985" r="90" fill="#fff" stroke="#1f3a5a" stroke-width="3"/>
+<circle cx="1190" cy="919" r="15" fill="#1f3a5a"/>
+<text x="1190" y="925.3" font-size="18" font-weight="700" fill="#fff" text-anchor="middle"><tspan x="1190" dy="0">7</tspan></text>
+<text x="1190" y="992.3" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="1190" dy="0">Sales History</tspan><tspan x="1190" dy="24.2">&amp; Reports</tspan></text>
+<rect x="700" y="360" width="210" height="44" fill="#fff" stroke="none"/>
+<path d="M910,360 H700 V404 H910" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<path d="M750,360 L750,404" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<text x="725" y="388.7" font-size="19" font-weight="700" fill="#111" text-anchor="middle"><tspan x="725" dy="0">D1</tspan></text>
+<text x="758" y="389" font-size="20" font-weight="400" fill="#111" text-anchor="start"><tspan x="758" dy="0">customers</tspan></text>
+<rect x="930" y="118" width="210" height="44" fill="#fff" stroke="none"/>
+<path d="M1140,118 H930 V162 H1140" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<path d="M980,118 L980,162" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<text x="955" y="146.7" font-size="19" font-weight="700" fill="#111" text-anchor="middle"><tspan x="955" dy="0">D2</tspan></text>
+<text x="988" y="147" font-size="20" font-weight="400" fill="#111" text-anchor="start"><tspan x="988" dy="0">admins</tspan></text>
+<rect x="320" y="500" width="210" height="44" fill="#fff" stroke="none"/>
+<path d="M530,500 H320 V544 H530" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<path d="M370,500 L370,544" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<text x="345" y="528.7" font-size="19" font-weight="700" fill="#111" text-anchor="middle"><tspan x="345" dy="0">D3</tspan></text>
+<text x="378" y="529" font-size="20" font-weight="400" fill="#111" text-anchor="start"><tspan x="378" dy="0">vehicles</tspan></text>
+<rect x="1090" y="400" width="210" height="44" fill="#fff" stroke="none"/>
+<path d="M1300,400 H1090 V444 H1300" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<path d="M1140,400 L1140,444" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<text x="1115" y="428.7" font-size="19" font-weight="700" fill="#111" text-anchor="middle"><tspan x="1115" dy="0">D4</tspan></text>
+<text x="1148" y="429" font-size="20" font-weight="400" fill="#111" text-anchor="start"><tspan x="1148" dy="0">items</tspan></text>
+<rect x="1100" y="735" width="210" height="44" fill="#fff" stroke="none"/>
+<path d="M1310,735 H1100 V779 H1310" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<path d="M1150,735 L1150,779" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<text x="1125" y="763.7" font-size="19" font-weight="700" fill="#111" text-anchor="middle"><tspan x="1125" dy="0">D5</tspan></text>
+<text x="1158" y="764" font-size="20" font-weight="400" fill="#111" text-anchor="start"><tspan x="1158" dy="0">sales + sale_items</tspan></text>
+<rect x="560" y="1050" width="210" height="44" fill="#fff" stroke="none"/>
+<path d="M770,1050 H560 V1094 H770" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<path d="M610,1050 L610,1094" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<text x="585" y="1078.7" font-size="19" font-weight="700" fill="#111" text-anchor="middle"><tspan x="585" dy="0">D6</tspan></text>
+<text x="618" y="1079" font-size="20" font-weight="400" fill="#111" text-anchor="start"><tspan x="618" dy="0">service_requests</tspan></text>
+<rect x="860" y="1050" width="210" height="44" fill="#fff" stroke="none"/>
+<path d="M1070,1050 H860 V1094 H1070" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<path d="M910,1050 L910,1094" fill="none" stroke="#1f3a5a" stroke-width="2.6"/>
+<text x="885" y="1078.7" font-size="19" font-weight="700" fill="#111" text-anchor="middle"><tspan x="885" dy="0">D7</tspan></text>
+<text x="918" y="1079" font-size="20" font-weight="400" fill="#111" text-anchor="start"><tspan x="918" dy="0">tiremen</tspan></text>
+<text x="420" y="138" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="420" dy="0">Registration, Login, Profile &amp; Photo</tspan></text>
+<text x="585" y="238" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="585" dy="0">Account &amp; Profile Details</tspan></text>
+<text x="812" y="328" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="812" dy="0">Customer Account Data</tspan></text>
+<text x="1020" y="186" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1020" dy="0">Admin Credentials</tspan></text>
+<text x="1160" y="80" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1160" dy="0">Admin Login Credentials</tspan></text>
+<text x="240" y="334" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="240" dy="0">Vehicle Details</tspan></text>
+<text x="240" y="405" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="240" dy="0">Saved</tspan><tspan x="240" dy="23">Vehicle List</tspan></text>
+<text x="432" y="468" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="432" dy="0">Vehicle Records</tspan></text>
+<text x="432" y="650" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="432" dy="0">Active Vehicle (read)</tspan></text>
+<text x="155" y="712" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="155" dy="0">Rescue Request:</tspan><tspan x="155" dy="23">vehicle, problem,</tspan><tspan x="155" dy="23">location; Feedback</tspan></text>
+<text x="22" y="902" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="22" dy="0">Confirmation, Frozen ETA,</tspan><tspan x="22" dy="23">Status, Tireman Contact</tspan></text>
+<text x="505" y="985" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="end" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="505" dy="0">Request, Frozen ETA,</tspan><tspan x="505" dy="23">Status, Feedback</tspan></text>
+<text x="640" y="1118" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="640" dy="0">Assigned Tireman Name &amp; Contact (read)</tspan></text>
+<text x="792" y="600" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="end" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="792" dy="0">Customer Details (read)</tspan></text>
+<text x="752" y="985" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="752" dy="0">Status, Tireman,</tspan><tspan x="752" dy="23">Admin Updates</tspan></text>
+<text x="932" y="972" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="932" dy="0">Tireman Records</tspan></text>
+<text x="925" y="760" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="925" dy="0">Accept + Tireman,</tspan><tspan x="925" dy="23">Reject, Complete;</tspan><tspan x="925" dy="23">Tireman Roster</tspan></text>
+<text x="925" y="880" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="925" dy="0">Pending Requests,</tspan><tspan x="925" dy="23">Details, Customer</tspan><tspan x="925" dy="23">Feedback</tspan></text>
+<text x="960" y="665" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="end" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="960" dy="0">Rescue Sale</tspan><tspan x="960" dy="23">Context</tspan></text>
+<text x="975" y="520" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="end" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="975" dy="0">Customer Details</tspan><tspan x="975" dy="23">(optional link)</tspan></text>
+<text x="1202" y="470" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1202" dy="0">Item Prices (read),</tspan><tspan x="1202" dy="23">Stock Deduction</tspan></text>
+<text x="1178" y="702" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="end" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1178" dy="0">Sale &amp; Line Items</tspan><tspan x="1178" dy="23">(+ Rescue link)</tspan></text>
+<text x="1288" y="530" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1288" dy="0">Total, Change,</tspan><tspan x="1288" dy="23">Transaction</tspan><tspan x="1288" dy="23">Summary (print)</tspan></text>
+<text x="1288" y="670" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1288" dy="0">Items, Qty, Cash</tspan><tspan x="1288" dy="23">Tendered, Customer</tspan><tspan x="1288" dy="23">or Rescue Link</tspan></text>
+<text x="1296" y="168" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1296" dy="0">Product / Service Details,</tspan><tspan x="1296" dy="23">Stock Updates, Activation</tspan></text>
+<text x="1296" y="300" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1296" dy="0">Inventory List,</tspan><tspan x="1296" dy="23">Low-Stock Alerts</tspan></text>
+<text x="1202" y="372" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1202" dy="0">Item Records</tspan></text>
+<text x="1202" y="882" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1202" dy="0">Recorded Sales (read)</tspan></text>
+<text x="1296" y="1015" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1296" dy="0">Sales History</tspan><tspan x="1296" dy="23">&amp; Reports</tspan></text>
 </svg>
