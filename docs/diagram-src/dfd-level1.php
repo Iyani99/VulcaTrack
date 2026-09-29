@@ -16,8 +16,10 @@
  * - Cash tendered is an input to P5 only — no store holds it (Decision 54).
  * - The per-sale output is a printable Transaction Summary (not an official receipt).
  * - P7 = Sales History + Sales Reports (Phase 6): read-only over D5.
- * - Web admin-account creation is NOT shown: it is not in the committed system at
- *   the time of this regeneration (the first admin comes from the CLI seed script).
+ * - Admin Accounts (Decision 79) is part of process 1: a signed-in admin sends new
+ *   admin details plus their OWN current password; P1 re-authenticates against D2,
+ *   creates the account there and returns the admin account list. (The first admin
+ *   still comes from the CLI seed script, outside the system's data flows.)
  * - Every flow passes through a process (no entity <-> store flow).
  *
  *   php docs/diagram-src/dfd-level1.php > docs/flows/VulcaTrack-DFD-1-Level1.svg
@@ -29,7 +31,7 @@ const SW = 210, SH = 44;
 $navy = '#1f3a5a';
 
 $procs = [ // id => [cx, cy, name]
-    1 => [800, 195, "Authenticate &\nManage Accounts"],
+    1 => [800, 215, "Authenticate &\nManage Accounts"],
     2 => [420, 330, "Manage\nVehicles"],
     3 => [420, 830, "Process Rescue\nRequest"],
     4 => [820, 820, "Manage Rescue\nRequests"],
@@ -51,11 +53,13 @@ $entities = ['Customer' => [20, 330, 125, 530], 'Admin' => [1470, 330, 110, 530]
 // flows: [points, label (\n ok), [label x, first baseline y], anchor, double-headed?]
 $flows = [
     // Customer <-> P1 (routed over P2), P1 <-> D1 / D2, Admin login over the top
-    [[[70, 330], [70, 150], [722, 150]], 'Registration, Login, Profile & Photo', [420, 138], 'middle'],
+    [[[70, 330], [70, 150], [738, 150]], 'Registration, Login, Profile & Photo', [420, 138], 'middle'],
     [[[711, 210], [110, 210], [110, 330]], 'Account & Profile Details', [585, 238], 'middle'],
-    [[[800, 285], [800, 360]], 'Customer Account Data', [812, 328], 'start', true],
-    [[[878, 150], [930, 140]], 'Admin Credentials', [1020, 186], 'middle', true],
-    [[[1560, 330], [1560, 90], [800, 90], [800, 105]], 'Admin Login Credentials', [1160, 80], 'middle'],
+    [[[800, 305], [800, 360]], 'Customer Account Data', [812, 338], 'start', true],
+    [[[871, 160], [930, 150]], "Admin Accounts
+(read / create)", [935, 186], 'start', true],
+    [[[1575, 330], [1575, 88], [775, 88], [775, 128]], 'Admin Login; New Admin Details + Own Password', [1175, 80], 'middle'],
+    [[[830, 130], [830, 104], [1555, 104], [1555, 330]], 'Admin Account List', [1545, 134], 'end'],
     // Customer <-> P2, P2 <-> D3
     [[[145, 345], [331, 345]], 'Vehicle Details', [240, 334], 'middle'],
     [[[345, 380], [145, 380]], "Saved\nVehicle List", [240, 405], 'middle'],
@@ -81,7 +85,7 @@ $flows = [
     [[[1279, 600], [1470, 600]], "Total, Change,\nTransaction\nSummary (print)", [1288, 530], 'start'],
     [[[1470, 645], [1261, 645]], "Items, Qty, Cash\nTendered, Customer\nor Rescue Link", [1288, 670], 'start'],
     // P6
-    [[[1500, 330], [1500, 215], [1276, 215]], "Product / Service Details,\nStock Updates, Activation", [1296, 168], 'start'],
+    [[[1500, 330], [1500, 215], [1276, 215]], "Product / Service Details,\nStock Updates, Activation", [1286, 172], 'start'],
     [[[1273, 275], [1478, 275], [1478, 330]], "Inventory List,\nLow-Stock Alerts", [1296, 300], 'start'],
     [[[1190, 335], [1190, 400]], 'Item Records', [1202, 372], 'start', true],
     // P7

@@ -30,8 +30,9 @@ Request* / *Manage Rescue Requests*; process 3 also stores the customer's one-ti
 sales** (Decisions 70–76): process 4 hands the POS a *Rescue Sale Context* and
 process 5 writes the sale with its Rescue link to D5; new process **7 Sales History &
 Reports** (built in Phase 6) reads D5. *Cash Tendered* stays an input to process 5
-only — no store holds it (Decision 54). Web admin-account creation is not shown (not
-in the committed system when regenerated).
+only — no store holds it (Decision 54). Admin Accounts (Decision 79) is part of process 1:
+new admin details + the admin's own current password in, the admin account list out,
+read / create on D2.
 
 The 2026-09-04 revision is a **visual-clarity pass only** — layout, routing and
 labelling. No process, external entity, data store or data flow was added or
@@ -119,7 +120,8 @@ audit/status-history store, `shop_settings` store, or Tireman-login store.
 > **Resolved 2026-09-29:** the Level 1 DFD now shows Rescue sales (Decisions 70–76)
 > and completed-Rescue feedback (Decision 78). The **context diagram (Level 0)** was
 > not regenerated in that pass and still says *Printable Receipt* and lacks the
-> feedback and sales-report flows — refresh it before using it in the paper.
+> feedback, sales-report and admin-account flows — refresh it before using it in the
+> paper (decision record D7).
 
 ## Consistency check
 

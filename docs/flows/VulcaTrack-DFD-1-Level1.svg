@@ -5,11 +5,12 @@
 <rect width="1600" height="1165" fill="#ffffff"/>
 <text x="800" y="38" font-size="28" font-weight="700" fill="#111" text-anchor="middle"><tspan x="800" dy="0">VulcaTrack: Sales and Inventory with On-the-Go Services</tspan></text>
 <text x="800" y="66" font-size="20" font-weight="400" fill="#444" text-anchor="middle"><tspan x="800" dy="0">Data Flow Diagram — Level 1</tspan></text>
-<path d="M70,330 L70,150 L722,150" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M70,330 L70,150 L738,150" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
 <path d="M711,210 L110,210 L110,330" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
-<path d="M800,285 L800,360" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
-<path d="M878,150 L930,140" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
-<path d="M1560,330 L1560,90 L800,90 L800,105" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M800,305 L800,360" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M871,160 L930,150" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path d="M1575,330 L1575,88 L775,88 L775,128" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
+<path d="M830,130 L830,104 L1555,104 L1555,330" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
 <path d="M145,345 L331,345" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
 <path d="M345,380 L145,380" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)"/>
 <path d="M420,420 L420,500" fill="none" stroke="#2b2f33" stroke-width="2.2" marker-end="url(#ah)" marker-start="url(#ah)"/>
@@ -38,10 +39,10 @@
 <text x="82.5" y="603.1" font-size="23" font-weight="700" fill="#111" text-anchor="middle"><tspan x="82.5" dy="0">Customer</tspan></text>
 <rect x="1470" y="330" width="110" height="530" rx="0" fill="#eef0f3" stroke="#1f3a5a" stroke-width="3"/>
 <text x="1525" y="603.1" font-size="23" font-weight="700" fill="#111" text-anchor="middle"><tspan x="1525" dy="0">Admin</tspan></text>
-<circle cx="800" cy="195" r="90" fill="#fff" stroke="#1f3a5a" stroke-width="3"/>
-<circle cx="800" cy="129" r="15" fill="#1f3a5a"/>
-<text x="800" y="135.3" font-size="18" font-weight="700" fill="#fff" text-anchor="middle"><tspan x="800" dy="0">1</tspan></text>
-<text x="800" y="202.3" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="800" dy="0">Authenticate &amp;</tspan><tspan x="800" dy="24.2">Manage Accounts</tspan></text>
+<circle cx="800" cy="215" r="90" fill="#fff" stroke="#1f3a5a" stroke-width="3"/>
+<circle cx="800" cy="149" r="15" fill="#1f3a5a"/>
+<text x="800" y="155.3" font-size="18" font-weight="700" fill="#fff" text-anchor="middle"><tspan x="800" dy="0">1</tspan></text>
+<text x="800" y="222.3" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="800" dy="0">Authenticate &amp;</tspan><tspan x="800" dy="24.2">Manage Accounts</tspan></text>
 <circle cx="420" cy="330" r="90" fill="#fff" stroke="#1f3a5a" stroke-width="3"/>
 <circle cx="420" cy="264" r="15" fill="#1f3a5a"/>
 <text x="420" y="270.3" font-size="18" font-weight="700" fill="#fff" text-anchor="middle"><tspan x="420" dy="0">2</tspan></text>
@@ -103,9 +104,10 @@
 <text x="918" y="1079" font-size="20" font-weight="400" fill="#111" text-anchor="start"><tspan x="918" dy="0">tiremen</tspan></text>
 <text x="420" y="138" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="420" dy="0">Registration, Login, Profile &amp; Photo</tspan></text>
 <text x="585" y="238" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="585" dy="0">Account &amp; Profile Details</tspan></text>
-<text x="812" y="328" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="812" dy="0">Customer Account Data</tspan></text>
-<text x="1020" y="186" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1020" dy="0">Admin Credentials</tspan></text>
-<text x="1160" y="80" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1160" dy="0">Admin Login Credentials</tspan></text>
+<text x="812" y="338" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="812" dy="0">Customer Account Data</tspan></text>
+<text x="935" y="186" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="935" dy="0">Admin Accounts</tspan><tspan x="935" dy="23">(read / create)</tspan></text>
+<text x="1175" y="80" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1175" dy="0">Admin Login; New Admin Details + Own Password</tspan></text>
+<text x="1545" y="134" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="end" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1545" dy="0">Admin Account List</tspan></text>
 <text x="240" y="334" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="240" dy="0">Vehicle Details</tspan></text>
 <text x="240" y="405" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="240" dy="0">Saved</tspan><tspan x="240" dy="23">Vehicle List</tspan></text>
 <text x="432" y="468" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="432" dy="0">Vehicle Records</tspan></text>
@@ -125,7 +127,7 @@
 <text x="1178" y="702" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="end" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1178" dy="0">Sale &amp; Line Items</tspan><tspan x="1178" dy="23">(+ Rescue link)</tspan></text>
 <text x="1288" y="530" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1288" dy="0">Total, Change,</tspan><tspan x="1288" dy="23">Transaction</tspan><tspan x="1288" dy="23">Summary (print)</tspan></text>
 <text x="1288" y="670" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1288" dy="0">Items, Qty, Cash</tspan><tspan x="1288" dy="23">Tendered, Customer</tspan><tspan x="1288" dy="23">or Rescue Link</tspan></text>
-<text x="1296" y="168" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1296" dy="0">Product / Service Details,</tspan><tspan x="1296" dy="23">Stock Updates, Activation</tspan></text>
+<text x="1286" y="172" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1286" dy="0">Product / Service Details,</tspan><tspan x="1286" dy="23">Stock Updates, Activation</tspan></text>
 <text x="1296" y="300" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1296" dy="0">Inventory List,</tspan><tspan x="1296" dy="23">Low-Stock Alerts</tspan></text>
 <text x="1202" y="372" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1202" dy="0">Item Records</tspan></text>
 <text x="1202" y="882" font-size="20" font-weight="400" fill="#1a1a1a" text-anchor="start" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1202" dy="0">Recorded Sales (read)</tspan></text>

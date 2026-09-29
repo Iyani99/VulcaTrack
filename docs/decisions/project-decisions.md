@@ -1236,7 +1236,7 @@ phase at a time; the next phase is never auto-started.
 |---|---|---|
 | `docs/VulcaTrack-Database-Notes_1.md` | Field-by-field explanation of the database design, business rules, integrity rules, assumptions, and unresolved questions. Read alongside the schema. | Has a 2026-08-31 revision note at the top. |
 | `docs/ERD/schema.dbml` | **Maintainable source of truth for the database schema** (DBML text). Basis for the eventual MySQL implementation. | Decision 38. Added 2026-08-31. |
-| `docs/ERD/VulcaTrack-ERD_1.png` | Entity-relationship diagram (visual aid). | Image. Now **behind** `schema.dbml`; needs regeneration — see Required Diagram Changes. |
+| `docs/ERD/VulcaTrack-ERD_1.png` | Entity-relationship diagram (visual aid). | Image + `.svg`. **Regenerated 2026-09-29** from `schema.dbml` by `docs/diagram-src/erd.php` (Required Diagram Changes D1 — refreshed). |
 | `docs/VulcaTrack-Use-Case-Diagram_1.png` | Actors and use cases for customer and admin sides. | Image. Changes pending (see Required Diagram Changes). "Manage Customer Accounts" flagged as proposed. |
 | `docs/flows/VulcaTrack-1-Overall-System-Flow.png` | Overall system workflow. | Image. |
 | `docs/flows/VulcaTrack-2-Customer-Flow.png` | Customer-side workflow. | Image. |
@@ -1281,11 +1281,10 @@ each item below.
 ### Remaining conflicts after this update
 
 - **No unresolved *CONFLICT* remains between the confirmed decisions and the artifacts.**
-- **POSSIBLY OUTDATED diagrams** (documented, not yet regenerated): ERD PNG, use-case PNG,
-  OTG flowcharts 2 & 5, and — since Decisions 70–76 — the POS flowchart, the POS
-  sequence diagram, the OTG activity diagram and the Level 1 DFD — see
-  [Required Diagram Changes](#required-diagram-changes). Planned for the Phase 7.5
-  documentation / diagram refresh.
+- **POSSIBLY OUTDATED diagrams** (documented, not yet regenerated): use-case PNG, OTG
+  flowcharts 2 & 5, the POS flowchart (4) and the Level 0 context DFD — see
+  [Required Diagram Changes](#required-diagram-changes). *Refreshed 2026-09-29:* the ERD,
+  the OTG activity diagram, the POS sequence diagram and the Level 1 DFD.
 - **N8 (Figma)** stays open until the prototype is provided.
 
 Any future conflict must be reported and classified here (or in a superseding decision
@@ -1295,21 +1294,32 @@ record), never silently reconciled.
 
 ## Required Diagram Changes
 
-Documented here for whoever owns the diagram tooling. **Not executed in this task** (the
-PNGs and the Figma prototype were not modified).
+Documented here for whoever owns the diagram tooling. *2026-09-29:* the ERD (D1) and the
+activity / POS sequence / Level 1 DFD items of D6 are **refreshed** — regenerated from the
+committed code and `schema.dbml` by the generators in `docs/diagram-src/` (see its README).
 
 | ID | Artifact | Classification | Required change |
 |---|---|---|---|
-| D1 | `docs/ERD/VulcaTrack-ERD_1.png` | POSSIBLY OUTDATED | Regenerate from `docs/ERD/schema.dbml`. Must show: (a) new `tiremen` table (`tireman_id` PK, `name`, `contact_number`, `is_active`, `created_at`, `updated_at`); (b) `service_requests.tireman_id` nullable FK → `tiremen`; (c) `items.is_active` and `vehicles.is_active`; (d) `customers → service_requests` as **`1 : 0..N`** (not `1 : 1..N`); (e) *(Decision 70)* `sales.service_request_id` — nullable, UNIQUE FK → `service_requests`, drawn as **`service_requests 1 : 0..1 sales`**; (f) *(Decision 77)* `customers.avatar_filename` — nullable `varchar(64)`, no relationship; (g) *(Decision 78)* `service_requests.feedback_rating` / `feedback_comment` / `feedback_submitted_at` — nullable, no relationship. |
+| D1 | `docs/ERD/VulcaTrack-ERD_1.png` | **REFRESHED 2026-09-29** | *Done:* regenerated from `schema.dbml` (`docs/diagram-src/erd.php`, `.svg` + `.png`), covering (a)–(g) below. Original requirement: regenerate from `docs/ERD/schema.dbml`. Must show: (a) new `tiremen` table (`tireman_id` PK, `name`, `contact_number`, `is_active`, `created_at`, `updated_at`); (b) `service_requests.tireman_id` nullable FK → `tiremen`; (c) `items.is_active` and `vehicles.is_active`; (d) `customers → service_requests` as **`1 : 0..N`** (not `1 : 1..N`); (e) *(Decision 70)* `sales.service_request_id` — nullable, UNIQUE FK → `service_requests`, drawn as **`service_requests 1 : 0..1 sales`**; (f) *(Decision 77)* `customers.avatar_filename` — nullable `varchar(64)`, no relationship; (g) *(Decision 78)* `service_requests.feedback_rating` / `feedback_comment` / `feedback_submitted_at` — nullable, no relationship. |
 | D2 | `docs/VulcaTrack-Use-Case-Diagram_1.png` | POSSIBLY OUTDATED | (a) Collapse "Manage Inventory" + "Manage Products" into one "Manage Inventory" use case (products + services). (b) Add admin use cases "Manage Tiremen" and "Assign Tireman to Request". (c) Keep "Manage Customer Accounts" flagged as proposed/unresolved. |
 | D3 | `docs/flows/VulcaTrack-2-Customer-Flow.png`, `docs/flows/VulcaTrack-5-OTG-Request-Flow.png` | POSSIBLY OUTDATED | Admin branch: add an "Assign Tireman" step after "Set Status: Accepted" *(per Decision 66 the Tireman is chosen in the same step as acceptance; also show accepted → rejected and the final states, Decision 65)*. Customer view after acceptance: show assigned Tireman name + contact number, "Tireman is on the way", the stored ETA, and the route/map. |
 | D4 | `docs/flows/VulcaTrack-4-POS-Flow.png` | POSSIBLY OUTDATED *(was CONSISTENT — annotate)* | Note that "Enter Payment Amount / Payment Sufficient? / Calculate Change" are UI-only (not persisted) and "Generate Receipt" is a printable HTML view with no receipt table. *(Decisions 70–76)* Add the optional Rescue entry: *Record sale in POS* from an accepted / completed request → customer locked to the request's customer → the same cart and checkout → sale linked to the request; the request's status is not changed by the sale. |
 | D5 | `docs/flows/VulcaTrack-6-Inventory-Flow.png` | CONSISTENT | No change. "Deactivate / Delete Item" is now backed by `items.is_active`. |
-| D6 | `docs/flows/VulcaTrack-5-OTG-Request-Flow.png`, `docs/flows/VulcaTrack-Activity-Diagram-OTG.*`, `docs/flows/VulcaTrack-Sequence-Diagram-POS.*`, `docs/flows/VulcaTrack-DFD-1-Level1.*` | POSSIBLY OUTDATED | *(Decisions 70–76, logged 2026-09-28)* OTG flow / activity diagram: after the job, the admin may record the request's sale in the POS (accepted or completed) and separately mark it completed; a request with a sale cannot be rejected. POS sequence diagram: optional Rescue context (read the request, lock its customer, store `service_request_id`). Level 1 DFD: the POS process now reads `service_requests` (D6) to link a sale — no new data store. No payment store in any diagram. |
+| D6 | `docs/flows/VulcaTrack-5-OTG-Request-Flow.png`, `docs/flows/VulcaTrack-Activity-Diagram-OTG.*`, `docs/flows/VulcaTrack-Sequence-Diagram-POS.*`, `docs/flows/VulcaTrack-DFD-1-Level1.*` | **PARTLY REFRESHED 2026-09-29** — activity, POS sequence and Level 1 DFD done; OTG flowchart 5 still outdated (also D3) | *(Decisions 70–76, logged 2026-09-28)* OTG flow / activity diagram: after the job, the admin may record the request's sale in the POS (accepted or completed) and separately mark it completed; a request with a sale cannot be rejected. POS sequence diagram: optional Rescue context (read the request, lock its customer, store `service_request_id`). Level 1 DFD: the POS process now reads `service_requests` (D6) to link a sale — no new data store. No payment store in any diagram. *Done 2026-09-29:* the activity diagram (accept + assign in one action, accepted → rejected, completion separate from the sale, optional feedback), the POS sequence diagram (one atomic transaction, product-only stock deduction, Transaction Summary, tender not stored) and the Level 1 DFD (Rescue sale context P4 → P5, feedback into D6, Sales History & Reports, and — Decision 79 — Admin Accounts in process 1). |
+| D7 | `docs/flows/VulcaTrack-DFD-0-Context.*` | POSSIBLY OUTDATED | Balance with the regenerated Level 1 DFD: "Printable Receipt" → printable **Transaction Summary**; add the customer's completed-Rescue feedback, Sales History & Reports, and admin-account creation (new admin details + own password in, admin account list out). |
 
 ---
 
 ## Revision History
+
+### 2026-09-29 — Paper diagram refresh (status only; no decision change)
+
+- **Required Diagram Changes:** D1 (ERD) refreshed; D6 partly refreshed (activity diagram,
+  POS sequence diagram, Level 1 DFD); new **D7** — the Level 0 context DFD must be balanced
+  with the new Level 1. The Level 1 DFD shows Admin Accounts (Decision 79) as part of
+  process 1. Diagrams are now generated from `docs/diagram-src/` (the ERD straight from
+  `schema.dbml`).
+- No decision change, no schema change.
 
 ### 2026-09-29 — Phase 7.4 Chunk 2: Admin Accounts (**decision change: Decision 79 added**)
 
