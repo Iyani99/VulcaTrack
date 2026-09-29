@@ -169,6 +169,13 @@ function rescue_tel(string $number): string
     return '<a href="tel:' . e(preg_replace('/[^0-9+]/', '', $number)) . '">' . e($number) . '</a>';
 }
 
+/** Stored 'Y-m-d H:i:s' → "Sep 29, 2026 · 4:51 PM" (presentation only; same form as the customer pages). */
+function rescue_when(string $datetime): string
+{
+    $t = strtotime($datetime);
+    return $t === false ? $datetime : date('M j, Y · g:i A', $t);
+}
+
 $hasLocation  = $request['latitude'] !== null && $request['longitude'] !== null;
 $vehicleBits  = array_filter([$request['make'] ?? '', $request['model'] ?? '', $request['vehicle_type'] ?? '']);
 
@@ -190,8 +197,8 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 </header>
 
 <dl class="rescue-meta">
-  <div><dt>Requested</dt><dd><?= e($request['requested_at']) ?></dd></div>
-  <div><dt>Last updated</dt><dd><?= e($request['updated_at']) ?></dd></div>
+  <div><dt>Requested</dt><dd><?= e(rescue_when((string) $request['requested_at'])) ?></dd></div>
+  <div><dt>Last updated</dt><dd><?= e(rescue_when((string) $request['updated_at'])) ?></dd></div>
   <div><dt>Handled by</dt><dd><?= $request['admin_id'] !== null ? e($request['admin_name']) : '<span class="muted">Not yet handled by an admin.</span>' ?></dd></div>
 </dl>
 
@@ -251,7 +258,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <dl class="kv">
       <dt>Sale no.</dt><dd>Sale #<?= (int) $linkedSale['sale_id'] ?></dd>
       <dt>Total</dt><dd class="rescue-sale__total">&#8369;<?= e(Money::format((int) $linkedSale['total_amount_centavos'])) ?></dd>
-      <dt>Date / time</dt><dd><?= e($linkedSale['sale_date']) ?></dd>
+      <dt>Date / time</dt><dd><?= e(rescue_when((string) $linkedSale['sale_date'])) ?></dd>
       <dt>Recorded by</dt><dd><?= e($linkedSale['admin_name']) ?></dd>
     </dl>
     <p><a href="<?= e(vulcatrack_url('/admin/transaction-summary.php?id=' . (int) $linkedSale['sale_id'])) ?>">View Transaction Summary</a></p>
@@ -278,7 +285,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <p class="rescue-feedback__rating"><span class="rescue-feedback__stars" aria-hidden="true"><?= str_repeat('&#9733;', $fbRating) . str_repeat('&#9734;', 5 - $fbRating) ?></span> <?= $fbRating ?> / 5</p>
       <dl class="kv">
         <dt>Comment</dt><dd><?= $request['feedback_comment'] !== null ? nl2br(e($request['feedback_comment'])) : '<span class="muted">No comment.</span>' ?></dd>
-        <dt>Submitted</dt><dd><?= e($request['feedback_submitted_at']) ?></dd>
+        <dt>Submitted</dt><dd><?= e(rescue_when((string) $request['feedback_submitted_at'])) ?></dd>
       </dl>
     <?php else: ?>
       <p class="muted">No feedback yet.</p>

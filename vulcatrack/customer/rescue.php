@@ -102,7 +102,7 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
 <div class="rb-head">
   <p class="rb-eyebrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/></svg>Roadside rescue</p>
   <h1>Request Rescue Service</h1>
-  <p class="rb-sub">Follow the steps below. The shop reviews every request and calls you on your contact number.</p>
+  <p class="rb-sub">Follow the steps below. The shop reviews every request; once it is accepted, you'll see the assigned Tireman's name and contact number.</p>
 </div>
 
 <?php if (!$vehicles): ?>
@@ -202,7 +202,7 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
     <section class="cu-card rb-review" aria-labelledby="rb-review-title">
       <h2 class="rb-step__title" id="rb-review-title"><span class="rb-step__num">4</span>Before you submit</h2>
       <dl class="rb-review__list">
-        <div><dt>Contact number on file</dt><dd><strong><?= e($record['contact_number']) ?></strong> <a href="<?= e(vulcatrack_url('/customer/profile.php')) ?>">Update</a><span class="rb-review__hint">The shop will call you on this number.</span></dd></div>
+        <div><dt>Contact number on file</dt><dd><strong><?= e($record['contact_number']) ?></strong> <a href="<?= e(vulcatrack_url('/customer/profile.php')) ?>">Update</a><span class="rb-review__hint">Saved with your request so the shop and the assigned Tireman can reach you.</span></dd></div>
         <div><dt>Shop</dt><dd><?= e($shop['name'] ?? 'VulcaTrack') ?><?= isset($shop['address']) ? '<span class="rb-review__hint">' . e($shop['address']) . '</span>' : '' ?></dd></div>
         <div><dt>Charges</dt><dd>Nothing is charged here.<span class="rb-review__hint">After the job, the shop records the products and services actually used.</span></dd></div>
       </dl>

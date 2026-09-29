@@ -299,7 +299,7 @@ test('admin Rescue sale: entry point, start_rescue checks, clean-cart rule, cust
         assert_contains('Sale recorded', $panel, '44. wording');
         assert_contains("Sale #{$saleA}", $panel, '40. sale id');
         assert_contains('&#8369;500.50', $panel, '41. total');
-        assert_contains('<dd>' . $sale['sale_date'] . '</dd>', $panel, '42. date');
+        assert_contains('<dd>' . e(date('M j, Y · g:i A', strtotime($sale['sale_date']))) . '</dd>', $panel, '42. date (friendly form, Phase 7.4 final pass)');
         assert_contains("<dd>{$s['tag']} Cashier</dd>", $panel, '42. recorded by');
         assert_contains('href="/vulcatrack/admin/transaction-summary.php?id=' . $saleA . '">View Transaction Summary</a>', $panel, '43.');
         assert_not_contains('Payment recorded', $d, '44. never "Payment recorded"');
