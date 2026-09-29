@@ -46,17 +46,6 @@ function dash_when(string $datetime): array
     return $t === false ? [$datetime, ''] : [date('M j, Y', $t), date('g:i A', $t)];
 }
 
-/**
- * Status wording for the dashboard. Accepting a request assigns an active
- * Tireman in the same admin action (Decision 66), so "accepted without a
- * Tireman" is only a defensive fallback for malformed / legacy data — shown
- * neutrally, never as an assignment still in progress.
- */
-function dash_label(string $status, bool $tiremanAssigned): string
-{
-    return $status === 'accepted' && !$tiremanAssigned ? 'Accepted request' : OtgStatus::label($status, $tiremanAssigned);
-}
-
 $pageTitle = 'Home';
 $navActive = 'dashboard';
 $mainClass = 'app--wide';
@@ -98,7 +87,7 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
   <section class="cu-card cd-active" aria-labelledby="cd-active-title">
     <div class="cd-active__main">
       <p class="cu-chip"><?= $isAccepted ? 'Active rescue' : 'Request received' ?></p>
-      <h2 class="cd-active__title" id="cd-active-title"><?= e(dash_label($active['status'], $tiremanAssigned)) ?></h2>
+      <h2 class="cd-active__title" id="cd-active-title"><?= e(OtgStatus::label($active['status'], $tiremanAssigned)) ?></h2>
       <p class="cd-active__meta">
         <span>Request #<?= (int) $active['request_id'] ?> &middot; <?= e($active['plate_number']) ?></span>
         <?php if ($isAccepted && $tiremanAssigned): ?>
@@ -155,7 +144,7 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
             <td class="nowrap"><?= e($day) ?><?php if ($time !== ''): ?><span class="cu-table__sub"><?= e($time) ?></span><?php endif; ?></td>
             <td class="nowrap">#<?= (int) $r['request_id'] ?></td>
             <td class="nowrap"><?= e($r['plate_number']) ?></td>
-            <td><span class="cu-status cu-status--<?= e($r['status']) ?>"><?= e(dash_label($r['status'], $r['tireman_id'] !== null)) ?></span></td>
+            <td><span class="cu-status cu-status--<?= e($r['status']) ?>"><?= e(OtgStatus::label($r['status'], $r['tireman_id'] !== null)) ?></span></td>
             <td class="cu-table__action"><a href="<?= e(vulcatrack_url('/customer/booking.php?id=' . (int) $r['request_id'])) ?>">View</a></td>
           </tr>
         <?php endforeach; ?>

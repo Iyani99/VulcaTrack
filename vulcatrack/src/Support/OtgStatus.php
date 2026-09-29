@@ -54,14 +54,19 @@ final class OtgStatus
         return $status === 'accepted' || $status === 'completed';
     }
 
-    /** Customer-facing label. */
+    /**
+     * Customer-facing label. Accepting a request assigns an active Tireman in
+     * the same admin action (Decision 66), so "accepted without a Tireman" is
+     * only a defensive fallback for malformed / legacy data — labelled
+     * neutrally, never as an assignment still in progress.
+     */
     public static function label(string $status, bool $tiremanAssigned = false): string
     {
         switch ($status) {
             case 'pending':
                 return 'Pending review';
             case 'accepted':
-                return $tiremanAssigned ? 'Tireman is on the way' : 'Accepted — assigning a tireman';
+                return $tiremanAssigned ? 'Tireman is on the way' : 'Accepted request';
             case 'rejected':
                 return 'Request declined';
             case 'completed':

@@ -1153,7 +1153,7 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
 }
 .cust .cu-table td { padding: .75rem 1rem; border-bottom: 1px solid var(--cu-line-soft); font-size: .9rem; vertical-align: middle; }
 .cust .cu-table tbody tr:last-child td { border-bottom: 0; }
-.cust .cu-table td.nowrap { white-space: nowrap; }
+.cust .cu-table .nowrap { white-space: nowrap; } /* whole cells or a span (e.g. a plate number) */
 .cust .cu-table__sub { display: block; font-size: .78rem; color: var(--cu-muted); }
 .cust .cu-table__action { text-align: right; }
 .cust .cu-table a,
@@ -1464,4 +1464,99 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
   .cust .rb-locate__me { flex: 1 1 100%; }
   .cust .rc-hero { padding: 1.6rem 1rem 1.3rem; }
   .cust .rc-body { padding: 1rem .8rem; }
+}
+
+/* ---- customer Request Status + My Bookings (Phase 7.4b-d) -------------------
+   The Request Status + Booking History Figma frames on the .cust system. The
+   status page is read-only for the customer (no Cancel / Complete actions) and
+   shows the stored location + a request-time ETA — no live tracking. My
+   Bookings lists real request data only (no Amount column, no dead filter). */
+
+.cust .cu-notice { margin: 0 0 1.25rem; padding: .7rem .9rem; background: #eef6f0; border-left: 4px solid #1c6b32; color: #154d25; font-size: .9rem; }
+/* many-column tables keep their columns and scroll on phones instead of
+   being squeezed to fit (outranks the Dashboard's phone min-width: 0) */
+.cust .table-scroll > .cu-table.cu-table--wide { min-width: 40rem; }
+/* the scroll box is the containing block for absolutely positioned .sr-only
+   text in its cells — otherwise that text escapes the scroll clip and widens
+   the whole page on phones */
+.cust .table-scroll { position: relative; }
+
+/* status page */
+.cust .rs :focus-visible { outline: 2px solid var(--cu-red); outline-offset: 2px; }
+.cust .rs-titlebar { margin: 0 0 1.25rem; }
+.cust .rs-back { margin: 0 0 .5rem; font-size: .85rem; }
+.cust .rs-back a { color: #555; text-underline-offset: 2px; }
+.cust .rs-back a:hover { color: var(--cu-red-dark); }
+.cust .rs-titlebar h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 1.9rem); font-weight: 800; letter-spacing: -.01em; text-transform: uppercase; }
+.cust .rs-meta { margin: .3rem 0 0; font-size: .85rem; color: var(--cu-muted); }
+
+.cust .rs-banner {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 2.5rem; margin: 0 0 1.5rem; padding: 1.4rem 1.6rem;
+  background: #fff; border: 1px solid var(--cu-line); border-left: 4px solid #c9c9c9;
+}
+.cust .rs-banner--accepted { border-left-color: var(--cu-red); }
+.cust .rs-banner--completed { border-left-color: var(--cu-ink); }
+.cust .rs-banner__main { flex: 1 1 18rem; min-width: 0; }
+.cust .rs-banner h2 { display: flex; align-items: center; gap: .65rem; margin: 0; font-size: clamp(1.35rem, 2.6vw, 1.75rem); font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.cust .rs-banner__main p { margin: .45rem 0 0; color: #555; font-size: .92rem; }
+.cust .rs-dot { width: .7rem; height: .7rem; flex: none; border-radius: 50%; background: #9a9a9a; }
+.cust .rs-banner--accepted .rs-dot { background: var(--cu-red); }
+.cust .rs-banner--completed .rs-dot { background: var(--cu-ink); }
+.cust .rs-banner--rejected .rs-dot { background: #fff; border: 2px solid var(--cu-ink); }
+.cust .rs-banner__eta { flex: 0 1 13rem; text-align: right; }
+.cust .rs-eta { margin: .2rem 0 0; font-size: 1.75rem; font-weight: 800; line-height: 1.15; color: var(--cu-ink); }
+.cust .rs-banner--accepted .rs-eta { color: var(--cu-red-dark); }
+.cust .rs-eta__note { margin: .2rem 0 0; font-size: .74rem; color: var(--cu-muted); }
+.cust .rs-banner__actions { flex: 0 0 auto; }
+
+.cust .rs-grid { display: grid; grid-template-columns: minmax(0, 21rem) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+.cust .rs-side { display: grid; gap: 1.5rem; min-width: 0; }
+.cust .rs-card { padding: 1.2rem 1.3rem 1.3rem; }
+.cust .rs-card__title { margin: 0 0 1rem; }
+.cust .rs-card__text { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.cust .rs-card__note { margin: .75rem 0 0; font-size: .8rem; color: var(--cu-muted); }
+.cust .rs-person { display: flex; align-items: center; gap: .9rem; margin: 0 0 1rem; }
+.cust .rs-person__avatar { display: flex; align-items: center; justify-content: center; width: 3.4rem; height: 3.4rem; flex: none; border-radius: 50%; background: #e6e6e6; color: #555; }
+.cust .rs-person__avatar svg { width: 1.9rem; height: 1.9rem; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.cust .rs-person__name { margin: 0; font-size: 1.15rem; font-weight: 800; overflow-wrap: anywhere; }
+.cust .rs-call { width: 100%; min-height: 2.9rem; }
+.cust .rs-call svg { width: 1.05rem; height: 1.05rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linejoin: round; }
+.cust .rs-details { display: grid; margin: 0; }
+.cust .rs-details > div { padding: .75rem 0; border-top: 1px solid var(--cu-line-soft); }
+.cust .rs-details > div:first-child { padding-top: 0; border-top: 0; }
+.cust .rs-details dt { font-family: var(--cu-mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: #555; }
+.cust .rs-details dd { margin: .2rem 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.cust .rs-details__ref dd { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4rem .75rem; }
+
+.cust .rs-map { min-width: 0; background: #fff; border: 1px solid var(--cu-line); }
+.cust .rs-map__head { display: flex; align-items: center; gap: .45rem; margin: 0; padding: .8rem 1rem; border-bottom: 1px solid var(--cu-line); font-weight: 700; font-size: .92rem; }
+.cust .rs-map__head svg { width: 1.15rem; height: 1.15rem; flex: none; fill: none; stroke: var(--cu-red-dark); stroke-width: 2; }
+.cust .rs .otg-map { height: 26rem; border: 0; border-radius: 0; }
+.cust .rs-map__note { margin: 0; padding: .6rem 1rem; border-top: 1px solid var(--cu-line); font-size: .78rem; color: var(--cu-muted); }
+
+/* My Bookings */
+.cust .bk-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 1rem 2rem; margin: 0 0 1.5rem; }
+.cust .bk-head h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2rem); font-weight: 800; letter-spacing: -.01em; text-transform: uppercase; }
+.cust .bk-sub { margin: .35rem 0 0; color: #555; font-size: .9rem; }
+.cust .bk-table .bk-ref,
+.cust .bk-table .bk-eta { font-family: var(--cu-mono); font-size: .82rem; }
+.cust .bk-table tr.bk-row--accepted td:first-child { box-shadow: inset 3px 0 0 var(--cu-red); }
+.cust .bk-table tr.bk-row--rejected td:not(:nth-child(4)) { color: #888; }
+.cust .bk-note { margin: .75rem 0 0; font-size: .8rem; color: var(--cu-muted); }
+.cust .bk-empty { padding: 1.6rem 1.5rem; text-align: center; }
+.cust .bk-empty p { margin: 0 0 .5rem; color: #555; }
+.cust .bk-empty .bk-empty__title { font-size: 1.15rem; font-weight: 800; color: var(--cu-ink); }
+.cust .bk-empty p:last-child { margin: 1rem 0 0; }
+
+@media (max-width: 48rem) {
+  .cust .rs-grid { grid-template-columns: minmax(0, 1fr); }
+  .cust .rs-banner__eta { flex-basis: 100%; text-align: left; }
+  .cust .rs .otg-map { height: 20rem; }
+}
+@media (max-width: 30rem) {
+  .cust .rs-banner { padding: 1.15rem 1.1rem; }
+  .cust .rs-banner__actions,
+  .cust .rs-banner__actions .cu-btn,
+  .cust .bk-head .cu-btn { width: 100%; }
+  .cust .rs .otg-map { height: 17rem; }
 }

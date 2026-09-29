@@ -23,8 +23,8 @@ $requestUrl = vulcatrack_url('/customer/booking.php?id=' . (int) $request['reque
   <div class="rc-hero">
     <span class="rc-hero__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.3 12.2l2.6 2.6 4.8-5.3"/></svg></span>
     <h1 id="rc-title">Request submitted</h1>
-    <p>Your rescue request has been received and is pending review.
-      The shop will call you<?= $contactNumber !== null && $contactNumber !== '' ? ' on <strong>' . e($contactNumber) . '</strong>' : '' ?> to confirm.</p>
+    <p>Your rescue request has been received. The shop will review your request.<?= $contactNumber !== null && $contactNumber !== ''
+      ? ' Contact number on file: <strong>' . e($contactNumber) . '</strong>.' : '' ?></p>
   </div>
 
   <div class="rc-body">

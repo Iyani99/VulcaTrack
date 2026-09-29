@@ -24,7 +24,8 @@ test('OtgStatus::isValid accepts only the four values', function () {
 });
 
 test('OtgStatus::label maps accepted to on-the-way wording only once a Tireman is assigned', function () {
-    assert_same('Accepted — assigning a tireman', OtgStatus::label('accepted', false));
+    // accepted without a Tireman is malformed data only (Decision 66): a neutral label
+    assert_same('Accepted request', OtgStatus::label('accepted', false));
     assert_same('Tireman is on the way', OtgStatus::label('accepted', true));
     assert_same('Pending review', OtgStatus::label('pending'));
     assert_same('Request declined', OtgStatus::label('rejected'));
