@@ -236,3 +236,83 @@ test('login entry flow: separate customer + admin pages, subtle admin link, no a
         $server->stop();
     }
 });
+
+test('admin login (Phase 7.4 Chunk 1): customer-auth look, separate route, refusals, forged array input on both logins', function () {
+    $pdo = test_pdo();
+    assert_not_null($pdo, 'the database must be reachable for the HTTP tests');
+    $password = 'chunk1-password-123';
+    $adminEmail = TestDb::email('al-admin');
+    $custEmail  = TestDb::email('al-cust');
+    $pdo->prepare('INSERT INTO admins (full_name, email, password_hash) VALUES (?,?,?)')
+        ->execute(['Chunk1 Admin', $adminEmail, Password::hash($password)]);
+    $adminId = (int) $pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO customers (full_name, email, contact_number, password_hash) VALUES (?,?,?,?)')
+        ->execute(['Chunk1 Customer', $custEmail, '09170009999', Password::hash($password)]);
+    $custId = (int) $pdo->lastInsertId();
+
+    $server = new HttpServer(8701);
+    $URL = '/vulcatrack/admin/login.php';
+    $post = function (string $url, array $fields) use ($server): array {
+        $page = $server->request($url);
+        return $server->request($url, ['_csrf' => HttpServer::csrfToken($page['body'])] + $fields);
+    };
+    $clean = function (string $html, string $where): void {
+        foreach (['Warning:', 'Notice:', 'Array to string', 'Fatal error'] as $bad) {
+            assert_not_contains($bad, $html, "PHP error text on {$where}: {$bad}");
+        }
+    };
+
+    try {
+        $server->start();
+
+        // ---- presentation: the customer auth shell, admin copy, nothing else ----
+        $page = $server->request($URL);
+        assert_same(200, $page['status']);
+        $html = $page['body'];
+        assert_contains('<div class="cust cauth">', $html, 'shares the customer auth shell');
+        assert_contains('<h1 class="cauth-title cauth-title--tight" id="cauth-title">Administrator Access</h1>', $html);
+        assert_contains('Authorized shop personnel only.', $html);
+        assert_contains('<a class="cauth-back" href="/vulcatrack/login.php">', $html, 'the back action leads to the customer login');
+        assert_contains('Back to Customer Login</a>', $html);
+        assert_contains('<form method="post" action="/vulcatrack/admin/login.php" class="cauth-form"', $html, 'its own form and route');
+        assert_contains('<label for="email">Email</label>', $html);
+        assert_contains('<label for="password">Password</label>', $html);
+        foreach (['register', 'sign up', 'forgot', 'remember me', 'name="role"', 'name="actor"', 'cauth-switch', 'customer account'] as $absent) {
+            assert_not_contains($absent, strtolower($html), "no {$absent} on the admin login");
+        }
+
+        // ---- refusals (unchanged behaviour) ----
+        $r = $post($URL, ['email' => $adminEmail, 'password' => 'wrong-password']);
+        assert_same(200, $r['status']);
+        assert_contains('<p class="cauth-alert" role="alert">Invalid email or password.</p>', $r['body'], 'wrong password refused, error in the alert');
+        $r = $post($URL, ['email' => $custEmail, 'password' => $password]);
+        assert_contains('Invalid email or password.', $r['body'], 'customer credentials never sign in an admin');
+        assert_same(302, $server->request('/vulcatrack/admin/index.php')['status'], 'still signed out');
+
+        // ---- forged array input: a normal refusal, never a PHP warning ----
+        foreach (['/vulcatrack/admin/login.php', '/vulcatrack/login.php'] as $url) {
+            foreach ([['email[]' => $adminEmail, 'password' => $password], ['email' => $adminEmail, 'password[]' => $password], ['email[]' => 'x', 'password[]' => 'y']] as $fields) {
+                $r = $post($url, $fields);
+                assert_same(200, $r['status'], "{$url}: array input is not a 500");
+                assert_contains('Enter your email and password.', $r['body'], "{$url}: array input is treated as missing");
+                $clean($r['body'], $url);
+            }
+        }
+        assert_same(302, $server->request('/vulcatrack/admin/index.php')['status'], 'array input never signs anyone in');
+
+        // ---- a valid admin login still works ----
+        $r = $post($URL, ['email' => $adminEmail, 'password' => $password]);
+        assert_same(302, $r['status']);
+        assert_contains('/vulcatrack/admin/index.php', (string) $r['location']);
+        assert_same(200, $server->request('/vulcatrack/admin/index.php')['status'], 'signed in as admin');
+
+        $stderr = $server->serverStderr();
+        foreach (['PHP Warning', 'PHP Notice', 'PHP Deprecated', 'PHP Fatal'] as $bad) {
+            assert_not_contains($bad, $stderr, "php -S stderr contained: {$bad}");
+        }
+    } finally {
+        $server->stop();
+        $pdo->prepare('DELETE FROM admins WHERE admin_id = ?')->execute([$adminId]);
+        $pdo->prepare('DELETE FROM customers WHERE customer_id = ?')->execute([$custId]);
+    }
+});

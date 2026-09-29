@@ -3,8 +3,9 @@
  * Shell for the customer Log in / Sign up screens (Phase 7.4b-b: Customer
  * auth Figma). A white page with a top-right back action, the centered
  * VulcaTrack brand and a bordered card that the page fills. Every rule is
- * scoped under .cauth (inside the .cust customer theme), so the admin login —
- * which keeps the plain partials/top.php shell — is unaffected.
+ * scoped under .cauth (inside the .cust customer theme). The admin login
+ * (src/Views/admin_login.php) uses this same shell since the Phase 7.4 Chunk 1
+ * redesign — presentation only; its form, route and session stay separate.
  *
  * Expects: string $pageTitle
  *          array  $backLink  [label, path] for the top-right action

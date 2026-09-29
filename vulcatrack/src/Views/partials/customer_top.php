@@ -17,6 +17,23 @@
  */
 $navActive = $navActive ?? '';
 $shellCustomer = current_customer();
+
+// Header avatar (Phase 7.4 Chunk 1, Decision 77): the signed-in customer's own
+// picture via customer/avatar.php, else the generic person icon. Profile / My
+// Vehicles have already worked it out ($accountAvatarUrl, possibly null) for
+// their account panel; any other page does one primary-key lookup. Never cached
+// in the session, so another device's upload / removal shows up on next load.
+if (array_key_exists('accountAvatarUrl', get_defined_vars())) {
+    $shellAvatarUrl = $accountAvatarUrl;
+} else {
+    $shellAvatarRow = $shellCustomer !== null
+        ? (new \VulcaTrack\Repository\CustomerRepository(vulcatrack_db()))->findById((int) $shellCustomer['id'])
+        : null;
+    $shellAvatarUrl = $shellAvatarRow !== null
+        ? \VulcaTrack\Support\AvatarStore::forApp()->displayUrl($shellAvatarRow['avatar_filename'] ?? null, (int) $shellCustomer['id'])
+        : null;
+}
+$shellName = (string) ($shellCustomer['name'] ?? '');
 // The Figma "Tracking" item and notification bell have no destination in
 // VulcaTrack (no live tracking, no notifications); request status lives under
 // My Bookings. My Vehicles lives under Profile (account navigation,
@@ -50,7 +67,10 @@ $nav = [
     <?php endforeach; ?>
   </nav>
   <div class="appbar__account">
-    <span class="appbar__user"><svg class="appbar__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="10" r="3.2"/><path d="M6.3 18.4c1.3-2.2 3.3-3.3 5.7-3.3s4.4 1.1 5.7 3.3"/></svg><span class="appbar__name"><?= e((string) ($shellCustomer['name'] ?? '')) ?></span></span>
+    <a class="appbar__user" href="<?= e(vulcatrack_url('/customer/profile.php')) ?>" aria-label="<?= e($shellName) ?> (Profile)"><?php
+      if ($shellAvatarUrl !== null): ?><img class="appbar__avatar" src="<?= e($shellAvatarUrl) ?>" alt="" width="32" height="32"><?php
+      else: ?><svg class="appbar__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="10" r="3.2"/><path d="M6.3 18.4c1.3-2.2 3.3-3.3 5.7-3.3s4.4 1.1 5.7 3.3"/></svg><?php
+      endif; ?><span class="appbar__name"><?= e($shellName) ?></span></a>
     <form class="appbar__logout" method="post" action="<?= e(vulcatrack_url('/logout.php')) ?>">
       <?= \VulcaTrack\Auth\Csrf::field() ?>
       <button type="submit">Log out</button>

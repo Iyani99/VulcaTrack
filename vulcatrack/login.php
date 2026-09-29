@@ -20,8 +20,9 @@ $old = [];
 $notice = isset($_GET['registered']) ? 'Registration successful. Please log in.' : null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim((string) ($_POST['email'] ?? ''));
-    $password = (string) ($_POST['password'] ?? '');
+    // strings only: a forged email[] / password[] is treated as missing input (no warning)
+    $email = is_string($_POST['email'] ?? null) ? trim($_POST['email']) : '';
+    $password = is_string($_POST['password'] ?? null) ? $_POST['password'] : '';
     $old['email'] = $email;
 
     if (!Csrf::check($_POST['_csrf'] ?? null)) {

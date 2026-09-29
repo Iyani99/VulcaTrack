@@ -107,6 +107,11 @@ test('customer profile: picture upload / replace / remove, isolation, fallback, 
             assert_not_contains($absent, $page['body'], "no {$absent}");
         }
         assert_same(404, $server->request('/vulcatrack/customer/avatar.php')['status'], 'no picture -> 404');
+        // header (Phase 7.4 Chunk 1): no picture -> the generic icon, inside a link to Profile
+        $dash = $server->request('/vulcatrack/customer/dashboard.php')['body'];
+        assert_contains('<a class="appbar__user" href="/vulcatrack/customer/profile.php" aria-label="Avatar Owner (Profile)"><svg class="appbar__icon"', $dash, 'header: name + icon link to Profile');
+        assert_not_contains('appbar__avatar', $dash, 'header: no picture element without a picture');
+        assert_contains('<form class="appbar__logout" method="post" action="/vulcatrack/logout.php">', $dash, 'Logout stays a separate POST form');
 
         // --- JPEG ------------------------------------------------------------
         $r = $upload(ImageFixtures::jpeg(), 'me.jpg');
@@ -126,6 +131,16 @@ test('customer profile: picture upload / replace / remove, isolation, fallback, 
         assert_contains('<img class="ac-avatar ac-avatar--photo" src="' . $src . '" alt=""', $page['body'], 'the account panel shows the picture');
         assert_contains('Profile picture updated.', $page['body']);
         assert_contains('<img class="ac-avatar ac-avatar--photo" src="' . $src . '"', $server->request('/vulcatrack/customer/vehicles.php')['body'], 'My Vehicles shows the same picture');
+        // header: the same own-picture URL (no id / path in it) on every customer page —
+        // Profile / Vehicles reuse their account-panel URL, other pages look it up
+        $headerImg = '<img class="appbar__avatar" src="' . $src . '" alt="" width="32" height="32">';
+        foreach (['profile.php', 'vehicles.php', 'dashboard.php', 'bookings.php', 'rescue.php'] as $p) {
+            $body = $server->request('/vulcatrack/customer/' . $p)['body'];
+            assert_contains($headerImg, $body, "header picture on {$p}");
+            assert_not_contains('<svg class="appbar__icon"', $body, "no generic icon beside the picture on {$p}");
+            assert_same(1, substr_count($body, 'class="appbar__avatar"'), "exactly one header picture on {$p}");
+        }
+        assert_not_contains('storage/avatars', $body, 'the private storage path is never in a page');
 
         // --- PNG (named evil.php.jpg): type from contents, old JPEG removed ---
         $r = $upload(ImageFixtures::png(), 'evil.php.jpg');
@@ -173,6 +188,10 @@ test('customer profile: picture upload / replace / remove, isolation, fallback, 
             assert_contains('<span class="ac-avatar" aria-hidden="true">AO</span>', $page['body'], 'falls back to initials');
             assert_not_contains('<img class="ac-avatar', $page['body']);
             assert_same(404, $server->request('/vulcatrack/customer/avatar.php')['status'], "avatar.php 404s ({$broken})");
+            foreach ([$page['body'], $server->request('/vulcatrack/customer/dashboard.php')['body']] as $body) {
+                assert_not_contains('appbar__avatar', $body, "header: no broken picture ({$broken})");
+                assert_contains('<svg class="appbar__icon"', $body, "header: generic icon instead ({$broken})");
+            }
         }
         $pdo->prepare('UPDATE customers SET avatar_filename = ? WHERE customer_id = ?')->execute([$webp, $custA]);
 
@@ -184,6 +203,7 @@ test('customer profile: picture upload / replace / remove, isolation, fallback, 
             assert_same(404, $r['status'], "B has no picture, whatever the query ({$q})");
             assert_not_contains(ImageFixtures::webp(), $r['body']);
         }
+        assert_not_contains('appbar__avatar', $server->request('/vulcatrack/customer/dashboard.php')['body'], 'B\'s header never shows A\'s picture');
         $r = $upload(ImageFixtures::png(5, 5), 'b.png');
         assert_same(302, $r['status']);
         assert_same(ImageFixtures::png(5, 5), $server->request('/vulcatrack/customer/avatar.php')['body'], 'B gets B\'s own picture');
