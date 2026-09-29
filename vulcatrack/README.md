@@ -5,10 +5,14 @@ Local development runs on XAMPP (Apache + PHP + MariaDB).
 
 ## Status
 
-**Phase 6 complete -- admin OTG handling, Tiremen, Sales History and Reports.**
-Phases 1–5 (foundation, schema, auth, customer side, Inventory + Point of Sale) were
-completed first; see below. Next is Phase 7 (integration, testing, UI refinement,
-presentation readiness).
+**Phase 7 in progress -- integration, testing, UI refinement, presentation readiness.**
+Phases 1–6 (foundation, schema, auth, customer side, Inventory + Point of Sale, admin
+OTG handling, Tiremen, Sales History and Reports) are complete; see below. Phase 7 so
+far: inventory edit integrity, the public landing page and Dashboard cards, the admin
+area aligned with the Figma (sidebar shell, theme, POS catalogue cards), and
+**Rescue sales** -- the sale for an accepted or completed Rescue request is recorded
+through the POS and linked to that request (Decisions 70–76). Next: responsive /
+mobile refinement, then documentation / demo / deployment readiness.
 
 Phase 4 delivered the customer side on top of the Phase 3 auth system: customer dashboard, profile
 (name / contact number / password), saved vehicles (add / edit / soft-delete /
@@ -122,28 +126,31 @@ Tabayag Vulcanizing Shop, 504 San Jose St. Baliwag, Bulacan
 (`14.946654430279454` / `120.89290174619997`). It is a config value only, not a
 database table (Decision 37); route/ETA code reads from here.
 
-## Admin functionality (Phases 5–6)
+## Admin functionality (Phases 5–7)
 
 | Page | Notes |
 |---|---|
-| `admin/index.php` | Dashboard with links to POS and Inventory. |
+| `admin/index.php` | Dashboard: total sales today, low-stock alerts, pending rescues, and short Needs Attention lists (low stock, pending rescues). |
 | `admin/inventory.php` | Products and services in one list: search, type / status filters, low-stock filter and badge. Activate / deactivate is POST + CSRF (soft -- items are never hard-deleted) and returns to the same filtered list. |
 | `admin/item-edit.php` | Add (`?id` absent) / edit (`?id=N`). Price in pesos (stored exactly, integer-centavo maths). Products carry stock + optional reorder level; services never do. |
-| `admin/pos.php` | Point of Sale: pick active items, session-backed cart (one line per item; max 50 items / 9,999 per item), optional link to an **existing** customer (blank = walk-in; the POS never creates accounts), cash received + change (checked on the server, **never stored**), then **Complete sale**. |
-| `admin/transaction-summary.php?id=N` | Printable **Transaction Summary** of a recorded sale -- shop name/address, sale no., date/time, cashier, customer or Walk-in, lines with the **frozen** unit price, total. Browser print; *"For transaction reference only. Not an official BIR invoice."* |
-| `admin/sales.php` | Phase 6, read-only **Sales History**: every recorded sale, newest first (sale no., date/time, cashier, customer or Walk-in, stored total). Optional From / To filter on the sale date (both inclusive; no filter by default). *View* opens the sale's Transaction Summary. Recorded sales cannot be edited or deleted. |
+| `admin/pos.php` | Point of Sale: pick active items, session-backed cart (one line per item; max 50 items / 9,999 per item), optional link to an **existing** customer (blank = walk-in; the POS never creates accounts), cash received + change (checked on the server, **never stored**), then **Complete sale**. **Rescue mode** (Phase 7.3d): opened from a Rescue request with *Record sale in POS* -- the customer is locked to the request's customer, the usual cart and checkout record the sale linked to that request, and the result card links back to it. It only starts from an empty ordinary cart, and a POS form from another tab that no longer matches the cart's context is refused. |
+| `admin/transaction-summary.php?id=N` | Printable **Transaction Summary** of a recorded sale -- shop name/address, sale no., date/time, cashier, customer or Walk-in, *Rescue request #N* for a Rescue sale, lines with the **frozen** unit price, total. Browser print; *"For transaction reference only. Not an official BIR invoice."* No payment method is shown (none is stored). |
+| `admin/sales.php` | Phase 6, read-only **Sales History**: every recorded sale, newest first (sale no., date/time, cashier, customer or Walk-in, **source** -- *In-shop* or *Rescue #N* linking to the request, stored total). Optional From / To filter on the sale date (both inclusive; no filter by default). *View* opens the sale's Transaction Summary. Recorded sales cannot be edited or deleted. |
 | `admin/reports.php` | Phase 6, read-only **Sales Reports** over the same optional From / To range (all recorded sales by default; the range is shown). **Transactions** and **Total Sales** cards; **Daily Sales** (date, transactions, total, newest first, only days with sales); **Items Sold** (item, quantity, revenue from the price recorded at sale time). There is no item-type split, because the type is editable. No charts or exports. |
 | `admin/tiremen.php` | Phase 6.1. Tiremen (the non-login people who perform OTG jobs): Active / Inactive / All filter; activate / deactivate is POST + CSRF (soft -- never deleted) and returns to the same filter. Tiremen are assigned to requests on the Rescue detail page (active ones only). |
 | `admin/tireman-edit.php` | Add (`?id` absent) / edit (`?id=N`) a Tireman's name and contact number. |
 | `admin/rescue.php` | Phase 6.2, read-only list. Every customer's OTG requests, filtered by status (Pending by default / Accepted / Rejected / Completed / All), newest first. |
-| `admin/rescue-view.php?id=N` | Phase 6.2 + 6.3. One request: customer (name, contact, email), vehicle, problem, stored coordinates + frozen ETA, assigned Tireman, handling admin, and a read-only straight-line map to the shop. Actions (POST + CSRF): **pending** -> accept (choose an active Tireman) / reject; **accepted** -> reassign / complete (only with a Tireman assigned) / reject; **rejected / completed** are final. A request changed elsewhere is refused ("This request changed"), never overwritten. |
+| `admin/rescue-view.php?id=N` | Phase 6.2 + 6.3. One request: customer (name, contact, email), vehicle, problem, stored coordinates + frozen ETA, assigned Tireman, handling admin, and a read-only straight-line map to the shop. Actions (POST + CSRF): **pending** -> accept (choose an active Tireman) / reject; **accepted** -> reassign / complete (only with a Tireman assigned) / reject; **rejected / completed** are final. A request changed elsewhere is refused ("This request changed"), never overwritten. **Sale** (Phase 7.3d): an accepted or completed request without a sale offers *Record sale in POS*; once linked, the page shows *Sale recorded* (sale no., total, date, recording admin, Transaction Summary link) and the request can no longer be rejected. Recording the sale does not complete the request -- *Mark as completed* stays a separate action. |
 
 **Sales rules honoured:** checkout goes through one service, `src/Service/SaleService.php`, which owns a
 single database transaction: it re-reads and locks every item (`SELECT … FOR UPDATE`), uses the
 **database** price (frozen into `sale_items.unit_price`), computes totals in integer centavos
 (`src/Support/Money.php` -- no floats), deducts stock for **products only**, and rolls everything back
 on any failure. If a price or the cart changed after the page was shown, the sale is refused rather
-than recorded at a different amount. No payment table, no receipt table, no online payment.
+than recorded at a different amount. A Rescue sale (optional `sales.service_request_id`) is
+checked in the same transaction: the request must be accepted or completed and have no sale yet,
+and the sale must be for the request's customer. No payment table, no stored payment method, no
+receipt table, no online payment.
 
 ## Structure
 
@@ -165,7 +172,7 @@ than recorded at a different amount. No payment table, no receipt table, no onli
 | `src/Support/` | `Validator.php`, `Money.php` (integer centavos), `Geo.php` (haversine + frozen ETA), `OtgStatus.php` (status→label mapping), `Geocoder.php` + `NominatimGeocoder.php` / `ArrayGeocoder.php` / `GeocoderFactory.php` / `GeocodeResult.php` / `GeocodeException.php`, `GeocodeCache.php` (query cache + ≥1s throttle) |
 | `src/Views/` | Form templates + shared partials (`partials/customer_top.php` / `partials/admin_top.php` app shells) |
 | `assets/` | `css/app.css`, `js/otg-map.js`, `lib/leaflet/` (vendored), `img/` |
-| `database/` | `schema.sql`, `seed_admin.php` -- **not web-accessible** |
+| `database/` | `schema.sql` (fresh install), `migrations/` (upgrade an existing database), `seed_admin.php` -- **not web-accessible** |
 | `storage/` | Logs / generated files -- **not web-accessible** |
 | `tests/` | Dependency-free regression harness -- **not web-accessible** |
 

@@ -38,11 +38,14 @@ We are building it as a **BSIT student project**, so the priorities are maintain
 - In-shop Point of Sale (POS)
 - Walk-in customer sales
 - Registered customer sales
-- Printable transaction summaries (for reference only; not an official BIR invoice)
-- Sales history (all recorded sales, newest first, with an optional date filter)
+- Rescue sales: the sale for an accepted or completed rescue request is recorded through the same POS, for the request's customer, and linked to that request (recording it does not complete the request)
+- Printable transaction summaries (for reference only; not an official BIR invoice; a rescue sale shows its request number)
+- Sales history (all recorded sales, newest first, with an optional date filter; each sale's source is shown as In-shop or Rescue #N)
 - Sales reports (transaction count, total sales, daily totals and items sold for an optional date range)
 
-Phase 6 is complete. Next is Phase 7: final integration, testing, UI refinement and presentation readiness.
+The POS handles cash in person; a recorded sale stores its total and line items, not a payment method, amount received or change. Online / GCash payment is not supported.
+
+Phase 6 is complete and Phase 7 (integration, testing, UI refinement and presentation readiness) is in progress.
 
 ### On-the-Go Services
 

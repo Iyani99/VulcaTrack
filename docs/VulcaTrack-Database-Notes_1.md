@@ -9,6 +9,17 @@ This document explains the database structure and is meant to be read alongside
 
 ---
 
+> **Revision note — 2026-09-28 (Decisions 70–76, Rescue sales — one structural change):**
+> `sales` gained a nullable, UNIQUE `service_request_id` (FK → `service_requests`,
+> RESTRICT): a sale may be the one recorded for a Rescue request (at most one each way).
+> `NULL` = an ordinary in-shop sale — including every sale recorded before the column
+> existed (no backfill). Customer identity (`customer_id`: walk-in or registered) and
+> sale source (`service_request_id`: in-shop or Rescue) are independent; a Rescue sale
+> always uses the request's customer. Still no payment method, amount received or
+> change stored. Updated inline in §1, §2 (`sales`), §3, §4, §8 and §12; where older
+> wording says "in-shop", read it as "recorded by the admin at the POS" (decision
+> record conflict C7).
+>
 > **Revision note — 2026-09-28 (Decisions 65–68, wording only):** the `service_requests`
 > `admin_id` / `tireman_id` descriptions (§2, §3) and the status rules (§11) were updated
 > for the owner-approved Rescue workflow: accepting assigns an active Tireman in the same
@@ -61,10 +72,10 @@ The database exists to support four things, and nothing beyond them:
 
 1. **Customer accounts** — so a customer can log in and request on-the-go service.
 2. **Inventory** — products and services the shop tracks, with stock levels for products.
-3. **Sales** — a record of in-shop transactions (not an online checkout/cart system).
+3. **Sales** — a record of in-shop transactions (not an online checkout/cart system). *(Since Decision 70 a sale may also be the one recorded for an on-site Rescue job, linked to its request.)*
 4. **On-the-go service requests** — a customer's request for roadside vulcanizing help, including their location.
 
-There is no shopping cart, online payment, or e-commerce ordering in this schema — sales are recorded by Admin after a transaction happens physically in the shop.
+There is no shopping cart, online payment, or e-commerce ordering in this schema — sales are recorded by Admin after a transaction happens physically in the shop (or, for a Rescue sale, after the job at the customer's location).
 
 ---
 
@@ -144,6 +155,7 @@ One in-shop transaction, recorded by Admin. Confirmed: walk-in sales are support
 |---|---|
 | `sale_id` **(PK)** | Unique identifier |
 | `customer_id` **(FK → customers, nullable)** | Set only if the transaction is tied to a registered customer |
+| `service_request_id` **(FK → service_requests, nullable, UNIQUE)** | The Rescue request this sale was recorded for; `NULL` = ordinary in-shop sale. At most one sale per request (Decision 70). When set, `customer_id` is the request's customer (Decision 72). |
 | `admin_id` **(FK → admins)** | Who recorded the sale — always required |
 | `sale_date` | Actual-sale timestamp; system-controlled, not manually editable in v1; used as the reporting date (see §8) |
 | `total_amount` | Sum of line items; the only monetary value persisted (no amount-tendered / change — see §8) |
@@ -190,6 +202,7 @@ An on-the-go request submitted by a logged-in customer.
 | admins → service_requests | 1 : 0..N | Optional — the last admin who changed status / assignment (`NULL` while pending) |
 | tiremen → service_requests | 1 : 0..N | Optional — set when an admin accepts the request (or reassigns it) |
 | vehicles → service_requests | 1 : 0..N | A vehicle can be used across several requests over time |
+| service_requests → sales | 1 : 0..1 | Optional both ways — a request has at most one sale, a sale at most one request (`sales.service_request_id` nullable + UNIQUE, Decision 70) |
 | sales → sale_items | 1 : 1..N | A sale needs at least one line item |
 | items → sale_items | 1 : 0..N | An item can appear in many sales |
 
@@ -201,7 +214,8 @@ An on-the-go request submitted by a logged-in customer.
 - Customer accounts and Admin access are entirely separate — there is no shared login table and no shared "users" concept.
 - Admin and Staff are **not** modeled as separate roles; there is one internal `admins` table.
 - Recording a sale of an `item_type = 'product'` line should decrease that item's `stock_quantity` by the quantity sold. Service lines do not affect stock.
-- Walk-in, in-shop sales do not require a customer account — `sales.customer_id` is nullable specifically to support this.
+- Walk-in, in-shop sales do not require a customer account — `sales.customer_id` is nullable specifically to support this. *"Walk-in" is about the customer, not the source:* a registered customer may also buy in the shop, and a sale's source (in-shop vs Rescue) comes only from `sales.service_request_id` (Decision 70). A Rescue sale always has the request's registered customer.
+- A sale can be recorded for a Rescue request only while it is `accepted` or `completed` (completed = late entry) and has no sale yet; recording it does not change the request. A request with a linked sale can no longer be rejected (Decisions 71–74).
 - On-the-go requests always require both a customer and a vehicle reference.
 - Every `customers` row must have a `contact_number` — it's how the shop/Tireman communicates directly with the customer once a request is accepted. No in-app messaging is modeled; a phone contact is sufficient.
 - There is no live/continuous tracking of the Tireman's location. The customer's "Tireman is on the way" state is just a status display (see §11), not a moving-location feed.
@@ -235,6 +249,7 @@ An on-the-go request submitted by a logged-in customer.
 - **In-person cash handling (v1):** the POS UI computes the total, accepts the amount received from the cashier, computes change, and prevents completion if the amount received is insufficient. The amount tendered and change due are **UI-only** and are **not** stored.
 - If a receipt is produced, it is a simple printable HTML/browser view rendered from the saved `sales` + `sale_items` rows. There is **no receipt table**; a receipt "number" can just be `sale_id`.
 - `sale_date` is the actual-sale timestamp, **system-controlled** — not manually editable during normal POS completion, and there is no backdating feature in v1. `created_at` is the database record-creation timestamp. Sales reports use `sale_date`.
+- **Rescue sales (Decisions 70–76):** a sale linked to a Rescue request is otherwise an ordinary sale — same POS, frozen `unit_price`, product-only stock deduction, `sale_date` = when it was recorded (a late entry is not backdated). Reports therefore include it with no separate calculation. No payment method is stored for any sale.
 
 ## 9. On-the-Go Request Rules
 
@@ -263,6 +278,7 @@ Confirmed:
 - Vehicles have their own table; a customer can have multiple.
 - Products and services share one `items` table (`item_type` distinguishes them).
 - Walk-in sales are supported without a customer account (`sales.customer_id` is nullable).
+- A sale may be linked to at most one Rescue request (`sales.service_request_id`, nullable + UNIQUE — Decision 70); the source is derived from it, never stored separately.
 - No live/continuous Tireman tracking — only a one-time route + frozen ETA snapshot at request submission.
 - Customer `contact_number` is required, not optional.
 - Online / gateway payment (GCash or otherwise) is out of scope; no online-payment fields are modeled. In-person cash tender/change is UI-only, not persisted (§8).

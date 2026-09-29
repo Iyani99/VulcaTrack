@@ -99,6 +99,13 @@ detail). No store exists for anything outside the 8-table schema — there is no
 payments store, receipt store, tracking/location-history store, messaging store,
 audit/status-history store, `shop_settings` store, or Tireman-login store.
 
+> **Pending refresh (2026-09-28, Decisions 70–76 — Rescue sales):** a sale may now be
+> linked to the Rescue request it was recorded for (`sales.service_request_id`). The
+> stores are unchanged (still the 8 tables, no payment store), but the Level 1 DFD does
+> not yet show the POS process (P5) reading `service_requests` (D6) to link a sale.
+> Redraw during the Phase 7.5 diagram refresh (decision record D6). The checklist below
+> describes the diagrams as drawn on 2026-09-04.
+
 ## Consistency check
 
 1. **External entities exist?** Yes — Customer and Admin only.

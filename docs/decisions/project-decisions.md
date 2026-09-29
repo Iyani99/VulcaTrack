@@ -35,7 +35,8 @@ scope covers exactly these areas:
 
 1. Customer / public-facing functionality
 2. Customer accounts and vehicles
-3. In-shop sales and inventory
+3. In-shop sales and inventory *(the admin-operated POS; since Decision 70 a sale may
+   also be linked to the Rescue request it was recorded for)*
 4. On-the-Go (OTG) roadside service requests
 
 Nothing beyond these four areas is in scope unless explicitly approved later.
@@ -98,6 +99,9 @@ changes them.
     fields, or payment APIs unless the team explicitly approves this later.
 13. **Sales are handled by an admin in the shop.** There is no online customer shopping
     checkout.
+    *(Clarified 2026-09-28 by **Decision 70**: the admin still records every sale at
+    the POS, but a sale may also be the one recorded for an on-site Rescue job, linked
+    to its request.)*
 14. **Walk-in customers must be supported.** A sale may exist without a registered customer
     account; therefore `sales.customer_id` may be nullable.
 15. **Products and services share one unified inventory/`items` table,** distinguished by an
@@ -745,6 +749,87 @@ Approved by the owner for Phase 7.1. **No schema change.**
     changed …") if a sale has changed them since, so a stale form can never put back
     stock that the POS has already deducted.
 
+## Confirmed Project Decisions — 2026-09-28 (Phase 7.3d: Rescue sales)
+
+Approved by the owner for Phase 7.3d (built in three checkpoints: 7.3d-a schema,
+7.3d-b domain rules, 7.3d-c admin UI / POS workflow). **One structural change:** the
+nullable `sales.service_request_id` column (Decision 70) — still exactly the 8 tables,
+the four OTG statuses of Decision 10, and no payment table or field. Business context:
+a Rescue job is typically paid for on site once the actual work is known, and the
+admin then records the products and services actually used as an ordinary POS sale;
+before this, a sale could not be traced back to the Rescue it came from.
+
+70. **A sale may be linked to at most one Rescue request, and a request to at most one
+    sale.** `sales.service_request_id` is a nullable foreign key to
+    `service_requests.request_id`, **UNIQUE**, `ON DELETE RESTRICT ON UPDATE RESTRICT`
+    (one-to-one, optional on both sides). `NULL` = an ordinary **in-shop** sale; a
+    request id = a **Rescue** sale. The sale's *source* is **derived** from this column
+    only — there is no source / type column and no separate table. Sales recorded
+    before the column existed stay `NULL` (shown as in-shop); old links are never
+    guessed or backfilled. Existing databases are upgraded with
+    `vulcatrack/database/migrations/2026-09-28-sales-service-request.sql`.
+    *Customer identity and sale source are independent:* `sales.customer_id` (NULL =
+    walk-in, Decision 14) says **who** bought; `service_request_id` says **where the
+    sale came from**. A registered customer may buy in the shop (registered + in-shop);
+    a Rescue sale always has the Rescue's registered customer and is never a walk-in.
+    *This clarifies Decision 13 and scope area 3 ("in-shop sales"):* sales are still
+    recorded only by an admin at the POS — there is still no customer checkout — but a
+    recorded sale may be for a Rescue job performed on site as well as for an in-shop
+    transaction.
+71. **A sale can be recorded for a Rescue request that is `accepted` or `completed`,
+    never for one that is `pending` or `rejected`, and only while the request has no
+    sale.** `completed` is allowed on purpose: the admin may close the request first and
+    record its sale afterwards (a late financial entry), because `completed` is final
+    (Decision 65) and an omission could otherwise never be corrected. A second sale for
+    the same request is refused with a clear message; the UNIQUE key of Decision 70 is
+    the final guarantee under concurrency. The rule lives in `OtgStatus::canRecordSale()`
+    and is enforced by `SaleService` inside the checkout transaction, which locks the
+    request row before any item row.
+72. **The Rescue's customer is authoritative for its sale.** A Rescue sale is recorded
+    for `service_requests.customer_id`. A walk-in or a different customer is **refused**
+    (never silently replaced) — it means the screen was stale or in the wrong context.
+    The POS locks the customer while recording a Rescue sale, and `SaleService`
+    re-validates it at checkout.
+73. **Recording a sale does not change the Rescue request.** It never changes the
+    request's status, `admin_id`, Tireman or `updated_at`, and it is not the completion
+    action. Completing the request stays a separate, explicit admin action (Decision
+    65); the system enforces no order between the two (the usual order is: sale
+    recorded while accepted, then *Mark as completed* — but a completed request may
+    receive its sale later, Decision 71). A Rescue sale is an ordinary sale in every
+    other respect: frozen unit prices (Decision 17), product-only stock deduction
+    (Decision 16), full rollback on failure (Decision 61), and `sale_date` = the time
+    the sale is recorded (Decision 35 — a late entry is not backdated to the request or
+    completion date). Reports and the Dashboard therefore include Rescue sales with no
+    separate calculation.
+74. **A request with a linked sale can no longer be rejected.** A rejected request with
+    a recorded, unchangeable sale would be a contradictory final state. The guarded
+    reject update itself refuses a request that has a sale (from `pending` or
+    `accepted`), so a stale screen cannot get past it; the Reject action is also no
+    longer offered. While still accepted, such a request can have its Tireman
+    reassigned and can be marked completed. There is **no unlink** feature — recorded sales stay unchangeable.
+75. **Rescue sales use the existing POS (no second cart or checkout).** From the admin
+    Rescue detail page, *Record sale in POS* (a POST with CSRF — never a plain link)
+    puts the POS session cart into Rescue mode for that request, only from a clean cart
+    (no items, no registered customer chosen, no other Rescue active) so a sale in
+    progress is never overwritten; reopening the same Rescue changes nothing. The
+    request id is held in the session cart, never trusted from a form. Because every
+    browser tab shares one session cart, each cart-changing POS form states the
+    context it was rendered for (ordinary sale or a specific Rescue) and is refused if
+    the cart's context has changed since, so an old tab cannot change a different
+    sale. If the request stops being eligible while its sale is in progress, the POS
+    shows why and does not complete it; *Cancel sale* leaves Rescue mode. A completed
+    checkout, or a cancel, returns the POS to an ordinary walk-in sale.
+76. **A Rescue sale records a sale, not a payment method.** The `sales` table still
+    stores no payment method, amount received, change or payment status (Decisions
+    30/54); the in-person POS workflow is cash, but that is not stored data. Screens
+    therefore say **"Sale recorded"** (with the sale number, total, date and recording
+    admin) — never "Payment recorded" or "Cash" as a stored fact. Sales History shows
+    the derived source (**In-shop** / **Rescue #N**, linking to the request) beside the
+    independent Customer column, and the Transaction Summary of a Rescue sale shows
+    "Rescue request #N" for traceability — still a transaction reference, not an
+    official BIR invoice (Decision 50). GCash / online payment remains out of scope
+    (Decision 12).
+
 Unless explicitly approved later, do **not** introduce:
 
 - Live technician / Tireman GPS tracking
@@ -819,7 +904,11 @@ Key rules (from the Database Notes / schema / decisions):
   deactivate by setting `0`, never by hard-deleting a row that has historical references
   (Decisions 27–29).
 - `sales.total_amount` is the only monetary value persisted for a sale; amount tendered /
-  change due are UI-only and not stored (Decision 30).
+  change due are UI-only and not stored (Decision 30). No payment method is stored
+  (Decision 76).
+- `service_requests` 1 : 0..1 `sales` — `sales.service_request_id` is nullable and
+  UNIQUE (Decision 70). `NULL` = in-shop sale; set = the sale recorded for that Rescue.
+  Independent of `sales.customer_id` (walk-in vs registered customer).
 - `service_requests.eta_minutes` is a frozen snapshot; no route geometry is stored
   (Decisions 32–33).
 - `email` is unique within `customers` and within `admins`, checked independently — a
@@ -965,6 +1054,15 @@ Do not turn these into confirmed requirements without approval.
   sale has changed. Chunk 7.2 (2026-09-28): the public landing page was rebuilt
   (accurate copy — request status and a one-time ETA, no live tracking) and the
   Admin Dashboard shows total sales today, low-stock alerts and pending rescues.
+  Chunk 7.3 (2026-09-28): 7.3a–7.3c aligned the admin area with the approved Figma
+  (shared sidebar shell and black / white / red admin theme, page layouts, the POS
+  as catalogue cards beside a Current Sale panel) — presentation only, customer and
+  guest pages unchanged. 7.3d added **Rescue sales** (**Decisions 70–76**): the sale
+  for an accepted or completed Rescue request is recorded through the ordinary POS
+  and linked to the request (`sales.service_request_id`); Sales History shows its
+  source and the Transaction Summary its request. Committed as `b7e595d` (schema),
+  `0d2f86e` (domain rules) and `7d158e6` (UI), and re-checked after commit with a
+  browser run of the whole workflow. Next: 7.4 responsive / mobile refinement.
   Its deferred-item backlog is consolidated in
   `docs/PROJECT-CONTEXT.md` §16.5.
 - Repo on `main` at `C:\IPT102`, pushed to
@@ -972,14 +1070,17 @@ Do not turn these into confirmed requirements without approval.
   served via a Windows junction from `C:\xampp\htdocs\vulcatrack`.
 - Database: the 8 tables from `docs/ERD/schema.dbml` are built
   (`vulcatrack/database/schema.sql`); no seed data ships (the owner keeps a
-  personal test account).
+  personal test account). The only structural change since Phase 2 is the
+  nullable, UNIQUE `sales.service_request_id` (Decision 70); an existing database is
+  upgraded once with `vulcatrack/database/migrations/2026-09-28-sales-service-request.sql`.
 - **Test harness (Phase 4.5, extended each chunk):** `vulcatrack/tests/` —
-  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **198 passed, 0
-  failed, 2762 assertions across 36 files** (unit, integration — schema +
-  repositories + Auth + inventory + sales + Sales History / Reports reads +
-  Tiremen + admin request reads and guarded status changes + DB session, and
-  end-to-end HTTP incl. the POS, Transaction Summary, Sales History, Reports,
-  Tiremen and Rescue pages and actions). All green as of 2026-09-28 (`4e3d8c3`).
+  dependency-free CLI runner (`php vulcatrack/tests/run.php`), **233 passed, 0
+  failed, 3486 assertions across 41 files** (unit, integration — schema +
+  repositories + Auth + inventory + sales + Rescue-sale rules + Sales History /
+  Reports reads + Tiremen + admin request reads and guarded status changes + DB
+  session, and end-to-end HTTP incl. the POS, the Rescue-sale workflow, Transaction
+  Summary, Sales History, Reports, Tiremen and Rescue pages and actions). All green
+  as of 2026-09-28 (`7d158e6`).
 - Auth (Decisions 41–47): customer + admin login/logout, CLI
   `vulcatrack/database/seed_admin.php`, hardened sessions, guards.
 - Customer side (Decision 48): `vulcatrack/customer/*` — dashboard, profile,
@@ -989,7 +1090,7 @@ Do not turn these into confirmed requirements without approval.
 - Admin side (Phase 5; Tiremen, Rescue, Sales History and Reports added in
   Phase 6): `vulcatrack/admin/*` — dashboard, inventory + item edit, POS,
   transaction summary, Sales History, Reports, Tiremen, Rescue (list, detail,
-  status actions). No schema change — still exactly the 8 tables.
+  status actions, and — Phase 7.3d — the Rescue's sale). Still exactly the 8 tables.
 - ERD exists (PNG + text schema `docs/ERD/schema.dbml`).
 - Use-case diagram exists (PNG; changes pending — see Required Diagram Changes).
 - Six flowcharts exist.
@@ -1047,13 +1148,17 @@ each item below.
 | N6 | `docs/requirements/` folder referenced but absent | **RESOLVED** | Record wording softened; folder intentionally not created. No requirements/SRS invented. |
 | N7 | `sales.sale_date` vs `sales.created_at` | **RESOLVED** | Decision 35: `sale_date` = system-controlled actual-sale timestamp (no backdating in v1); `created_at` = record creation; reports use `sale_date`. |
 | N8 | Figma not cross-checked | **OPEN (informational)** | Prototype is external and not provided this session. Cross-check needed before frontend work for: POS payment/receipt UI, inventory module layout, OTG map view (customer + admin), saved-vehicle management UI, admin dashboard contents. |
+| C7 | "In-shop sales" wording (scope area 3, Decision 13, Database Notes §1 / §2 / §4) vs Rescue-linked sales | **RESOLVED** | Logged 2026-09-28 with Decisions 70–76: the older wording read as if every sale were an in-shop counter transaction, which became **AMBIGUOUS** once a sale can be the one recorded for an on-site Rescue job. Resolved by clarification, not rewrite: Decision 13 and scope area 3 carry a note pointing to Decision 70 (sales are still recorded only by an admin at the POS), and the Database Notes got a revision note plus inline additions. *Walk-in* stays a customer-identity term (`customer_id` NULL), never a synonym for *in-shop* (`service_request_id` NULL). |
 | C6 | `service_requests.tireman_id` / `admin_id` note wording vs Decisions 65–68 | **RESOLVED** | Logged 2026-09-28 when Decisions 65–68 were added: the notes in `docs/ERD/schema.dbml`, the `vulcatrack/database/schema.sql` comments and `docs/VulcaTrack-Database-Notes_1.md` (§2, §3, §11) still described the older "assign after acceptance / NULL while rejected" wording. Corrected the same day on owner approval — **comment / note wording only**, no table, column, type, constraint, FK, CHECK or index changed. |
 
 ### Remaining conflicts after this update
 
 - **No unresolved *CONFLICT* remains between the confirmed decisions and the artifacts.**
 - **POSSIBLY OUTDATED diagrams** (documented, not yet regenerated): ERD PNG, use-case PNG,
-  and OTG flowcharts 2 & 5 — see [Required Diagram Changes](#required-diagram-changes).
+  OTG flowcharts 2 & 5, and — since Decisions 70–76 — the POS flowchart, the POS
+  sequence diagram, the OTG activity diagram and the Level 1 DFD — see
+  [Required Diagram Changes](#required-diagram-changes). Planned for the Phase 7.5
+  documentation / diagram refresh.
 - **N8 (Figma)** stays open until the prototype is provided.
 
 Any future conflict must be reported and classified here (or in a superseding decision
@@ -1068,15 +1173,35 @@ PNGs and the Figma prototype were not modified).
 
 | ID | Artifact | Classification | Required change |
 |---|---|---|---|
-| D1 | `docs/ERD/VulcaTrack-ERD_1.png` | POSSIBLY OUTDATED | Regenerate from `docs/ERD/schema.dbml`. Must show: (a) new `tiremen` table (`tireman_id` PK, `name`, `contact_number`, `is_active`, `created_at`, `updated_at`); (b) `service_requests.tireman_id` nullable FK → `tiremen`; (c) `items.is_active` and `vehicles.is_active`; (d) `customers → service_requests` as **`1 : 0..N`** (not `1 : 1..N`). |
+| D1 | `docs/ERD/VulcaTrack-ERD_1.png` | POSSIBLY OUTDATED | Regenerate from `docs/ERD/schema.dbml`. Must show: (a) new `tiremen` table (`tireman_id` PK, `name`, `contact_number`, `is_active`, `created_at`, `updated_at`); (b) `service_requests.tireman_id` nullable FK → `tiremen`; (c) `items.is_active` and `vehicles.is_active`; (d) `customers → service_requests` as **`1 : 0..N`** (not `1 : 1..N`); (e) *(Decision 70)* `sales.service_request_id` — nullable, UNIQUE FK → `service_requests`, drawn as **`service_requests 1 : 0..1 sales`**. |
 | D2 | `docs/VulcaTrack-Use-Case-Diagram_1.png` | POSSIBLY OUTDATED | (a) Collapse "Manage Inventory" + "Manage Products" into one "Manage Inventory" use case (products + services). (b) Add admin use cases "Manage Tiremen" and "Assign Tireman to Request". (c) Keep "Manage Customer Accounts" flagged as proposed/unresolved. |
 | D3 | `docs/flows/VulcaTrack-2-Customer-Flow.png`, `docs/flows/VulcaTrack-5-OTG-Request-Flow.png` | POSSIBLY OUTDATED | Admin branch: add an "Assign Tireman" step after "Set Status: Accepted" *(per Decision 66 the Tireman is chosen in the same step as acceptance; also show accepted → rejected and the final states, Decision 65)*. Customer view after acceptance: show assigned Tireman name + contact number, "Tireman is on the way", the stored ETA, and the route/map. |
-| D4 | `docs/flows/VulcaTrack-4-POS-Flow.png` | CONSISTENT (annotate) | No structural change. Optionally note that "Enter Payment Amount / Payment Sufficient? / Calculate Change" are UI-only (not persisted) and "Generate Receipt" is a printable HTML view with no receipt table. |
+| D4 | `docs/flows/VulcaTrack-4-POS-Flow.png` | POSSIBLY OUTDATED *(was CONSISTENT — annotate)* | Note that "Enter Payment Amount / Payment Sufficient? / Calculate Change" are UI-only (not persisted) and "Generate Receipt" is a printable HTML view with no receipt table. *(Decisions 70–76)* Add the optional Rescue entry: *Record sale in POS* from an accepted / completed request → customer locked to the request's customer → the same cart and checkout → sale linked to the request; the request's status is not changed by the sale. |
 | D5 | `docs/flows/VulcaTrack-6-Inventory-Flow.png` | CONSISTENT | No change. "Deactivate / Delete Item" is now backed by `items.is_active`. |
+| D6 | `docs/flows/VulcaTrack-5-OTG-Request-Flow.png`, `docs/flows/VulcaTrack-Activity-Diagram-OTG.*`, `docs/flows/VulcaTrack-Sequence-Diagram-POS.*`, `docs/flows/VulcaTrack-DFD-1-Level1.*` | POSSIBLY OUTDATED | *(Decisions 70–76, logged 2026-09-28)* OTG flow / activity diagram: after the job, the admin may record the request's sale in the POS (accepted or completed) and separately mark it completed; a request with a sale cannot be rejected. POS sequence diagram: optional Rescue context (read the request, lock its customer, store `service_request_id`). Level 1 DFD: the POS process now reads `service_requests` (D6) to link a sale — no new data store. No payment store in any diagram. |
 
 ---
 
 ## Revision History
+
+### 2026-09-28 — Phase 7.3d: Rescue sales (**decision change: Decisions 70–76 added**)
+
+- **Decision change (owner-approved):** added **Decisions 70–76** — the optional
+  one-to-one link between a sale and a Rescue request (`sales.service_request_id`,
+  nullable + UNIQUE, RESTRICT), accepted / completed eligibility with late entry, the
+  Rescue's customer as the sale's customer, sale recording independent of the
+  request's status, no reject once a sale is linked (no unlink), Rescue mode in the
+  existing POS with the clean-cart and stale-tab rules, and "Sale recorded" wording
+  with no payment method stored. **Decision 13** and scope area 3 gained a
+  clarification note (no rewrite). No existing decision was renumbered.
+- **Schema:** one nullable column + UNIQUE key + FK on `sales` (7.3d-a, `b7e595d`);
+  `schema.dbml`, `schema.sql` and a one-off migration were updated in that commit.
+  Still exactly 8 tables; no new status; no payment table or field.
+- **Status:** 7.3d-b domain rules (`0d2f86e`) and 7.3d-c admin UI / POS workflow
+  (`7d158e6`) committed and re-verified after commit. Tests **233 passed / 3486
+  assertions / 41 files**. **Current Project Status**, Database Context, Known
+  Conflicts (new **C7**, resolved) and Required Diagram Changes (D1, D4 updated; new
+  **D6**) updated. Diagrams themselves not regenerated (Phase 7.5).
 
 ### 2026-09-28 — Phase 7.2: landing page + Admin Dashboard cards (status only; no decision change)
 
