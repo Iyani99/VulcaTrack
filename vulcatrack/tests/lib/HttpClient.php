@@ -36,9 +36,16 @@ final class HttpServer
     {
         $repoRoot = dirname(VULCATRACK_APP_ROOT);
         $php = PHP_BINARY;
-        $cmd = escapeshellarg($php) . ' -d display_errors=1 -d error_reporting=' . E_ALL
-             . ' -S 127.0.0.1:' . $this->port
-             . ' -t ' . escapeshellarg($repoRoot);
+        // An argument array starts php.exe directly. A command string goes
+        // through cmd.exe on Windows, so proc_terminate() only kills the shell
+        // and leaves the server holding its port and log file open.
+        $cmd = [
+            $php,
+            '-d', 'display_errors=1',
+            '-d', 'error_reporting=' . E_ALL,
+            '-S', '127.0.0.1:' . $this->port,
+            '-t', $repoRoot,
+        ];
 
         @unlink($this->logFile);
         // Inherit the parent environment and layer any extras on top (Windows
@@ -51,7 +58,8 @@ final class HttpServer
             [0 => ['pipe', 'r'], 1 => ['file', $this->logFile, 'a'], 2 => ['file', $this->logFile, 'a']],
             $this->pipes,
             null,
-            $env
+            $env,
+            ['bypass_shell' => true]
         );
         if (!is_resource($this->proc)) {
             throw new \RuntimeException('could not start php -S');
@@ -69,6 +77,7 @@ final class HttpServer
             }
             usleep(150_000);
         }
+        $this->stop();
         throw new \RuntimeException('php -S did not come up on port ' . $this->port);
     }
 
@@ -77,10 +86,6 @@ final class HttpServer
         if (is_resource($this->proc)) {
             $status = proc_get_status($this->proc);
             if ($status['running'] ?? false) {
-                // proc_terminate can miss the real php.exe child on Windows.
-                if (stripos(PHP_OS, 'WIN') === 0 && !empty($status['pid'])) {
-                    @exec('taskkill /F /T /PID ' . (int) $status['pid'] . ' 2>NUL');
-                }
                 @proc_terminate($this->proc);
             }
             foreach ($this->pipes as $p) {
