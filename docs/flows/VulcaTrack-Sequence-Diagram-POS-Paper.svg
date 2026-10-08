@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1310" viewBox="0 0 1500 1310" font-family="Segoe UI, Arial, Helvetica, sans-serif">
+<defs>
+<marker id="call" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L12,6 L0,12 z" fill="#20252a"/></marker>
+<marker id="return" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L12,6 L0,12 z" fill="#555"/></marker>
+</defs>
+<rect width="1500" height="1310" fill="#ffffff"/>
+<text x="750" y="43" font-size="26" font-weight="700" fill="#111" text-anchor="middle"><tspan x="750" dy="0">VulcaTrack: Sales and Inventory with On-the-Go Services</tspan></text>
+<text x="750" y="78" font-size="22" font-weight="400" fill="#111" text-anchor="middle"><tspan x="750" dy="0">Sequence Diagram — Process Sale (POS)</tspan></text>
+<rect x="25" y="115" width="270" height="60" rx="6" fill="#f8db74" stroke="#aa8421" stroke-width="2"/>
+<text x="160" y="152" font-size="21" font-weight="700" fill="#111" text-anchor="middle"><tspan x="160" dy="0">Admin</tspan></text>
+<path d="M160,175 L160,1230" fill="none" stroke="#777" stroke-width="1.6" stroke-dasharray="8 6"/>
+<rect x="615" y="115" width="270" height="60" rx="6" fill="#f8db74" stroke="#aa8421" stroke-width="2"/>
+<text x="750" y="152" font-size="21" font-weight="700" fill="#111" text-anchor="middle"><tspan x="750" dy="0">VulcaTrack POS System</tspan></text>
+<path d="M750,175 L750,1230" fill="none" stroke="#777" stroke-width="1.6" stroke-dasharray="8 6"/>
+<rect x="1205" y="115" width="270" height="60" rx="6" fill="#f8db74" stroke="#aa8421" stroke-width="2"/>
+<text x="1340" y="152" font-size="21" font-weight="700" fill="#111" text-anchor="middle"><tspan x="1340" dy="0">Database</tspan></text>
+<path d="M1340,175 L1340,1230" fill="none" stroke="#777" stroke-width="1.6" stroke-dasharray="8 6"/>
+<path d="M168,235 L742,235" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#call)"/>
+<text x="455" y="223" font-size="20" font-weight="400" fill="#111" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="455" dy="0">Add products/services and quantities</tspan></text>
+<path d="M758,320 L1332,320" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#call)"/>
+<text x="1045" y="308" font-size="20" font-weight="400" fill="#111" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1045" dy="0">Get item details, current price and stock</tspan></text>
+<path d="M1332,405 L758,405" fill="none" stroke="#555" stroke-width="2" marker-end="url(#return)" stroke-dasharray="9 6"/>
+<text x="1045" y="393" font-size="20" font-weight="400" fill="#111" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1045" dy="0">Return price and available stock</tspan></text>
+<path d="M742,490 L168,490" fill="none" stroke="#555" stroke-width="2" marker-end="url(#return)" stroke-dasharray="9 6"/>
+<text x="455" y="478" font-size="20" font-weight="400" fill="#111" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="455" dy="0">Show cart and total</tspan></text>
+<path d="M168,575 L742,575" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#call)"/>
+<text x="455" y="563" font-size="20" font-weight="400" fill="#111" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="455" dy="0">Optional registered Customer; otherwise Walk-in</tspan></text>
+<path d="M168,660 L742,660" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#call)"/>
+<text x="455" y="648" font-size="20" font-weight="400" fill="#111" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="455" dy="0">Enter cash tender and complete Sale</tspan></text>
+<rect x="574" y="700" width="352" height="51" rx="8" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="750" y="733" font-size="20" font-weight="600" fill="#111" text-anchor="middle"><tspan x="750" dy="0">Validate checkout input</tspan></text>
+<path d="M750,660 L750,700" fill="none" stroke="#1a1a1a" stroke-width="2" marker-end="url(#call)"/>
+<rect x="55" y="780" width="1390" height="440" rx="0" fill="none" stroke="#315f7c" stroke-width="2"/>
+<rect x="55" y="780" width="105" height="37" rx="0" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="76" y="805" font-size="20" font-weight="700" fill="#111" text-anchor="start"><tspan x="76" dy="0">alt</tspan></text>
+<text x="172" y="806" font-size="18" font-weight="400" fill="#111" text-anchor="start" font-style="italic"><tspan x="172" dy="0">[Valid]</tspan></text>
+<path d="M758,851 L1332,851" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#call)"/>
+<text x="1045" y="839" font-size="20" font-weight="400" fill="#111" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1045" dy="0">Record Sale transaction</tspan></text>
+<path d="M1332,921 L758,921" fill="none" stroke="#555" stroke-width="2" marker-end="url(#return)" stroke-dasharray="9 6"/>
+<text x="1045" y="909" font-size="20" font-weight="400" fill="#111" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="1045" dy="0">Return Sale success</tspan></text>
+<path d="M742,991 L168,991" fill="none" stroke="#555" stroke-width="2" marker-end="url(#return)" stroke-dasharray="9 6"/>
+<text x="455" y="979" font-size="20" font-weight="400" fill="#111" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="455" dy="0">Show Sale number, total and change</tspan></text>
+<path d="M168,1051 L742,1051" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#call)"/>
+<text x="455" y="1039" font-size="20" font-weight="400" fill="#111" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="455" dy="0">Open Transaction Summary</tspan></text>
+<path d="M742,1101 L168,1101" fill="none" stroke="#555" stroke-width="2" marker-end="url(#return)" stroke-dasharray="9 6"/>
+<text x="455" y="1089" font-size="20" font-weight="400" fill="#111" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="455" dy="0">Show printable Transaction Summary</tspan></text>
+<path d="M55,1130 L1445,1130" fill="none" stroke="#315f7c" stroke-width="1.6" stroke-dasharray="8 6"/>
+<text x="172" y="1155" font-size="18" font-weight="400" fill="#111" text-anchor="start" font-style="italic"><tspan x="172" dy="0">[Invalid]</tspan></text>
+<path d="M742,1190 L168,1190" fill="none" stroke="#555" stroke-width="2" marker-end="url(#return)" stroke-dasharray="9 6"/>
+<text x="455" y="1178" font-size="20" font-weight="400" fill="#111" text-anchor="middle" stroke="#fff" stroke-width="6" stroke-linejoin="round" paint-order="stroke"><tspan x="455" dy="0">Show checkout errors; no Sale recorded</tspan></text>
+<text x="750" y="1270" font-size="17" font-weight="400" fill="#555" text-anchor="middle"><tspan x="750" dy="0">Cash tender and change are displayed for checkout; they are not stored as Sale history.</tspan></text>
+</svg>

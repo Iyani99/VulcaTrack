@@ -1,6 +1,6 @@
 <?php
 /**
- * VulcaTrack — Rescue (On-the-Go) service request, UML activity diagram (paper version).
+ * VulcaTrack — Rescue (On-the-Go) service lifecycle, technical activity diagram.
  * Portrait: 1100 units ≈ a 6.5-inch page width → 21-unit text ≈ 9 pt.
  *
  * Facts (Decisions 10, 25, 32, 39, 65-68, 70-76, 78): an authenticated customer books
@@ -10,7 +10,7 @@
  * recording the POS sale is separate; the customer may give one-time feedback on a
  * completed request (status unchanged). No live GPS, no chat, no cancelled status.
  *
- *   php docs/diagram-src/activity-otg.php > docs/flows/VulcaTrack-Activity-Diagram-OTG.svg
+ *   php docs/diagram-src/activity-otg-detailed.php > docs/flows/VulcaTrack-Activity-Diagram-OTG-Detailed.svg
  */
 require __DIR__ . '/lib.php';
 
@@ -52,7 +52,7 @@ $label = fn (float $x, float $y, string $t, string $anchor = 'start') => txt($x,
 
 $out = svg_open(W, H, arrow_marker('a', '#1a1a1a', 15));
 $out .= txt(W / 2, 40, 'VulcaTrack: Sales and Inventory with On-the-Go Services', 27, ['anchor' => 'middle', 'weight' => '700']);
-$out .= txt(W / 2, 72, 'Activity Diagram — Rescue (On-the-Go) Service Request', 20, ['anchor' => 'middle', 'fill' => '#444']);
+$out .= txt(W / 2, 72, 'Technical Activity Diagram — Rescue (On-the-Go) Lifecycle', 20, ['anchor' => 'middle', 'fill' => '#444']);
 
 // swimlanes
 foreach ($lanes as $name => [$x0, $x1]) {
@@ -74,14 +74,14 @@ $out .= $arrow([[380, $cy(6)], [325, $cy(6)]]);                       // -> conf
 $out .= $arrow([[700, $cy(6)], [765, $cy(6)]]);                       // -> admin review
 $out .= $arrow([[$A, $bot(6)], [$A, $cy(7) - 38]]);
 $out .= $arrow([[$A, $cy(7) + 38], [$A, $top(8)]]);                   // [Yes]
-$out .= $label($A + 12, $cy(7) + 55, '[Yes]');
+$out .= $label($A + 12, $cy(7) + 55, '[Accept]');
 $out .= $arrow([[765, $cy(8)], [700, $cy(8)]]);                       // accept+assign -> save
 $out .= $arrow([[380, $cy(8)], [$C, $cy(8)], [$C, $top(9, 3)]]);      // -> Tireman on the way
 $out .= $arrow([[$A, $bot(8)], [$A, $cy(10) - 38]]);                  // -> job done?
 $out .= $arrow([[325, $cy(9)], [362, $cy(9)], [362, $cy(10)], [$A - 80, $cy(10)]]); // after the job
 $out .= $label(560, $cy(10) - 10, 'after the roadside job', 'middle');
 $out .= $arrow([[$A, $cy(10) + 38], [$A, $top(11, 1)]]);              // [Yes] -> mark completed
-$out .= $label($A + 12, $cy(10) + 57, '[Yes]');
+$out .= $label($A + 12, $cy(10) + 57, '[Complete]');
 $out .= $arrow([[765, $cy(11)], [700, $cy(11)]]);                     // -> status completed
 $out .= $arrow([[380, $cy(11)], [$C, $cy(11)], [$C, $top(12)]]);      // -> view completed
 $out .= $arrow([[$C, $bot(12)], [$C, $top(13)]]);                     // -> optional feedback
@@ -89,9 +89,9 @@ $out .= $arrow([[325, $cy(13)], [380, $cy(13)]]);                     // -> save
 $out .= $arrow([[660, $cy(13)], [690, $cy(13)]]);                     // -> end (completed)
 // the two reject branches share the right gutter
 $out .= $line([[$A + 80, $cy(7)], [1085, $cy(7)]]);
-$out .= $label($A + 88, $cy(7) - 10, '[No]');
+$out .= $label($A + 88, $cy(7) - 10, '[Reject]');
 $out .= $line([[$A + 80, $cy(10)], [1085, $cy(10)]]);
-$out .= $label($A + 88, $cy(10) - 10, '[No]');
+$out .= $label($A + 88, $cy(10) - 10, '[Reject*]');
 $out .= $arrow([[1085, $cy(7)], [1085, $cy(14)], [1065, $cy(14)]]);
 $out .= $arrow([[765, $cy(14)], [700, $cy(14)]]);                     // reject -> status rejected
 $out .= $arrow([[380, $cy(14)], [325, $cy(14)]]);                     // -> view rejected
@@ -101,19 +101,19 @@ $out .= $arrow([[$C, $bot(14, 1)], [$C, $bot(14, 1) + 50]]);             // -> e
 $out .= '<circle cx="' . $C . '" cy="160" r="12" fill="#1a1a1a"/>' . "\n";
 $out .= $box('C', 1, "Log in & open\nBook a Rescue");
 $out .= $box('C', 2, "Choose an active saved\nvehicle; describe problem");
-$out .= $box('C', 3, "Share location: browser\ngeolocation or map pin");
+$out .= $box('C', 3, "Share location: browser,\nsearch or optional map pin");
 $out .= $box('C', 4, "Confirm contact number\non file; submit request");
 $out .= $box('S', 4, "Validate customer, vehicle\nownership & request data");
 $out .= $box('S', 5, "Compute the ETA once\n(customer point + shop)");
 $out .= $box('S', 6, "Save request: pending;\nETA frozen (never updated)");
 $out .= $box('C', 6, "See confirmation, frozen\nETA and status Pending");
 $out .= $box('A', 6, "Review pending request\n(details, location, ETA)");
-$out .= $diamond('Accept?', 7);
+$out .= $diamond('Admin action?', 7);
 $out .= $box('A', 8, "Accept & assign an active\nTireman (one action)");
 $out .= $box('S', 8, "Save Tireman + status\naccepted (guarded update)");
 $out .= $box('C', 9, "“Tireman is on the way”:\nname, contact number,\nfrozen ETA");
 $out .= $note(378, $top(9, 3), 324, ['Off-system: the Tireman does', 'the roadside job; customer and', 'Tireman talk by phone. No live', 'GPS tracking, no in-app chat.']);
-$out .= $diamond('Job done?', 10);
+$out .= $diamond('Next action?', 10);
 $out .= $box('A', 11, 'Mark request completed');
 $out .= $box('S', 11, 'Set status = completed');
 $out .= $box('C', 12, "View completed request\n(“Serviced by …”)");
@@ -122,6 +122,7 @@ $out .= $box('S', 13, "Save one-time feedback\n(status stays completed)", ['x' =
 $out .= $note(765, $bot(11, 1) + 16, 300, [
     'Status rules', 'pending → accepted or rejected', 'accepted → completed or rejected',
     'While accepted, the admin may', 'reassign another active Tireman.',
+    '* Reject only if no Sale linked.',
     'The POS sale is a separate action', 'and never changes the status.',
 ], true);
 $out .= $box('A', 14, 'Reject request');

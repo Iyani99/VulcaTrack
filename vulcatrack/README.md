@@ -8,11 +8,12 @@ Local development runs on XAMPP (Apache + PHP + MariaDB).
 **Phase 7 in progress -- integration, testing, UI refinement, presentation readiness.**
 Phases 1–6 (foundation, schema, auth, customer side, Inventory + Point of Sale, admin
 OTG handling, Tiremen, Sales History and Reports) are complete; see below. Phase 7 so
-far: inventory edit integrity, the public landing page and Dashboard cards, the admin
-area aligned with the Figma (sidebar shell, theme, POS catalogue cards), and
-**Rescue sales** -- the sale for an accepted or completed Rescue request is recorded
-through the POS and linked to that request (Decisions 70–76). Next: responsive /
-mobile refinement, then documentation / demo / deployment readiness.
+far: inventory edit integrity, the public landing page and Dashboard cards, admin
+and customer responsive/Figma refinement, private customer avatars and completed
+Rescue feedback, Admin Accounts, and **Rescue sales** -- the sale for an accepted or
+completed Rescue request is recorded through the POS and linked to that request
+(Decisions 70–76). Paper diagrams and documentation are being aligned; Phase 7
+has not been formally closed.
 
 Phase 4 delivered the customer side on top of the Phase 3 auth system: customer dashboard, profile
 (name / contact number / password), saved vehicles (add / edit / soft-delete /
@@ -37,7 +38,8 @@ list with a status filter, detail page with a read-only map) and Chunk 6.3 the
 rejected / completed are final. **Sales History** lists every recorded sale, newest
 first, with an optional From / To date filter; each row opens its Transaction Summary.
 **Sales Reports** totals the same kind of range: transactions, total sales, daily
-totals and items sold. No schema change.
+totals, source split and items sold. The later Sales Performance chart has its
+own stated day window. No schema change.
 
 ## Design / decision documents
 
@@ -104,6 +106,7 @@ Tireman/Staff login.
 | `customer/dashboard.php` | Home: vehicle count, open-request count, latest request, "Book a Rescue" CTA |
 | `customer/profile.php` | Edit full name + contact number (mandatory); change password (current + new). Email is the login id and is read-only in v1. **Profile picture** (Decision 77): upload / replace / remove a JPEG, PNG or WebP up to 5 MB (checked from the file contents), stored privately in `storage/avatars/`; initials when there is none. |
 | `customer/avatar.php` | Serves the signed-in customer's **own** profile picture only (no id / file name in the request; 404 when there is none). The only web path to `storage/avatars/`. |
+| Customer header | Shows the signed-in customer's own avatar, or initials when none is usable; the shared Profile / My Vehicles account panel shows the same private picture. |
 | `customer/vehicles.php` | List active vehicles; **soft-delete** (`is_active = 0`) and restore. Removed vehicles stay on past requests. |
 | `customer/vehicle-edit.php` | Add (`?id` absent) / edit (`?id=N`, ownership-checked). `plate_number` required; type/make/model optional. |
 | `customer/rescue.php` | OTG submission: pick an active vehicle, describe the problem, set the location by **browser geolocation** or **landmark/address search**, then confirm on the map (the marker is draggable — its final position wins). ETA is computed **once** here and stored frozen. Request is always created `status = 'pending'`. |
@@ -139,11 +142,11 @@ database table (Decision 37); route/ETA code reads from here.
 |---|---|
 | `admin/index.php` | Dashboard: total sales today, low-stock alerts, pending rescues, and short Needs Attention lists (low stock, pending rescues). |
 | `admin/inventory.php` | Products and services in one list: search, type / status filters, low-stock filter and badge. Activate / deactivate is POST + CSRF (soft -- items are never hard-deleted) and returns to the same filtered list. |
-| `admin/item-edit.php` | Add (`?id` absent) / edit (`?id=N`). Price in pesos (stored exactly, integer-centavo maths). Products carry stock + optional reorder level; services never do. |
+| `admin/item-edit.php` | Add (`?id` absent) / edit (`?id=N`). Price in pesos (stored exactly, integer-centavo maths). Products carry stock + optional reorder level; services never do. An item's type is fixed once it has recorded sales; unsold items may still be corrected. |
 | `admin/pos.php` | Point of Sale: pick active items, session-backed cart (one line per item; max 50 items / 9,999 per item), optional link to an **existing** customer (blank = walk-in; the POS never creates accounts), cash received + change (checked on the server, **never stored**), then **Complete sale**. **Rescue mode** (Phase 7.3d): opened from a Rescue request with *Record sale in POS* -- the customer is locked to the request's customer, the usual cart and checkout record the sale linked to that request, and the result card links back to it. It only starts from an empty ordinary cart, and a POS form from another tab that no longer matches the cart's context is refused. |
 | `admin/transaction-summary.php?id=N` | Printable **Transaction Summary** of a recorded sale -- shop name/address, sale no., date/time, cashier, customer or Walk-in, *Rescue request #N* for a Rescue sale, lines with the **frozen** unit price, total. Browser print; *"For transaction reference only. Not an official BIR invoice."* No payment method is shown (none is stored). |
 | `admin/sales.php` | Phase 6, read-only **Sales History**: every recorded sale, newest first (sale no., date/time, cashier, customer or Walk-in, **source** -- *In-shop* or *Rescue #N* linking to the request, stored total). Optional From / To filter on the sale date (both inclusive; no filter by default). *View* opens the sale's Transaction Summary. Recorded sales cannot be edited or deleted. |
-| `admin/reports.php` | Phase 6, read-only **Sales Reports** over the same optional From / To range (all recorded sales by default; the range is shown). **Transactions** and **Total Sales** cards; **Daily Sales** (date, transactions, total, newest first, only days with sales); **Items Sold** (item, quantity, revenue from the price recorded at sale time). There is no item-type split, because the type is editable. No charts or exports. |
+| `admin/reports.php` | Read-only **Sales Reports** over an optional From / To range (all recorded sales by default; the range is shown). **Transactions** and **Total Sales** cards; **Sales Performance** chart with its own stated day window; **Sales by Source** (In-shop / Rescue); **Daily Sales** (date, transactions, total, newest first, only days with sales); **Items Sold** (item, quantity, revenue from the price recorded at sale time). No export. Sold item types are protected from edits; the report does not currently show a product/service split. |
 | `admin/tiremen.php` | Phase 6.1. Tiremen (the non-login people who perform OTG jobs): Active / Inactive / All filter; activate / deactivate is POST + CSRF (soft -- never deleted) and returns to the same filter. Tiremen are assigned to requests on the Rescue detail page (active ones only). |
 | `admin/tireman-edit.php` | Add (`?id` absent) / edit (`?id=N`) a Tireman's name and contact number. |
 | `admin/rescue.php` | Phase 6.2, read-only list. Every customer's OTG requests, filtered by status (Pending by default / Accepted / Rejected / Completed / All), newest first. |

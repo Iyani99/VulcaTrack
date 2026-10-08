@@ -16,20 +16,23 @@ We are building it as a **BSIT student project**, so the priorities are maintain
 - Customer logout
 - Customer dashboard
 - Customer profile management
+- Private profile picture with signed-in Customer header display
 - Password changing
 - Saved vehicle management
 - Add, edit, deactivate, and restore vehicles
 - Request On-the-Go roadside vulcanizing services
 - Browser-based location capture
-- Manual map location selection
+- Landmark/address search and adjustable map marker
 - OTG request history
 - View individual service request details
 - View request status and frozen ETA
 - View assigned Tireman information when applicable
+- Submit one-time feedback on a completed Rescue
 
 ### Admin
 
 - Separate administrator authentication
+- Admin Accounts page for creating additional admins
 - Admin dashboard and management functions
 - Tireman management (add, edit, activate / deactivate; Tiremen have no login)
 - OTG rescue request management: list, detail with map, accept with an active Tireman, reassign, reject, complete
@@ -41,7 +44,7 @@ We are building it as a **BSIT student project**, so the priorities are maintain
 - Rescue sales: the sale for an accepted or completed rescue request is recorded through the same POS, for the request's customer, and linked to that request (recording it does not complete the request)
 - Printable transaction summaries (for reference only; not an official BIR invoice; a rescue sale shows its request number)
 - Sales history (all recorded sales, newest first, with an optional date filter; each sale's source is shown as In-shop or Rescue #N)
-- Sales reports (transaction count, total sales, daily totals and items sold for an optional date range)
+- Sales reports (transaction count, total sales, Sales by Source, daily totals and items sold for an optional date range; Sales Performance chart has its own stated day window)
 
 The POS handles cash in person; a recorded sale stores its total and line items, not a payment method, amount received or change. Online / GCash payment is not supported.
 
@@ -128,3 +131,4 @@ The database schema is defined in:
 
 ```text
 database/schema.sql
+```

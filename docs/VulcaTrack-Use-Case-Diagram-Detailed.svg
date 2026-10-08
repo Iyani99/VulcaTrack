@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1570" viewBox="0 0 1700 1570" font-family="Segoe UI, Arial, Helvetica, sans-serif">
+<defs>
+</defs>
+<rect width="1700" height="1570" fill="#ffffff"/>
+<text x="850" y="48" font-size="30" font-weight="700" fill="#111" text-anchor="middle"><tspan x="850" dy="0">VulcaTrack: Sales and Inventory with On-the-Go Services</tspan></text>
+<text x="850" y="85" font-size="23" font-weight="400" fill="#555" text-anchor="middle"><tspan x="850" dy="0">Use Case Diagram — Technical System Coverage</tspan></text>
+<rect x="330" y="110" width="1040" height="1400" rx="14" fill="#fff" stroke="#41535c" stroke-width="2.5"/>
+<text x="850" y="146" font-size="24" font-weight="700" fill="#111" text-anchor="middle"><tspan x="850" dy="0">VulcaTrack System</tspan></text>
+<g stroke="#1b62a9" stroke-width="3" fill="none"><circle cx="115" cy="736" r="24"/><path d="M115,760 V831 M73,789 H157 M115,831 L81,890 M115,831 L149,890"/></g>
+<text x="115" y="928" font-size="24" font-weight="700" fill="#1b62a9" text-anchor="middle"><tspan x="115" dy="0">Customer</tspan></text>
+<g stroke="#bf3030" stroke-width="3" fill="none"><circle cx="1585" cy="736" r="24"/><path d="M1585,760 V831 M1543,789 H1627 M1585,831 L1551,890 M1585,831 L1619,890"/></g>
+<text x="1585" y="928" font-size="24" font-weight="700" fill="#bf3030" text-anchor="middle"><tspan x="1585" dy="0">Admin</tspan></text>
+<path d="M157,800 L278,800" fill="none" stroke="#9eafb8" stroke-width="1.7"/>
+<path d="M1543,800 L1422,800" fill="none" stroke="#9eafb8" stroke-width="1.7"/>
+<path d="M278,205 L278,1450" fill="none" stroke="#9eafb8" stroke-width="1.7"/>
+<path d="M1422,205 L1422,1450" fill="none" stroke="#9eafb8" stroke-width="1.7"/>
+<path d="M278,300 L425,300" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="620" cy="300" rx="195" ry="36" fill="#fff" stroke="#1b62a9" stroke-width="2.3"/>
+<text x="620" y="307" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="620" dy="0">Register</tspan></text>
+<path d="M278,440 L425,440" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="620" cy="440" rx="195" ry="36" fill="#fff" stroke="#1b62a9" stroke-width="2.3"/>
+<text x="620" y="447" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="620" dy="0">Manage Profile</tspan></text>
+<path d="M278,580 L425,580" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="620" cy="580" rx="195" ry="36" fill="#fff" stroke="#1b62a9" stroke-width="2.3"/>
+<text x="620" y="587" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="620" dy="0">Manage Saved Vehicles</tspan></text>
+<path d="M278,720 L425,720" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="620" cy="720" rx="195" ry="36" fill="#fff" stroke="#1b62a9" stroke-width="2.3"/>
+<text x="620" y="727" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="620" dy="0">Book a Rescue</tspan></text>
+<path d="M278,860 L425,860" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="620" cy="860" rx="195" ry="36" fill="#fff" stroke="#1b62a9" stroke-width="2.3"/>
+<text x="620" y="867" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="620" dy="0">View Rescue Status and ETA</tspan></text>
+<path d="M278,1000 L425,1000" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="620" cy="1000" rx="195" ry="36" fill="#fff" stroke="#1b62a9" stroke-width="2.3"/>
+<text x="620" y="1007" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="620" dy="0">View Rescue History</tspan></text>
+<path d="M278,1140 L425,1140" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="620" cy="1140" rx="195" ry="36" fill="#fff" stroke="#1b62a9" stroke-width="2.3"/>
+<text x="620" y="1147" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="620" dy="0">Submit Rescue Feedback</tspan></text>
+<path d="M1422,280 L1275,280" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="1080" cy="280" rx="195" ry="36" fill="#fff" stroke="#bf3030" stroke-width="2.3"/>
+<text x="1080" y="287" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="1080" dy="0">View Dashboard</tspan></text>
+<path d="M1422,375 L1275,375" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="1080" cy="375" rx="195" ry="36" fill="#fff" stroke="#bf3030" stroke-width="2.3"/>
+<text x="1080" y="382" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="1080" dy="0">Manage Inventory</tspan></text>
+<path d="M1422,470 L1275,470" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="1080" cy="470" rx="195" ry="36" fill="#fff" stroke="#bf3030" stroke-width="2.3"/>
+<text x="1080" y="477" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="1080" dy="0">Process Sale (POS)</tspan></text>
+<path d="M1422,565 L1275,565" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="1080" cy="565" rx="195" ry="36" fill="#fff" stroke="#bf3030" stroke-width="2.3"/>
+<text x="1080" y="572" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="1080" dy="0">View Transaction Summary</tspan></text>
+<path d="M1422,660 L1275,660" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="1080" cy="660" rx="195" ry="36" fill="#fff" stroke="#bf3030" stroke-width="2.3"/>
+<text x="1080" y="667" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="1080" dy="0">View Sales History</tspan></text>
+<path d="M1422,755 L1275,755" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="1080" cy="755" rx="195" ry="36" fill="#fff" stroke="#bf3030" stroke-width="2.3"/>
+<text x="1080" y="762" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="1080" dy="0">View Sales Reports</tspan></text>
+<path d="M1422,850 L1275,850" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="1080" cy="850" rx="195" ry="36" fill="#fff" stroke="#bf3030" stroke-width="2.3"/>
+<text x="1080" y="857" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="1080" dy="0">Manage Rescue Requests</tspan></text>
+<path d="M1422,945 L1275,945" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="1080" cy="945" rx="195" ry="36" fill="#fff" stroke="#bf3030" stroke-width="2.3"/>
+<text x="1080" y="952" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="1080" dy="0">Assign or Reassign Tireman</tspan></text>
+<path d="M1422,1040 L1275,1040" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="1080" cy="1040" rx="195" ry="36" fill="#fff" stroke="#bf3030" stroke-width="2.3"/>
+<text x="1080" y="1047" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="1080" dy="0">Manage Tiremen</tspan></text>
+<path d="M1422,1135 L1275,1135" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="1080" cy="1135" rx="195" ry="36" fill="#fff" stroke="#bf3030" stroke-width="2.3"/>
+<text x="1080" y="1142" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="1080" dy="0">View Rescue Feedback</tspan></text>
+<path d="M1422,1230 L1275,1230" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="1080" cy="1230" rx="195" ry="36" fill="#fff" stroke="#bf3030" stroke-width="2.3"/>
+<text x="1080" y="1237" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="1080" dy="0">Manage Admin Accounts</tspan></text>
+<path d="M278,205 L735,205" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<path d="M1422,205 L965,205" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="850" cy="205" rx="115" ry="36" fill="#fff" stroke="#41535c" stroke-width="2.3"/>
+<text x="850" y="212" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="850" dy="0">Log In</tspan></text>
+<path d="M278,1450 L735,1450" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<path d="M1422,1450 L965,1450" fill="none" stroke="#9eafb8" stroke-width="1.5"/>
+<ellipse cx="850" cy="1450" rx="115" ry="36" fill="#fff" stroke="#41535c" stroke-width="2.3"/>
+<text x="850" y="1457" font-size="19" font-weight="400" fill="#111" text-anchor="middle"><tspan x="850" dy="0">Log Out</tspan></text>
+<text x="850" y="1540" font-size="18" font-weight="400" fill="#555" text-anchor="middle" font-style="italic"><tspan x="850" dy="0">Tiremen are managed and assigned by Admin; they have no application account, login or dashboard.</tspan></text>
+</svg>

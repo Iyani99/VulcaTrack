@@ -4,7 +4,7 @@
 </defs>
 <rect width="1100" height="1575" fill="#ffffff"/>
 <text x="550" y="40" font-size="27" font-weight="700" fill="#111" text-anchor="middle"><tspan x="550" dy="0">VulcaTrack: Sales and Inventory with On-the-Go Services</tspan></text>
-<text x="550" y="72" font-size="20" font-weight="400" fill="#444" text-anchor="middle"><tspan x="550" dy="0">Activity Diagram — Rescue (On-the-Go) Service Request</tspan></text>
+<text x="550" y="72" font-size="20" font-weight="400" fill="#444" text-anchor="middle"><tspan x="550" dy="0">Technical Activity Diagram — Rescue (On-the-Go) Lifecycle</tspan></text>
 <rect x="1" y="94" width="348" height="1475" rx="0" fill="none" stroke="#555" stroke-width="1.6"/>
 <rect x="1" y="94" width="348" height="46" rx="0" fill="#eef1f4" stroke="#555" stroke-width="1.6"/>
 <text x="175" y="125.1" font-size="23" font-weight="700" fill="#111" text-anchor="middle"><tspan x="175" dy="0">Customer</tspan></text>
@@ -25,23 +25,23 @@
 <path d="M700,691 L765,691" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <path d="M915,724.8 L915,747" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <path d="M915,823 L915,845.2" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
-<text x="927" y="840" font-size="18" font-weight="400" fill="#333" text-anchor="start" font-style="italic"><tspan x="927" dy="0">[Yes]</tspan></text>
+<text x="927" y="840" font-size="18" font-weight="400" fill="#333" text-anchor="start" font-style="italic"><tspan x="927" dy="0">[Accept]</tspan></text>
 <path d="M765,879 L700,879" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <path d="M380,879 L175,879 L175,926.8" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <path d="M915,912.8 L915,1029" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <path d="M325,973 L362,973 L362,1067 L835,1067" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <text x="560" y="1057" font-size="18" font-weight="400" fill="#333" text-anchor="middle" font-style="italic"><tspan x="560" dy="0">after the roadside job</tspan></text>
 <path d="M915,1105 L915,1139.6" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
-<text x="927" y="1124" font-size="18" font-weight="400" fill="#333" text-anchor="start" font-style="italic"><tspan x="927" dy="0">[Yes]</tspan></text>
+<text x="927" y="1124" font-size="18" font-weight="400" fill="#333" text-anchor="start" font-style="italic"><tspan x="927" dy="0">[Complete]</tspan></text>
 <path d="M765,1161 L700,1161" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <path d="M380,1161 L175,1161 L175,1221.2" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <path d="M175,1288.8 L175,1315.2" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <path d="M325,1349 L380,1349" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <path d="M660,1349 L690,1349" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <path d="M995,785 L1085,785" fill="none" stroke="#1a1a1a" stroke-width="2.2"/>
-<text x="1003" y="775" font-size="18" font-weight="400" fill="#333" text-anchor="start" font-style="italic"><tspan x="1003" dy="0">[No]</tspan></text>
+<text x="1003" y="775" font-size="18" font-weight="400" fill="#333" text-anchor="start" font-style="italic"><tspan x="1003" dy="0">[Reject]</tspan></text>
 <path d="M995,1067 L1085,1067" fill="none" stroke="#1a1a1a" stroke-width="2.2"/>
-<text x="1003" y="1057" font-size="18" font-weight="400" fill="#333" text-anchor="start" font-style="italic"><tspan x="1003" dy="0">[No]</tspan></text>
+<text x="1003" y="1057" font-size="18" font-weight="400" fill="#333" text-anchor="start" font-style="italic"><tspan x="1003" dy="0">[Reject*]</tspan></text>
 <path d="M1085,785 L1085,1443 L1065,1443" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <path d="M765,1443 L700,1443" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
 <path d="M380,1443 L325,1443" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#a)"/>
@@ -52,7 +52,7 @@
 <rect x="25" y="281.2" width="300" height="67.6" rx="14" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
 <text x="175" y="310" font-size="21" font-weight="400" fill="#111" text-anchor="middle"><tspan x="175" dy="0">Choose an active saved</tspan><tspan x="175" dy="24.8">vehicle; describe problem</tspan></text>
 <rect x="25" y="375.2" width="300" height="67.6" rx="14" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
-<text x="175" y="404" font-size="21" font-weight="400" fill="#111" text-anchor="middle"><tspan x="175" dy="0">Share location: browser</tspan><tspan x="175" dy="24.8">geolocation or map pin</tspan></text>
+<text x="175" y="404" font-size="21" font-weight="400" fill="#111" text-anchor="middle"><tspan x="175" dy="0">Share location: browser,</tspan><tspan x="175" dy="24.8">search or optional map pin</tspan></text>
 <rect x="25" y="469.2" width="300" height="67.6" rx="14" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
 <text x="175" y="498" font-size="21" font-weight="400" fill="#111" text-anchor="middle"><tspan x="175" dy="0">Confirm contact number</tspan><tspan x="175" dy="24.8">on file; submit request</tspan></text>
 <rect x="380" y="469.2" width="320" height="67.6" rx="14" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
@@ -66,7 +66,7 @@
 <rect x="765" y="657.2" width="300" height="67.6" rx="14" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
 <text x="915" y="686" font-size="21" font-weight="400" fill="#111" text-anchor="middle"><tspan x="915" dy="0">Review pending request</tspan><tspan x="915" dy="24.8">(details, location, ETA)</tspan></text>
 <path d="M915,747 L995,785 L915,823 L835,785 z" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
-<text x="915" y="792.4" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="915" dy="0">Accept?</tspan></text>
+<text x="915" y="792.4" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="915" dy="0">Admin action?</tspan></text>
 <rect x="765" y="845.2" width="300" height="67.6" rx="14" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
 <text x="915" y="874" font-size="21" font-weight="400" fill="#111" text-anchor="middle"><tspan x="915" dy="0">Accept &amp; assign an active</tspan><tspan x="915" dy="24.8">Tireman (one action)</tspan></text>
 <rect x="380" y="845.2" width="320" height="67.6" rx="14" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
@@ -79,7 +79,7 @@
 <text x="392" y="997.3" font-size="17" font-weight="400" fill="#3d3510" text-anchor="start"><tspan x="392" dy="0">Tireman talk by phone. No live</tspan></text>
 <text x="392" y="1018.6" font-size="17" font-weight="400" fill="#3d3510" text-anchor="start"><tspan x="392" dy="0">GPS tracking, no in-app chat.</tspan></text>
 <path d="M915,1029 L995,1067 L915,1105 L835,1067 z" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
-<text x="915" y="1074.4" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="915" dy="0">Job done?</tspan></text>
+<text x="915" y="1074.4" font-size="21" font-weight="600" fill="#111" text-anchor="middle"><tspan x="915" dy="0">Next action?</tspan></text>
 <rect x="765" y="1139.6" width="300" height="42.8" rx="14" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
 <text x="915" y="1168.4" font-size="21" font-weight="400" fill="#111" text-anchor="middle"><tspan x="915" dy="0">Mark request completed</tspan></text>
 <rect x="380" y="1139.6" width="320" height="42.8" rx="14" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
@@ -90,14 +90,15 @@
 <text x="175" y="1344" font-size="21" font-weight="400" fill="#111" text-anchor="middle"><tspan x="175" dy="0">Optional: rate this service</tspan><tspan x="175" dy="24.8">(1–5 stars + comment)</tspan></text>
 <rect x="380" y="1315.2" width="280" height="67.6" rx="14" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
 <text x="520" y="1344" font-size="21" font-weight="400" fill="#111" text-anchor="middle"><tspan x="520" dy="0">Save one-time feedback</tspan><tspan x="520" dy="24.8">(status stays completed)</tspan></text>
-<rect x="765" y="1198.4" width="300" height="170.8" rx="0" fill="#fff8d6" stroke="#a08a2a" stroke-width="1.6" stroke-dasharray="6 4"/>
+<rect x="765" y="1198.4" width="300" height="192" rx="0" fill="#fff8d6" stroke="#a08a2a" stroke-width="1.6" stroke-dasharray="6 4"/>
 <text x="779" y="1226.4" font-size="17" font-weight="700" fill="#3d3510" text-anchor="start"><tspan x="779" dy="0">Status rules</tspan></text>
 <text x="779" y="1247.6" font-size="17" font-weight="400" fill="#3d3510" text-anchor="start"><tspan x="779" dy="0">pending → accepted or rejected</tspan></text>
 <text x="779" y="1268.9" font-size="17" font-weight="400" fill="#3d3510" text-anchor="start"><tspan x="779" dy="0">accepted → completed or rejected</tspan></text>
 <text x="779" y="1290.1" font-size="17" font-weight="400" fill="#3d3510" text-anchor="start"><tspan x="779" dy="0">While accepted, the admin may</tspan></text>
 <text x="779" y="1311.4" font-size="17" font-weight="400" fill="#3d3510" text-anchor="start"><tspan x="779" dy="0">reassign another active Tireman.</tspan></text>
-<text x="779" y="1332.6" font-size="17" font-weight="400" fill="#3d3510" text-anchor="start"><tspan x="779" dy="0">The POS sale is a separate action</tspan></text>
-<text x="779" y="1353.9" font-size="17" font-weight="400" fill="#3d3510" text-anchor="start"><tspan x="779" dy="0">and never changes the status.</tspan></text>
+<text x="779" y="1332.6" font-size="17" font-weight="400" fill="#3d3510" text-anchor="start"><tspan x="779" dy="0">* Reject only if no Sale linked.</tspan></text>
+<text x="779" y="1353.9" font-size="17" font-weight="400" fill="#3d3510" text-anchor="start"><tspan x="779" dy="0">The POS sale is a separate action</tspan></text>
+<text x="779" y="1375.1" font-size="17" font-weight="400" fill="#3d3510" text-anchor="start"><tspan x="779" dy="0">and never changes the status.</tspan></text>
 <rect x="765" y="1421.6" width="300" height="42.8" rx="14" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>
 <text x="915" y="1450.4" font-size="21" font-weight="400" fill="#111" text-anchor="middle"><tspan x="915" dy="0">Reject request</tspan></text>
 <rect x="380" y="1421.6" width="320" height="42.8" rx="14" fill="#dcebf6" stroke="#2f5f82" stroke-width="2"/>

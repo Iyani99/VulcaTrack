@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1580" viewBox="0 0 1100 1580" font-family="Segoe UI, Arial, Helvetica, sans-serif">
+<defs>
+<marker id="flow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L12,6 L0,12 z" fill="#20252a"/></marker>
+</defs>
+<rect width="1100" height="1580" fill="#ffffff"/>
+<text x="550" y="43" font-size="26" font-weight="700" fill="#111" text-anchor="middle"><tspan x="550" dy="0">VulcaTrack: Sales and Inventory with On-the-Go Services</tspan></text>
+<text x="550" y="78" font-size="22" font-weight="400" fill="#111" text-anchor="middle"><tspan x="550" dy="0">Activity Diagram — Book a Rescue</tspan></text>
+<text x="550" y="107" font-size="17" font-weight="400" fill="#555" text-anchor="middle"><tspan x="550" dy="0">Precondition: Customer is already logged in</tspan></text>
+<rect x="2" y="126" width="516" height="1445" rx="0" fill="#fff" stroke="#777" stroke-width="1.5"/>
+<rect x="2" y="126" width="516" height="52" rx="0" fill="#eef1f4" stroke="#777" stroke-width="1.5"/>
+<text x="260" y="159" font-size="23" font-weight="700" fill="#111" text-anchor="middle"><tspan x="260" dy="0">Customer</tspan></text>
+<rect x="522" y="126" width="576" height="1445" rx="0" fill="#fff" stroke="#777" stroke-width="1.5"/>
+<rect x="522" y="126" width="576" height="52" rx="0" fill="#eef1f4" stroke="#777" stroke-width="1.5"/>
+<text x="810" y="159" font-size="23" font-weight="700" fill="#111" text-anchor="middle"><tspan x="810" dy="0">VulcaTrack System</tspan></text>
+<path d="M260,202 L260,225" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<path d="M260,297 L260,316" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<path d="M260,388 L260,441" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<path d="M260,513 L260,557" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<path d="M260,647 L260,691" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<path d="M445,727 L805,727 L805,770" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<path d="M805,800 L805,844" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<path d="M805,916 L805,938" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<path d="M700,982 L650,982 L650,1089" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<text x="660" y="967" font-size="17" font-weight="400" fill="#111" text-anchor="middle" font-style="italic"><tspan x="660" dy="0">[Invalid]</tspan></text>
+<path d="M540,1125 L445,1125" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<path d="M75,1125 L35,1125 L35,785 L790,785" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<path d="M805,1027 L920,1027 L920,1089" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<text x="856" y="1052" font-size="17" font-weight="400" fill="#111" text-anchor="middle" font-style="italic"><tspan x="856" dy="0">[Valid]</tspan></text>
+<path d="M920,1161 L920,1224" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<path d="M795,1260 L490,1260 L490,1400 L445,1400" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<path d="M260,1436 L260,1497" fill="none" stroke="#1a1a1a" stroke-width="2.2" marker-end="url(#flow)"/>
+<circle cx="260" cy="194" r="12" fill="#20252a"/>
+<rect x="75" y="225" width="370" height="72" rx="15" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="260" y="268" font-size="20" font-weight="400" fill="#111" text-anchor="middle"><tspan x="260" dy="0">Open Book a Rescue</tspan></text>
+<rect x="75" y="316" width="370" height="72" rx="15" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="260" y="359" font-size="20" font-weight="400" fill="#111" text-anchor="middle"><tspan x="260" dy="0">Choose an active saved Vehicle</tspan></text>
+<rect x="75" y="441" width="370" height="72" rx="15" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="260" y="484" font-size="20" font-weight="400" fill="#111" text-anchor="middle"><tspan x="260" dy="0">Describe the problem</tspan></text>
+<rect x="75" y="546" width="370" height="112" rx="15" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="260" y="574.5" font-size="20" font-weight="400" fill="#111" text-anchor="middle"><tspan x="260" dy="0">Provide location:</tspan><tspan x="260" dy="23">browser geolocation or</tspan><tspan x="260" dy="23">landmark/address search</tspan><tspan x="260" dy="23">map-marker adjustment is optional</tspan></text>
+<rect x="75" y="691" width="370" height="72" rx="15" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="260" y="722.5" font-size="20" font-weight="400" fill="#111" text-anchor="middle"><tspan x="260" dy="0">Confirm contact number on file</tspan><tspan x="260" dy="23">and submit request</tspan></text>
+<circle cx="805" cy="785" r="15" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<rect x="610" y="844" width="390" height="72" rx="15" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="805" y="875.5" font-size="20" font-weight="400" fill="#111" text-anchor="middle"><tspan x="805" dy="0">Validate Customer, Vehicle</tspan><tspan x="805" dy="23">and request details</tspan></text>
+<path d="M805,938 L910,982 L805,1027 L700,982 z" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="805" y="988" font-size="18" font-weight="600" fill="#111" text-anchor="middle"><tspan x="805" dy="0">Valid request?</tspan></text>
+<rect x="540" y="1089" width="220" height="72" rx="15" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="650" y="1120.5" font-size="20" font-weight="400" fill="#111" text-anchor="middle"><tspan x="650" dy="0">Show validation</tspan><tspan x="650" dy="23">errors</tspan></text>
+<rect x="75" y="1089" width="370" height="72" rx="15" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="260" y="1132" font-size="20" font-weight="400" fill="#111" text-anchor="middle"><tspan x="260" dy="0">Correct errors and resubmit</tspan></text>
+<rect x="795" y="1089" width="250" height="72" rx="15" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="920" y="1132" font-size="20" font-weight="400" fill="#111" text-anchor="middle"><tspan x="920" dy="0">Compute ETA once</tspan></text>
+<rect x="795" y="1224" width="250" height="72" rx="15" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="920" y="1255.5" font-size="20" font-weight="400" fill="#111" text-anchor="middle"><tspan x="920" dy="0">Save Rescue request</tspan><tspan x="920" dy="23">as Pending</tspan></text>
+<rect x="75" y="1364" width="370" height="72" rx="15" fill="#dcebf6" stroke="#315f7c" stroke-width="2"/>
+<text x="260" y="1395.5" font-size="20" font-weight="400" fill="#111" text-anchor="middle"><tspan x="260" dy="0">View confirmation, ETA</tspan><tspan x="260" dy="23">and Pending status</tspan></text>
+<circle cx="260" cy="1514" r="17" fill="#fff" stroke="#20252a" stroke-width="2.5"/><circle cx="260" cy="1514" r="10" fill="#20252a"/>
+</svg>

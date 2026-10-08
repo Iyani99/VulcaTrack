@@ -1,8 +1,8 @@
 # VulcaTrack — Project Decision Record
 
 **Status:** Authoritative record of CONFIRMED project decisions.
-**Last updated:** 2026-09-29
-**Last revised:** 2026-09-28 — **Decision 69 added** (Phase 7.1: an item's type is fixed
+**Last updated:** 2026-10-08 (documentation and paper-diagram clarification only; no new decision)
+**Earlier revision note (2026-09-28):** **Decision 69 added** (Phase 7.1: an item's type is fixed
 once it has recorded sales). Earlier the same day: **Phase 6 closed** (status only), and
 **Decisions 65–68 added** (owner-approved Rescue status rules, Phase 6.3; Decision 25
 refined, `admin_id` open question resolved) and Phase 6 status updated (Chunks 6.1–6.3,
@@ -874,6 +874,13 @@ exactly the 8 tables; no avatar / media / upload table.
     - **Not part of this decision:** Notifications, Tracking, a Settings module,
       editable email, avatars for admins / Tiremen, galleries or multiple pictures.
 
+**2026-10-08 implementation clarification to Decision 77 (display only):** the later
+committed Customer header intentionally displays the signed-in customer's own
+avatar (or initials fallback), in addition to the shared account panel. The
+original display bullet above records the earlier approved scope; it is retained
+as history. Private, owner-only serving and the no-Admin/Tireman-avatar boundary
+still apply. See `customer_top.php` and commit `7b5c2ee`.
+
 ## Confirmed Project Decisions — 2026-09-29 (Phase 7.4c: completed Rescue feedback)
 
 Approved by the owner for Phase 7.4c. **One structural change:** three nullable
@@ -1135,6 +1142,15 @@ Do not turn these into confirmed requirements without approval.
 
 ## Current Project Status
 
+**Current-state addendum (2026-10-08):** The later committed Customer header
+shows the owner-only avatar; Admin Accounts and completed-Rescue feedback are
+built. Reports include Sales Performance and Sales by Source, and sold item
+types are protected. The fresh complete-suite baseline at `29e30ce` is
+**263 passed / 0 failed / 4,672 assertions / 49 files**. The older
+**233 / 0 / 3,486 / 41** run below is correctly dated to `7d158e6`;
+the separate **263 / 0 / 4,668 / 49** handoff figure is historical.
+Phase 7 remains open; these facts do not imply phase closeout.
+
 - **Phases 1–4 complete (2026-09-01); Phase 4.5 stabilization pass done
   (2026-09-06).** Application Foundation, Database Schema, Authentication &
   Authorization, Customer-Side Functionality.
@@ -1237,7 +1253,7 @@ phase at a time; the next phase is never auto-started.
 | `docs/VulcaTrack-Database-Notes_1.md` | Field-by-field explanation of the database design, business rules, integrity rules, assumptions, and unresolved questions. Read alongside the schema. | Has a 2026-08-31 revision note at the top. |
 | `docs/ERD/schema.dbml` | **Maintainable source of truth for the database schema** (DBML text). Basis for the eventual MySQL implementation. | Decision 38. Added 2026-08-31. |
 | `docs/ERD/VulcaTrack-ERD_1.png` | Entity-relationship diagram (visual aid). | Image + `.svg`. **Regenerated 2026-09-29** from `schema.dbml` by `docs/diagram-src/erd.php` (Required Diagram Changes D1 — refreshed). |
-| `docs/VulcaTrack-Use-Case-Diagram_1.png` | Actors and use cases for customer and admin sides. | Image. Changes pending (see Required Diagram Changes). "Manage Customer Accounts" flagged as proposed. |
+| `docs/VulcaTrack-Use-Case-Diagram-Paper.png` | Paper Customer/Admin use cases. | Generated from `docs/diagram-src/use-case-paper.php`; the separate `-Detailed` figure covers more current functions. Neither gives Tiremen a login. |
 | `docs/flows/VulcaTrack-1-Overall-System-Flow.png` | Overall system workflow. | Image. |
 | `docs/flows/VulcaTrack-2-Customer-Flow.png` | Customer-side workflow. | Image. |
 | `docs/flows/VulcaTrack-3-Admin-Flow.png` | Admin-side workflow. | Image. |
@@ -1277,14 +1293,16 @@ each item below.
 | C7 | "In-shop sales" wording (scope area 3, Decision 13, Database Notes §1 / §2 / §4) vs Rescue-linked sales | **RESOLVED** | Logged 2026-09-28 with Decisions 70–76: the older wording read as if every sale were an in-shop counter transaction, which became **AMBIGUOUS** once a sale can be the one recorded for an on-site Rescue job. Resolved by clarification, not rewrite: Decision 13 and scope area 3 carry a note pointing to Decision 70 (sales are still recorded only by an admin at the POS), and the Database Notes got a revision note plus inline additions. *Walk-in* stays a customer-identity term (`customer_id` NULL), never a synonym for *in-shop* (`service_request_id` NULL). |
 | C6 | `service_requests.tireman_id` / `admin_id` note wording vs Decisions 65–68 | **RESOLVED** | Logged 2026-09-28 when Decisions 65–68 were added: the notes in `docs/ERD/schema.dbml`, the `vulcatrack/database/schema.sql` comments and `docs/VulcaTrack-Database-Notes_1.md` (§2, §3, §11) still described the older "assign after acceptance / NULL while rejected" wording. Corrected the same day on owner approval — **comment / note wording only**, no table, column, type, constraint, FK, CHECK or index changed. |
 | C8 | Decision 26 / out-of-scope "no ratings" for Tiremen vs customer feedback on completed Rescues (Phase 7.4c) | **RESOLVED** | Logged 2026-09-29 with **Decision 78**: Decision 26 ("Tiremen … no ratings"), the out-of-scope item "Technician … ratings" and PROJECT-CONTEXT §7 read as if any rating were excluded, which **CONFLICTED** with the owner-approved customer feedback feature. Resolved by clarification, not rewrite: Decision 78 defines the feature as one-time feedback on the customer's own completed request, stored on `service_requests`, with the Tireman shown only as context and no Tireman scores / averages / rankings / dispatch effects; Decision 26 and the out-of-scope item carry a note pointing to it. |
+| C9 | Decision 77 display wording vs later Customer header | **RESOLVED for current documentation** | The dated implementation clarification after Decision 77 records the later committed header avatar without changing the historical bullet or the privacy boundary. |
 
 ### Remaining conflicts after this update
 
 - **No unresolved *CONFLICT* remains between the confirmed decisions and the artifacts.**
-- **POSSIBLY OUTDATED diagrams** (documented, not yet regenerated): use-case PNG, OTG
-  flowcharts 2 & 5, the POS flowchart (4) and the Level 0 context DFD — see
-  [Required Diagram Changes](#required-diagram-changes). *Refreshed 2026-09-29:* the ERD,
-  the OTG activity diagram, the POS sequence diagram and the Level 1 DFD.
+- **POSSIBLY OUTDATED flowcharts** (separate from the current paper diagrams):
+  OTG flowcharts 2 & 5 and POS flowchart 4 — see
+  [Required Diagram Changes](#required-diagram-changes). The ERD and Level 1 DFD
+  remain the 2026-09-29 generated versions; the Level 0, Book a Rescue activity,
+  POS sequence and use-case diagrams were refreshed for the paper on 2026-10-08.
 - **N8 (Figma)** stays open until the prototype is provided.
 
 Any future conflict must be reported and classified here (or in a superseding decision
@@ -1298,15 +1316,31 @@ Documented here for whoever owns the diagram tooling. *2026-09-29:* the ERD (D1)
 activity / POS sequence / Level 1 DFD items of D6 are **refreshed** — regenerated from the
 committed code and `schema.dbml` by the generators in `docs/diagram-src/` (see its README).
 
+**2026-10-08 paper presentation update:** D2 and D7 are now refreshed. The
+activity diagram is deliberately scoped to the Customer's **Book a Rescue**
+submission with two lanes; the POS sequence uses three conceptual participants.
+The 2026-09-29 D6 descriptions below remain historical records of that earlier
+generation. Level 1 remains available as the detailed DFD; refreshed Level 0 is
+the preferred context figure for the paper.
+
 | ID | Artifact | Classification | Required change |
 |---|---|---|---|
 | D1 | `docs/ERD/VulcaTrack-ERD_1.png` | **REFRESHED 2026-09-29** | *Done:* regenerated from `schema.dbml` (`docs/diagram-src/erd.php`, `.svg` + `.png`), covering (a)–(g) below. Original requirement: regenerate from `docs/ERD/schema.dbml`. Must show: (a) new `tiremen` table (`tireman_id` PK, `name`, `contact_number`, `is_active`, `created_at`, `updated_at`); (b) `service_requests.tireman_id` nullable FK → `tiremen`; (c) `items.is_active` and `vehicles.is_active`; (d) `customers → service_requests` as **`1 : 0..N`** (not `1 : 1..N`); (e) *(Decision 70)* `sales.service_request_id` — nullable, UNIQUE FK → `service_requests`, drawn as **`service_requests 1 : 0..1 sales`**; (f) *(Decision 77)* `customers.avatar_filename` — nullable `varchar(64)`, no relationship; (g) *(Decision 78)* `service_requests.feedback_rating` / `feedback_comment` / `feedback_submitted_at` — nullable, no relationship. |
-| D2 | `docs/VulcaTrack-Use-Case-Diagram_1.png` | POSSIBLY OUTDATED | (a) Collapse "Manage Inventory" + "Manage Products" into one "Manage Inventory" use case (products + services). (b) Add admin use cases "Manage Tiremen" and "Assign Tireman to Request". (c) Keep "Manage Customer Accounts" flagged as proposed/unresolved. |
+| D2 | `docs/VulcaTrack-Use-Case-Diagram-Paper.png` | **REFRESHED 2026-10-08** | Current generated paper figure uses one Inventory use case, Manage Tiremen and Assign Tireman to Request, shared Log In and bottom Log Out. The old proposed Manage Customer Accounts is omitted because it is not implemented; Admin Accounts is shown. Tireman has no application login. |
 | D3 | `docs/flows/VulcaTrack-2-Customer-Flow.png`, `docs/flows/VulcaTrack-5-OTG-Request-Flow.png` | POSSIBLY OUTDATED | Admin branch: add an "Assign Tireman" step after "Set Status: Accepted" *(per Decision 66 the Tireman is chosen in the same step as acceptance; also show accepted → rejected and the final states, Decision 65)*. Customer view after acceptance: show assigned Tireman name + contact number, "Tireman is on the way", the stored ETA, and the route/map. |
 | D4 | `docs/flows/VulcaTrack-4-POS-Flow.png` | POSSIBLY OUTDATED *(was CONSISTENT — annotate)* | Note that "Enter Payment Amount / Payment Sufficient? / Calculate Change" are UI-only (not persisted) and "Generate Receipt" is a printable HTML view with no receipt table. *(Decisions 70–76)* Add the optional Rescue entry: *Record sale in POS* from an accepted / completed request → customer locked to the request's customer → the same cart and checkout → sale linked to the request; the request's status is not changed by the sale. |
 | D5 | `docs/flows/VulcaTrack-6-Inventory-Flow.png` | CONSISTENT | No change. "Deactivate / Delete Item" is now backed by `items.is_active`. |
 | D6 | `docs/flows/VulcaTrack-5-OTG-Request-Flow.png`, `docs/flows/VulcaTrack-Activity-Diagram-OTG.*`, `docs/flows/VulcaTrack-Sequence-Diagram-POS.*`, `docs/flows/VulcaTrack-DFD-1-Level1.*` | **PARTLY REFRESHED 2026-09-29** — activity, POS sequence and Level 1 DFD done; OTG flowchart 5 still outdated (also D3) | *(Decisions 70–76, logged 2026-09-28)* OTG flow / activity diagram: after the job, the admin may record the request's sale in the POS (accepted or completed) and separately mark it completed; a request with a sale cannot be rejected. POS sequence diagram: optional Rescue context (read the request, lock its customer, store `service_request_id`). Level 1 DFD: the POS process now reads `service_requests` (D6) to link a sale — no new data store. No payment store in any diagram. *Done 2026-09-29:* the activity diagram (accept + assign in one action, accepted → rejected, completion separate from the sale, optional feedback), the POS sequence diagram (one atomic transaction, product-only stock deduction, Transaction Summary, tender not stored) and the Level 1 DFD (Rescue sale context P4 → P5, feedback into D6, Sales History & Reports, and — Decision 79 — Admin Accounts in process 1). |
-| D7 | `docs/flows/VulcaTrack-DFD-0-Context.*` | POSSIBLY OUTDATED | Balance with the regenerated Level 1 DFD: "Printable Receipt" → printable **Transaction Summary**; add the customer's completed-Rescue feedback, Sales History & Reports, and admin-account creation (new admin details + own password in, admin account list out). |
+| D7 | `docs/flows/VulcaTrack-DFD-0-Context.*` | **REFRESHED 2026-10-08** | Current context diagram uses Customer and Admin only, printable **Transaction Summary**, completed-Rescue feedback, Sales History / Reports, and Admin Accounts; generated from `docs/diagram-src/dfd-level0.php`. |
+
+**2026-10-08 diagram organization clarification (status only):** The D6 paths
+above identify the files reviewed in 2026-09-29. Their current detailed
+successors have `-Detailed` names; the professor-facing Book a Rescue Activity,
+Process Sale Sequence, and Use Case have separate `-Paper` names. The old use
+case image contained a proposed Customer-account management function and is
+superseded by generated current versions. See `docs/diagram-src/README.md` for
+the maintained source/output mapping. The shared ERD and technical Level 1 DFD
+remain available; paper simplification does not remove implemented behavior.
 
 ---
 

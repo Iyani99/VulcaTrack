@@ -1,6 +1,6 @@
 <?php
 /**
- * VulcaTrack — In-shop POS sale, UML sequence diagram (paper version).
+ * VulcaTrack — In-shop POS sale, technical UML sequence diagram.
  * Landscape: 1700 units ≈ a 9-inch page width → 22-unit text ≈ 8.4 pt (≈ 2× the old diagram).
  *
  * Facts (Decisions 14, 16, 17, 30, 31, 50, 54, 55, 61-63): SaleService owns ONE
@@ -11,7 +11,7 @@
  * stored. The printable document is a Transaction Summary, not an official BIR invoice.
  * Rescue-linked sales use the same POS but are out of this diagram's scope.
  *
- *   php docs/diagram-src/sequence-pos.php > docs/flows/VulcaTrack-Sequence-Diagram-POS.svg
+ *   php docs/diagram-src/sequence-pos-detailed.php > docs/flows/VulcaTrack-Sequence-Diagram-POS-Detailed.svg
  */
 require __DIR__ . '/lib.php';
 
@@ -62,7 +62,7 @@ $H = (int) ($footY + 3 * NOTE * 1.3 + 50);
 
 $out = svg_open(W, $H, arrow_marker('call', '#1a1a1a', 15) . arrow_marker('ret', '#555', 15));
 $out .= txt(W / 2, 44, 'VulcaTrack: Sales and Inventory with On-the-Go Services', 28, ['anchor' => 'middle', 'weight' => '700']);
-$out .= txt(W / 2, 76, 'Sequence Diagram — In-Shop POS Sale', 20, ['anchor' => 'middle', 'fill' => '#444']);
+$out .= txt(W / 2, 76, 'Technical Sequence Diagram — In-Shop POS Sale', 20, ['anchor' => 'middle', 'fill' => '#444']);
 
 // participants + lifelines
 $lifeEnd = $footY - 20;

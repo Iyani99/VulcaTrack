@@ -4,7 +4,7 @@
 //
 // Authoritative decisions:  docs/decisions/project-decisions.md
 // Field-by-field rationale:  docs/VulcaTrack-Database-Notes_1.md
-// Visual aid (now behind this file):  docs/ERD/VulcaTrack-ERD_1.png
+// Generated visual aid (from this DBML): docs/ERD/VulcaTrack-ERD_1.png
 //
 // Notation: DBML (https://dbml.dbdiagram.io). This is a DESIGN artifact, not an
 // executable migration. Column TYPES below are INDICATIVE MySQL types for the
@@ -143,7 +143,7 @@ Table service_requests {
   admin_id            int           [null, ref: > admins.admin_id, note: 'last admin who changed the status or Tireman assignment (Decision 67); NULL while pending']
   tireman_id          int           [null, ref: > tiremen.tireman_id, note: 'assigned Tireman; set in the same admin action that accepts the request (active Tireman), may be reassigned while accepted, kept on rejected/completed requests as history; NULL while pending and on requests rejected while pending (Decisions 25, 66, 68)']
   problem_description text          [not null]
-  latitude            decimal(10,7) [null, note: 'captured once at submission via browser geolocation; stays NULL until a successful capture']
+  latitude            decimal(10,7) [null, note: 'customer-confirmed location at submission: browser geolocation or landmark/address search, with draggable-marker adjustment; NULL until a location is set']
   longitude           decimal(10,7) [null]
   eta_minutes         int           [null, note: 'FROZEN snapshot computed once at submission; never recomputed / updated for display (Decision 32)']
   status              varchar(10)   [not null, note: "'pending' | 'accepted' | 'rejected' | 'completed' (Decision 10). Admin transitions: pending -> accepted | rejected; accepted -> completed (Tireman required) | rejected; rejected and completed are final (Decision 65)"]

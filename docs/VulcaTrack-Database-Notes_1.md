@@ -260,8 +260,8 @@ An on-the-go request submitted by a logged-in customer.
 
 ## 10. Location-Data Handling
 
-- `latitude` / `longitude` are captured once, at submission time, from the browser's geolocation API.
-- If location permission is denied, the request flow should let the customer retry rather than silently failing; this is a frontend/UX concern and doesn't change the schema — `latitude`/`longitude` simply stay unset until a successful capture.
+- `latitude` / `longitude` are saved once at submission from the customer's confirmed map marker. The initial location may come from browser geolocation or landmark/address search; the marker can be adjusted before submission (Decisions 58–59).
+- If browser location permission is denied, the customer may retry or use landmark/address search and confirm the marker; the schema is unchanged — `latitude`/`longitude` stay unset until a location is selected.
 - The customer's screen shows a map with their location, a route to the shop, and the calculated `eta_minutes` — all computed once at submission. The `eta_minutes` value shown afterward is always the stored snapshot.
 - **No route geometry/polyline is persisted.** If a map is shown again later (customer or admin), the route line may be re-generated from the two fixed endpoints (stored request `latitude`/`longitude` → shop config location), but the ETA displayed stays the stored `eta_minutes`. Optional columns like `distance_km` / `route_calculated_at` are not added in v1.
 - The shop's own location (needed to calculate the route/ETA) is a single fixed point stored in centralized application config (`config/shop.php`: `latitude`, `longitude`, `address`). All route/ETA calculations read from there; coordinates are never hard-coded across the app. No `shop_settings` table in v1; an admin-editable option remains a future consideration.

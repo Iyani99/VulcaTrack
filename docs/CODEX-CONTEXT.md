@@ -10,7 +10,7 @@ Verified against the local repository on **2026-10-08 (Asia/Manila)**. This is t
 |---|---|
 | `docs/CODEX-CONTEXT.md` | Current Codex continuity and verification provenance. Read first in future Codex sessions. |
 | `docs/PROJECT-CONTEXT.md` | Original Claude-era historical/project context. **Read-only for Codex.** |
-| `docs/decisions/project-decisions.md` | Approved decision history, including Decisions 60 and 65–79. Some status summaries are stale; read the actual decision entries. |
+| `docs/decisions/project-decisions.md` | Approved decision history, including Decisions 60 and 65–79, with a dated clarification of Decision 77's later header display. Read historical entries in their dated context. |
 | `docs/ERD/schema.dbml` | Authoritative database design. |
 | `docs/DEVELOPMENT-LOG.md` | Chronological post-handoff log, currently an untracked local file. Preserve it; it is not a substitute for Git or current code. |
 
@@ -111,26 +111,26 @@ Current test discovery has **49 files**: 13 unit, 15 integration, 21 HTTP. The d
 
 | Area | Stale/conflicting source | Current verified truth | Action needed |
 |---|---|---|---|
-| Header avatar — **CONFLICT** | Decision 77 says avatar is shown only in the account panel and not the header. | Later committed `7b5c2ee` and `customer_top.php` deliberately show the owner's avatar in the Customer header; private serving remains. | Record the later behavior; reconcile decision wording with owner before changing policy. Do not alter the working header solely for old prose. |
-| Phases/test status — **STALE DOCUMENTATION** | `PROJECT-CONTEXT.md` header/overview/roadmap and decision-record summary stop around earlier Phase 7 work, quote 233/3,486/41, and index fewer than Decisions 77–79. | Later committed feedback, reports chart, header avatar, Admin Accounts and all three schema migrations exist. 263/4,668/49 is a handoff report, not freshly verified. | Synchronize other docs only in a separately authorized task; keep historical counts labeled. |
-| Reports and item type — **STALE DOCUMENTATION** | Older Reports prose says no charts/source split; older caveat says sold item type remains editable. | Reports has server-rendered Sales Performance and Sales by Source; Decision 69 and `ItemRepository` prevent sold type changes. | Correct stale prose when separately authorized. |
-| Location — **STALE DOCUMENTATION** | Some schema/Database Notes comments say browser GPS only. | Decisions 58–59 and current Rescue UI also provide explicit landmark/address search and marker adjustment. | Clarify comments without changing schema. |
-| ERD/diagrams — **STALE DOCUMENTATION** | Decision 38/DBML header still describe the visual ERD as behind the text source. Older DFD notes describe reporting as deferred and the Level 1 diagram as primary. | ERD, activity, POS sequence and Level 1 DFD were regenerated/committed; newer professor paper direction favors refreshed Level 0. | Review/rewrite paper artifacts and status notes in a separate task. |
+| Header avatar — **CLARIFIED** | Decision 77's original display bullet says account panel only. | Later committed `7b5c2ee` deliberately shows the signed-in owner's avatar in the Customer header. | A dated implementation clarification follows Decision 77; its original wording remains historical. |
+| Phases/test status — **CURRENT DOCS ALIGNED** | `PROJECT-CONTEXT.md` stays read-only and historically stops at older Phase 7 work. | The decision record and app README now state later built features; fresh baseline **263/0/4,672/49** is separated from older **233/0/3,486/41** and handoff **263/0/4,668/49**. | Preserve dated history; Phase 7 is still open. |
+| Reports and item type — **CORRECTED** | Older Reports prose said no chart/source split and sold item type editable. | App README now describes Sales Performance, Sales by Source, and protected sold item types. | Historical development entries are unchanged. |
+| Location — **CORRECTED** | A DBML note and Database Notes said browser GPS only. | Both now describe browser geolocation or landmark/address search with marker adjustment. | No schema structure or application behavior changed. |
+| Paper and technical diagrams — **SEPARATED** | Older Level 0 and use-case image lacked current flows; activity and POS sequence showed more detail than requested for the paper. | Paper Level 0, two-lane Book a Rescue activity, three-participant POS sequence and use case are separate from the maintained detailed Activity, POS Sequence, Use Case and Level 1 DFD; the canonical ERD is shared. | Paper simplification does not redefine implemented behavior. Older flowcharts 2, 4 and 5 remain separately flagged. |
 | UI backlog — **STALE DOCUMENTATION** | Old responsive, date, navigation and Transaction Summary back-link items appear unfinished. | Responsive/Figma changes, several friendly date displays, and links to Sales History/Rescue are committed; remaining screen-specific issues need a browser review. | Reassess each item before treating it as work. |
-| Root README — **STALE DOCUMENTATION** | Root `README.md` Database code fence is unclosed. | The file still ends after `database/schema.sql`; application README is more complete but has older status text too. | Repair only when documentation editing is authorized. |
+| Root README — **CORRECTED** | Database code fence was unclosed. | Fence closed in the current documentation pass. | No further action for that fence. |
 
-The avatar policy is the main **genuine decision/implementation conflict**. The other rows chiefly describe stale historical summaries, not application failures.
+The avatar display difference is recorded as a later implementation clarification; private, owner-only access remains the same. The older `PROJECT-CONTEXT.md` and dated revision entries remain historical.
 
 ## 16. Paper and diagram direction
 
-**Committed artifact state:** `docs/ERD/schema.dbml` defines the eight-table model. `docs/diagram-src/` contains generators for ERD, OTG activity, POS sequence, and **Level 1** DFD; those SVG/PNG outputs were committed after `cc4e22c`/`5ed81e4`. `docs/flows/VulcaTrack-DFD-0-Context.svg` is an older hand-edited Level 0 artifact; the use-case PNG and some flowcharts also need review. `bash docs/diagram-src/build.sh` writes diagrams and was not run during this documentation task.
+**Diagram policy (2026-10-08, uncommitted documentation pass):** paper figures are intentionally simplified for research presentation and do not redefine application behavior. `docs/ERD/schema.dbml` defines the shared canonical eight-table ERD. The paper Level 0 DFD and technical Level 1 DFD are both maintained. Activity, POS Sequence, and Use Case each have separate `-Paper` and `-Detailed` SVG/PNG versions with matching PHP sources; `docs/diagram-src/README.md` maps their names. The detailed Activity and Sequence preserve valid pre-alignment system detail. The old Use Case PNG was materially stale, so its technical replacement uses a new current generator. Older flowcharts remain separate artifacts.
 
-**Later owner-supplied/professor presentation direction (not yet a committed artifact and not an application behavior change):**
+**Professor paper presentation direction now reflected in the four updated figures (documentation only):**
 
-- **DFD:** present a simpler refreshed **Level 0 / Context DFD**. Do not reuse the old Level 0 unchanged; it may omit feedback, Sales History/Reports, and Admin Account creation. Committed Level 1 remains the current file, not the preferred final presentation.
-- **Activity:** one use case, **Book a Rescue**, with exactly Customer and VulcaTrack System lanes; Customer login is a precondition. Customer opens booking, chooses an active saved Vehicle, describes the problem, provides location by browser/search/map adjustment, confirms contact number and submits. An **unlabeled merge in the System lane** leads to validation. Invalid input: System shows errors → Customer corrects and resubmits → back to merge → validation; no direct correction-to-confirmation link and no bidirectional correction/merge connector. Valid input: System computes ETA once, saves Pending, then Customer views confirmation/ETA/Pending and ends in Customer lane. Exclude Admin review, assignment, roadside work, POS and feedback from this diagram.
+- **DFD:** refreshed **Level 0 / Context DFD** is preferred for presentation and includes feedback, Sales History/Reports, Admin Accounts and Transaction Summary. Level 1 remains available for detail.
+- **Activity:** one use case, **Book a Rescue**, with exactly Customer and VulcaTrack System lanes; Customer login is a precondition. Customer opens booking, chooses an active saved Vehicle, describes the problem, provides location by browser geolocation or landmark/address search with optional map-marker adjustment, confirms contact number and submits. An **unlabeled merge in the System lane** leads to validation. Invalid input: System shows errors → Customer corrects and resubmits → back to merge → validation; no direct correction-to-confirmation link and no bidirectional correction/merge connector. Valid input: System computes ETA once, saves Pending, then Customer views confirmation/ETA/Pending and ends in Customer lane. Exclude Admin review, assignment, roadside work, POS and feedback from this diagram.
 - **POS sequence:** **Admin / VulcaTrack POS System / Database** only. Show item/price/stock lookup, cart total, optional registered Customer or Walk-in, cash tender/checkout validation, recorded transaction, Sale number/total/change, and optional printable Transaction Summary. Keep SQL locks/commit/rollback/expected-total internals in code, not the paper diagram.
-- **Use case:** use “Book a Rescue,” “Process Sale (POS),” “Manage Rescue Requests,” “View Rescue Status / Bookings,” and “Submit Rescue Feedback”; professor favored a shared Log In use case and Logout near the bottom. The current PNG has not been established as matching this direction.
+- **Use case:** the generated figure uses “Book a Rescue,” “Process Sale (POS),” “Manage Rescue Requests,” “View Rescue Status / Bookings,” and “Submit Rescue Feedback,” with shared Log In and bottom Log Out. Tireman remains a managed record with no login.
 
 ## 17. Deferred and future work
 
@@ -148,15 +148,16 @@ Read this file first, then inspect the relevant code, decisions, DBML, migration
 
 ## 20. Current open discrepancies and unknowns
 
-1. Decision 77's display restriction and the later committed header avatar require explicit reconciliation if avatar policy is touched.
+1. Decision 77's original display restriction is retained as history; the later committed Customer header behavior is documented by a dated clarification. Any new avatar policy change needs its own decision.
 2. Live GitHub branch/tag state was not queried; `origin/main` and `origin/HEAD` here are local refs only.
 3. Local MariaDB 10.4.32 and the eight-table schema, including all three later additions, were verified on 2026-10-08. The HTTP harness teardown was repaired and local HTTP/full tests now pass with normal XAMPP Temp access. The fresh full baseline is **263/0/4,672/49**; the separate **263/0/4,668/49** handoff figure remains a supplied historical report. Other databases and production HTTP behavior remain unverified.
-4. Exact final paper artifacts are outstanding. The Level 0, activity, sequence and use-case presentation direction is later than the committed diagram set.
+4. Level 0 and the separate paper and technical Activity, Sequence and Use Case figures are refreshed in this uncommitted documentation pass. Older flowcharts 2, 4 and 5 remain flagged separately; paper placement/approval is not established by this file.
 5. Actual production deployment/host configuration is unverified. Candidate work in §17 requires its own decision and scope check.
 
 ## 21. Last verification checkpoint
 
 - **Date:** 2026-10-08 (Asia/Manila).
+- **Documentation alignment inspection:** began from `29e30ce126f380f2acda74d183554f294847e5d3` on `main`, with local `origin/main` matching and only `docs/DEVELOPMENT-LOG.md` untracked. This pass changed documentation/diagram files only; no new application suite was run, and no Git staging/commit/push was performed.
 - **Pre-closure HEAD:** `5ed81e41fc89e7fa213b53a644f7ab6b51d2bff6` on `main`; annotated checkpoint points there. Local `origin/main` and `origin/HEAD` matched at that inspection; no live remote check.
 - **Pre-closure working tree:** before writing this file, only `docs/DEVELOPMENT-LOG.md` was untracked; no staged or modified tracked files. Immediately before closure staging, only `vulcatrack/tests/lib/HttpClient.php` was modified among tracked files; this file and `docs/DEVELOPMENT-LOG.md` were untracked; nothing was staged. Inspect Git for the post-commit state.
 - **Database:** configured local MariaDB connection succeeded; server reported **10.4.32-MariaDB**. Exactly eight InnoDB application tables and the three later schema additions were present. No migration or schema script was run. Counts in all eight tables matched before and after the test attempt.
