@@ -35,6 +35,7 @@ $nav = [
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($pageTitle ?? 'Admin') ?> &mdash; VulcaTrack</title>
 <link rel="stylesheet" href="<?= e(vulcatrack_asset('/assets/css/app.css')) ?>">
+<script src="<?= e(vulcatrack_asset('/assets/js/admin-nav.js')) ?>"></script>
 <?php if (!empty($useMap)): ?>
 <link rel="stylesheet" href="<?= e(vulcatrack_asset('/assets/lib/leaflet/leaflet.css')) ?>">
 <script defer src="<?= e(vulcatrack_asset('/assets/lib/leaflet/leaflet.js')) ?>"></script>

@@ -112,16 +112,13 @@ function pos_peso(int $centavos): string
 }
 
 /**
- * Catalogue stock chip [modifier, label] — the same chips as Inventory
+ * Product stock chip [modifier, label] — the same chips as Inventory
  * (Phase 7.3b), from the same low-stock rule: $isLow comes from
  * ItemRepository::lowStockProducts(). Presentation only; the catalogue lists
  * active items only, and the stock check that matters stays in SaleService.
  */
 function pos_stock_chip(array $row, bool $isLow): array
 {
-    if ($row['item_type'] !== 'product') {
-        return ['na', 'n/a'];
-    }
     $stock = (int) $row['stock_quantity'];
     if ($stock < 1) {
         return [$isLow ? 'low' : 'out', 'Out: ' . $stock];
@@ -208,6 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         );
                     }
                     $cart->add($itemId, $quantity);
+                    $_SESSION['pos_cart_added'] = true;
                     pos_flash('notice', "Added {$quantity} × {$item['item_name']}.");
                     break;
 
@@ -352,6 +350,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ---------------------------------------------------------------------------
 $flashes = is_array($_SESSION['pos_flash'] ?? null) ? $_SESSION['pos_flash'] : [];
 unset($_SESSION['pos_flash']);
+$animateCartAdd = !empty($_SESSION['pos_cart_added']);
+unset($_SESSION['pos_cart_added']);
 $lastSale = is_array($_SESSION['pos_last_sale'] ?? null) ? $_SESSION['pos_last_sale'] : null;
 unset($_SESSION['pos_last_sale']);
 
@@ -393,6 +393,10 @@ $catalogFilters = ['active' => true];
 if ($filters['q'] !== '')    { $catalogFilters['search'] = $filters['q']; }
 if ($filters['type'] !== '') { $catalogFilters['type'] = $filters['type']; }
 $catalog = $items->list($catalogFilters);
+$catalogGroups = ['service' => [], 'product' => []];
+foreach ($catalog as $row) {
+    $catalogGroups[$row['item_type']][] = $row;
+}
 
 // Which catalogue products carry a low-stock alert — the exact Inventory rule.
 $lowStockIds = [];
@@ -477,15 +481,12 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <input type="text" id="pos-q" name="q" value="<?= e($filters['q']) ?>" maxlength="150" placeholder="Search by name or category">
       <button type="submit">Search</button>
     </form>
-    <?php // Type filter as chips: plain links with the same ?type= values (the search is kept). ?>
+    <?php // Product/Service keep the search; All returns the full catalogue. ?>
     <nav class="chips" aria-label="Item type">
       <?php foreach (['' => 'All', 'product' => 'Products', 'service' => 'Services'] as $typeValue => $typeLabel): ?>
-        <a class="chip<?= $filters['type'] === $typeValue ? ' is-active' : '' ?>" href="<?= e(pos_url(['q' => $filters['q'], 'type' => $typeValue])) ?>"<?= $filters['type'] === $typeValue ? ' aria-current="true"' : '' ?>><?= e($typeLabel) ?></a>
+        <a class="chip<?= $filters['type'] === $typeValue ? ' is-active' : '' ?>" href="<?= e(pos_url(['q' => $typeValue === '' ? '' : $filters['q'], 'type' => $typeValue])) ?>"<?= $filters['type'] === $typeValue ? ' aria-current="true"' : '' ?>><?= e($typeLabel) ?></a>
       <?php endforeach; ?>
     </nav>
-    <?php if ($filters['q'] !== '' || $filters['type'] !== ''): ?>
-      <a class="pos-clear" href="<?= e(vulcatrack_url('/admin/pos.php')) ?>">Clear</a>
-    <?php endif; ?>
   </div>
 
   <?php if ($view['rows']): /* stacked (narrow) layout only: the sale sits below the catalogue */ ?>
@@ -496,17 +497,23 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <?php if (!$catalog): ?>
     <p class="muted">No active items match.</p>
   <?php else: ?>
-    <ul class="pos-grid">
-    <?php foreach ($catalog as $row): ?>
+    <?php foreach (['service' => 'Services Offered', 'product' => 'Products'] as $groupType => $groupTitle): ?>
+      <?php if (!$catalogGroups[$groupType]) { continue; } ?>
+    <section class="pos-catalog-group" aria-labelledby="pos-group-<?= $groupType ?>">
+      <h3 class="pos-catalog-group__title" id="pos-group-<?= $groupType ?>"><?= $groupTitle ?></h3>
+      <ul class="pos-grid">
+    <?php foreach ($catalogGroups[$groupType] as $row): ?>
       <?php
         $isProduct  = $row['item_type'] === 'product';
         $outOfStock = $isProduct && (int) $row['stock_quantity'] < 1;
-        [$chip, $chipLabel] = pos_stock_chip($row, isset($lowStockIds[(int) $row['item_id']]));
       ?>
       <li class="pos-item<?= $outOfStock ? ' pos-item--out' : '' ?>">
         <div class="pos-item__tags">
           <span class="badge badge--<?= $isProduct ? 'product' : 'service' ?>"><?= $isProduct ? 'Product' : 'Service' ?></span>
+          <?php if ($isProduct): ?>
+          <?php [$chip, $chipLabel] = pos_stock_chip($row, isset($lowStockIds[(int) $row['item_id']])); ?>
           <span class="stock stock--<?= $chip ?>"><?= e($chipLabel) ?></span>
+          <?php endif; ?>
         </div>
         <p class="pos-item__name"><?= e($row['item_name']) ?></p>
         <?php if ($row['category'] !== null && $row['category'] !== ''): ?>
@@ -527,12 +534,14 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
         <?php endif; ?>
       </li>
     <?php endforeach; ?>
-    </ul>
+      </ul>
+    </section>
+    <?php endforeach; ?>
   <?php endif; ?>
 </section>
 
 <!-- ================= current sale ================= -->
-<section class="pos-sale" id="sale" aria-labelledby="pos-sale-title">
+<section class="pos-sale<?= $animateCartAdd ? ' pos-sale--added' : '' ?>" id="sale" aria-labelledby="pos-sale-title">
   <h2 class="pos-sale__head" id="pos-sale-title">Current sale</h2>
   <div class="pos-sale__body">
 

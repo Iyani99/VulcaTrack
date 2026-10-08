@@ -129,8 +129,20 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         // Phase 7.3c layout: catalogue pane (item cards that wrap on phones, so no Add
         // control hides behind a scroll strip) beside the Current sale panel.
         assert_contains('<section class="pos-catalog" id="items"', $html, 'catalogue pane');
-        assert_contains('<ul class="pos-grid">', $html, 'the catalogue is a wrapping card grid');
+        assert_same(2, substr_count($html, '<ul class="pos-grid">'), 'each catalogue group uses the wrapping card grid');
+        assert_true(strpos($html, 'id="pos-group-service"') < strpos($html, 'id="pos-group-product"'), 'Services Offered comes before Products');
+        assert_true(preg_match('#<section class="pos-catalog-group" aria-labelledby="pos-group-service">(.*?)</section>#s', $html, $serviceGroup) === 1);
+        assert_true(preg_match('#<section class="pos-catalog-group" aria-labelledby="pos-group-product">(.*?)</section>#s', $html, $productGroup) === 1);
+        assert_contains("{$tag} Patching", $serviceGroup[1], 'service result belongs under Services Offered');
+        assert_not_contains("{$tag} Tire Valve", $serviceGroup[1]);
+        assert_contains("{$tag} Tire Valve", $productGroup[1], 'product result belongs under Products');
+        assert_not_contains("{$tag} Patching", $productGroup[1]);
+        assert_not_contains('stock--na', $serviceGroup[1], 'services do not show a meaningless stock indicator');
+        assert_contains('stock stock--ok', $productGroup[1], 'products retain stock status');
         assert_contains('<section class="pos-sale" id="sale"', $html, 'Current sale panel');
+        assert_not_contains('pos-sale--added', $html, 'initial POS load has no cart-add entrance');
+        assert_not_contains('pos-item--product', $html, 'product-specific card treatment is removed');
+        assert_not_contains('pos-item--service', $html, 'service-specific card treatment is removed');
         assert_true(strpos($html, 'id="items"') < strpos($html, 'id="sale"'), 'catalogue first, then the sale (desktop left/right, stacked order)');
         // each card keeps the same add form: POST action=add + item_id + quantity, never nested
         assert_contains('<input type="hidden" name="item_id" value="' . $P . '">', $html);
@@ -138,10 +150,29 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         // type chips are plain links carrying the real ?type= values (search kept)
         $filtered = $page('?q=' . urlencode($tag) . '&type=service');
         assert_contains('href="/vulcatrack/admin/pos.php?q=' . urlencode($tag) . '&amp;type=product"', $filtered, 'the Products chip keeps the search');
+        assert_contains('<a class="chip" href="/vulcatrack/admin/pos.php">All</a>', $filtered, 'All clears both search and type');
         assert_contains('aria-current="true">Services</a>', $filtered, 'the chosen type is marked current');
+        assert_not_contains('class="pos-clear"', $filtered, 'the redundant Clear link is absent');
         assert_contains('<input type="hidden" name="type" value="service">', $filtered, 'searching keeps the chosen type');
         assert_contains("{$tag} Patching", $filtered);
         assert_not_contains("{$tag} Tire Valve", $filtered, 'the type filter still filters');
+        assert_contains('id="pos-group-service"', $filtered);
+        assert_not_contains('id="pos-group-product"', $filtered, 'Services filter has no empty Products heading');
+        $filtered = $page('?q=' . urlencode($tag) . '&type=product');
+        assert_contains("{$tag} Tire Valve", $filtered);
+        assert_not_contains("{$tag} Patching", $filtered);
+        assert_contains('id="pos-group-product"', $filtered);
+        assert_not_contains('id="pos-group-service"', $filtered, 'Products filter has no empty Services heading');
+        $searched = $page('?q=' . urlencode($tag));
+        assert_contains("{$tag} Patching", $searched, 'All search includes matching services');
+        assert_contains("{$tag} Tire Valve", $searched, 'All search includes matching products');
+        assert_true(strpos($searched, 'id="pos-group-service"') < strpos($searched, 'id="pos-group-product"'), 'All search keeps service-first grouping');
+        $searched = $page('?q=' . urlencode($tag . ' Patching'));
+        assert_contains('id="pos-group-service"', $searched);
+        assert_not_contains('id="pos-group-product"', $searched, 'All search omits empty Products group');
+        $searched = $page('?q=' . urlencode($tag . ' Tire Valve'));
+        assert_contains('id="pos-group-product"', $searched);
+        assert_not_contains('id="pos-group-service"', $searched, 'All search omits empty Services group');
         assert_contains('No items yet', $html);
         assert_contains('Walk-in', $html, 'blank customer = walk-in');
         $assertClean($html, 'pos (empty)');
@@ -153,6 +184,7 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         $r = $server->request($POS, ['_action' => 'add', 'item_id' => (string) $P, 'quantity' => '1', '_csrf' => 'bogus'], true);
         assert_contains('session expired', strtolower($r['body']));
         assert_contains('No items yet', $r['body'], 'a bad-CSRF add did nothing');
+        assert_not_contains('pos-sale--added', $r['body'], 'a refused add has no cart motion');
 
         // ================= add: server-side validation =================
         assert_contains('not available for sale', $post(['_action' => 'add', 'item_id' => (string) $I, 'quantity' => '1']), 'inactive item refused');
@@ -167,6 +199,8 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         // ================= add / merge / update / remove =================
         $post(['_action' => 'add', 'item_id' => (string) $P, 'quantity' => '2']);
         $body = $post(['_action' => 'add', 'item_id' => (string) $P, 'quantity' => '1']);
+        assert_contains('<section class="pos-sale pos-sale--added"', $body, 'successful add marks only Current sale for entrance');
+        assert_not_contains('pos-sale--added', $page(), 'cart-add entrance is consumed after one render');
         assert_same(3, $qtyOf($body, $P), 'adding the same item again merges into one line');
         assert_same(1, preg_match_all('/name="qty\[' . $P . '\]"/', $body), 'exactly one cart line for the item');
         assert_contains('Not enough stock', $post(['_action' => 'add', 'item_id' => (string) $P, 'quantity' => '8']), 'cart + new qty checked against stock');
@@ -178,6 +212,7 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
 
         $body = $post(['_action' => 'update', "qty[{$P}]" => '4', "qty[{$S}]" => '1', "qty[{$H}]" => '1', 'qty[99999999]' => '5']);
         assert_contains('Quantities updated', $body);
+        assert_not_contains('pos-sale--added', $body, 'quantity updates do not replay add motion');
         assert_same(4, $qtyOf($body, $P));
         assert_null($qtyOf($body, 99999999), 'unknown keys in the update are ignored');
         $body = $post(['_action' => 'update', "qty[{$P}]" => '0', "qty[{$S}]" => '1', "qty[{$H}]" => '1']);

@@ -4,8 +4,8 @@
  *
  * Every customer's On-the-Go requests, filtered by status through a GET
  * whitelist (default: pending). Since Phase 7.3b the filter is a row of status
- * tabs — plain links carrying the same ?status= values, so it needs no
- * JavaScript; an empty view links to another status and to All. Each row
+ * tabs — plain links carrying the same ?status= values; JavaScript only
+ * moves the decorative underline. An empty view links to another status and to All. Each row
  * links to rescue-view.php. There are no forms that change anything here — the
  * status actions (accept / reassign / reject / complete) live on
  * rescue-view.php (Chunk 6.3).
@@ -43,6 +43,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <?php foreach (['pending', 'accepted', 'completed', 'rejected', 'all'] as $option): ?>
     <a class="tab<?= $status === $option ? ' is-active' : '' ?>" href="<?= e(vulcatrack_url('/admin/rescue.php?status=' . $option)) ?>"<?= $status === $option ? ' aria-current="true"' : '' ?>><?= e($option === 'all' ? 'All' : OtgStatus::adminLabel($option)) ?></a>
   <?php endforeach; ?>
+  <span class="tabs__indicator" aria-hidden="true"></span>
 </nav>
 
 <?php $n = count($requests); ?>

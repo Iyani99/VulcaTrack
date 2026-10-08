@@ -132,13 +132,14 @@ test('admin rescue (list + detail view): guard, filters, detail, escaping, map, 
         assert_same(200, $list['status'], 'the admin can view the request list');
         assert_contains('>Rescue<', $list['body'], 'the Rescue nav entry is present');
         assert_contains($tab('pending'), $list['body'], 'pending is the default filter');
-        // The filter is a row of status tabs (Phase 7.3b): plain GET links, so it
-        // needs no JavaScript. Exactly the four real statuses + All, in workflow
+        // The filter keeps plain GET links; JavaScript only moves the underline.
+        // Exactly the four real statuses + All, in workflow
         // order, one of them current — no invented status (e.g. "in progress").
         assert_true(preg_match('#<nav class="tabs" aria-label="Filter by status">(.*?)</nav>#s', $list['body'], $tabsNav) === 1, 'the status tabs');
         preg_match_all('#href="/vulcatrack/admin/rescue\.php\?status=([a-z]+)"#', $tabsNav[1], $tabValues);
         assert_same(['pending', 'accepted', 'completed', 'rejected', 'all'], $tabValues[1], 'the tabs are the real statuses + All');
         assert_same(1, substr_count($tabsNav[1], 'aria-current="true"'), 'exactly one tab is current');
+        assert_contains('<span class="tabs__indicator" aria-hidden="true"></span>', $tabsNav[1], 'status underline is decorative');
         assert_not_contains('in-progress', strtolower($list['body']), 'no invented in-progress status');
         assert_not_contains('in progress', strtolower($list['body']));
         assert_contains('rescue-view.php?id=' . $reqPending . '"', $list['body']);

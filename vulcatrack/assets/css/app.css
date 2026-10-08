@@ -601,6 +601,8 @@ body.admin {
   --adm-line-soft: #ececec;
   --adm-zebra: #f6f6f6;
   --adm-muted: #666;
+  --adm-surface-shadow: 0 1px 2px rgba(36, 33, 33, .05), 0 12px 30px rgba(36, 33, 33, .07);
+  --adm-surface-shadow-raised: 0 2px 5px rgba(36, 33, 33, .06), 0 16px 34px rgba(36, 33, 33, .09);
   --adm-mono: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
   --adm-sans: system-ui, "Segoe UI", Arial, sans-serif;
   background: var(--adm-bg);
@@ -628,15 +630,21 @@ body.admin .adm-brand__sub {
   margin-top: .15rem; font-family: var(--adm-mono); font-size: .7rem;
   letter-spacing: .08em; text-transform: uppercase; color: #9a9ca0;
 }
-body.admin .adm-nav { display: flex; flex-direction: column; padding: .9rem 0; }
+body.admin .adm-nav { display: flex; flex-direction: column; gap: .22rem; padding: 1.25rem .55rem; }
 body.admin .adm-nav a {
-  display: flex; align-items: center; gap: .8rem; padding: .72rem 1.25rem;
+  display: flex; align-items: center; gap: .8rem; min-height: 3.25rem; padding: .85rem .9rem;
   border-left: 3px solid transparent; color: var(--adm-side-text); text-decoration: none;
   font-family: var(--adm-mono); font-size: .86rem;
-  transition: color var(--motion-control) var(--motion-ease), background-color var(--motion-control) var(--motion-ease), border-color var(--motion-control) var(--motion-ease);
+  transform-origin: left center;
+  transition: color var(--motion-control) var(--motion-ease), background-color var(--motion-control) var(--motion-ease), border-color var(--motion-control) var(--motion-ease), transform var(--motion-control) var(--motion-ease);
 }
-body.admin .adm-nav a:hover { background: var(--adm-side-hover); color: #fff; }
+body.admin .adm-nav a:is(:hover, :focus-visible) { background: #303236; color: #fff; }
 body.admin .adm-nav a[aria-current="page"] { border-left-color: var(--adm-red); background: var(--adm-side-hover); color: #fff; font-weight: 700; }
+body.admin .adm-nav a[aria-current="page"]:is(:hover, :focus-visible) { background: #303236; }
+@media (min-width: 60.0625rem) and (prefers-reduced-motion: no-preference) {
+  body.admin .adm-nav a:is(:hover, :focus-visible) { transform: translateX(2px) scale(1.025); }
+  body.admin .adm-nav a:active { transform: translateX(1px) scale(.99); transition-duration: var(--motion-press); }
+}
 body.admin .adm-nav__icon {
   width: 1.15rem; height: 1.15rem; flex: none;
   fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round;
@@ -661,10 +669,20 @@ body.admin .adm-logout { margin: 0; }
 body.admin .adm-logout button {
   margin: 0; width: 100%; padding: .5rem .75rem;
   background: transparent; border: 1px solid #5a5c60; color: #e4e4e4; font-size: .74rem;
+  transition: background-color var(--motion-control) var(--motion-ease), border-color var(--motion-control) var(--motion-ease), color var(--motion-control) var(--motion-ease);
 }
-body.admin .adm-logout button:hover { background: var(--adm-side-hover); border-color: #8d8f93; color: #fff; }
+body.admin .adm-logout button:is(:hover, :focus-visible) { background: var(--adm-red); border-color: var(--adm-red); color: #fff; }
+body.admin .adm-logout button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+body.admin .adm-logout button:active { background: var(--adm-red-dark); border-color: var(--adm-red-dark); transition-duration: var(--motion-press); }
 
-body.admin .adm-main { max-width: 80rem; margin: 0; padding: 2rem 2.25rem 3rem; outline: 0; }
+body.admin .adm-main { width: 100%; min-width: 0; max-width: none; margin: 0; padding: 2rem 2.25rem 3rem; outline: 0; }
+@media screen and (prefers-reduced-motion: no-preference) {
+  @keyframes adm-page-enter {
+    from { opacity: .78; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .adm-page-enter body.admin .adm-main { animation: adm-page-enter 220ms var(--motion-ease) both; }
+}
 
 body.admin .adm-skip {
   position: absolute; left: .5rem; top: -4rem; z-index: 10; padding: .5rem .8rem;
@@ -710,6 +728,11 @@ body.admin .pagehead h1 {
 }
 body.admin .adm-main > h1 { margin-bottom: 1.5rem; padding-bottom: .9rem; border-bottom: 2px solid var(--adm-ink); }
 body.admin .pagehead__meta { margin: .35rem 0 0; font-size: .82rem; color: #777; }
+body.admin .pagehead--dashboard { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+@media (max-width: 40rem) {
+  body.admin .pagehead--dashboard { grid-template-columns: minmax(0, 1fr); }
+  body.admin .pagehead--dashboard .btnlink--new-sale { justify-self: start; }
+}
 
 /* buttons: red = the page's primary action (.btnlink), black = submit,
    outlined = secondary, .linklike stays a quiet text action */
@@ -719,6 +742,22 @@ body.admin .btnlink {
   font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; text-decoration: none;
 }
 body.admin .btnlink:hover { background: var(--adm-red-dark); border-color: var(--adm-red-dark); color: #fff; }
+body.admin .btnlink--new-sale {
+  background: #fff; border-color: var(--adm-red); color: var(--adm-red-dark);
+  box-shadow: 0 2px 4px rgba(74, 29, 31, .07);
+  transition: color var(--motion-control) var(--motion-ease), background-color var(--motion-control) var(--motion-ease),
+              border-color var(--motion-control) var(--motion-ease), box-shadow var(--motion-control) var(--motion-ease),
+              transform var(--motion-control) var(--motion-ease);
+}
+body.admin .btnlink--new-sale:is(:hover, :focus-visible) {
+  background: var(--adm-red); border-color: var(--adm-red); color: #fff;
+  box-shadow: 0 10px 22px rgba(130, 24, 30, .19), 0 3px 7px rgba(74, 29, 31, .11);
+}
+body.admin .btnlink--new-sale:focus-visible { outline: 2px solid var(--adm-red-dark); outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) {
+  body.admin .btnlink--new-sale:is(:hover, :focus-visible) { transform: translateY(-1px) scale(1.04); }
+  body.admin .btnlink--new-sale:active { transform: translateY(0) scale(.99); transition-duration: var(--motion-press); }
+}
 body.admin button.secondary {
   border: 2px solid var(--adm-ink); border-radius: 0; background: #fff; color: var(--adm-ink); padding: .45rem .9rem;
   font-size: .78rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; /* base sets font: inherit */
@@ -790,11 +829,12 @@ body.admin .badge--inactive  { background: #fff; color: #666; border-color: #a5a
 body.admin .badge--low       { background: #fdecec; color: var(--adm-red-dark); border-color: #f0b3b5; }
 
 /* dashboard (Phase 7.2 cards, on the shared shell since 7.3a) */
-.dash-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1.25rem; margin: 0 0 2rem; }
-.dash-card {
-  display: flex; flex-direction: column; padding: 1.3rem 1.4rem 1.2rem;
-  background: #fff; border: 1px solid var(--adm-line);
+body.admin .dash-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr)); gap: 1.25rem; margin: 0 0 2rem; }
+body.admin .dash-card {
+  display: flex; flex-direction: column; min-width: 0; padding: 1.3rem 1.4rem 1.2rem;
+  background: #fff; border: 1px solid #e0e0e0;
 }
+body.admin .dash-card:is(:hover, :focus-within) { border-color: #d4d4d4; box-shadow: var(--adm-surface-shadow-raised); }
 .dash-card--alert { border-left: 3px solid #c9c9c9; }
 .dash-card .dash-card__label { /* .dash-card prefix: outranks the base `.app h2` size + margin */
   display: flex; align-items: center; gap: .5rem; margin: 0;
@@ -829,7 +869,7 @@ body.admin .eyebrow {
 body.admin .filterbar--head { flex: 0 1 auto; margin: 0; padding: 0; background: none; border: 0; gap: .5rem .75rem; }
 
 /* status tabs (Rescue list) — plain links carrying the real ?status= values */
-body.admin .tabs { display: flex; flex-wrap: wrap; gap: 0 .25rem; margin: 0 0 1.25rem; border-bottom: 1px solid var(--adm-line); }
+body.admin .tabs { position: relative; display: flex; flex-wrap: wrap; gap: 0 .25rem; margin: 0 0 1.25rem; border-bottom: 1px solid var(--adm-line); }
 body.admin .tab {
   margin-bottom: -1px; padding: .6rem .95rem; border-bottom: 2px solid transparent;
   font-family: var(--adm-mono); font-size: .78rem; letter-spacing: .06em; text-transform: uppercase;
@@ -838,6 +878,13 @@ body.admin .tab {
 }
 body.admin .tab:hover { color: var(--adm-ink); border-bottom-color: #bbb; }
 body.admin .tab.is-active { color: var(--adm-red-dark); border-bottom-color: var(--adm-red); font-weight: 700; }
+body.admin .tabs__indicator {
+  position: absolute; top: 0; left: 0; width: 0; height: 2px; opacity: 0;
+  background: var(--adm-red); pointer-events: none;
+  transition: width 210ms var(--motion-ease), transform 210ms var(--motion-ease);
+}
+body.admin .tabs.has-indicator .tabs__indicator { opacity: 1; }
+body.admin .tabs.has-indicator .tab:is(.is-active, :hover) { border-bottom-color: transparent; }
 
 /* a table in a white panel, with an optional footer strip (count line) */
 body.admin .tablepanel { margin: 1rem 0 1.5rem; background: #fff; border: 1px solid var(--adm-line); }
@@ -888,6 +935,13 @@ body.admin a.tag--rescue:hover { background: var(--adm-red); color: #fff; }
 /* white panels with a header bar (Reports tables, Dashboard lists) */
 body.admin .panelgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr)); gap: 1.25rem; align-items: start; margin: 0 0 1.5rem; }
 body.admin .panel { min-width: 0; background: #fff; border: 1px solid var(--adm-line); }
+body.admin .panelgrid--dashboard .panel {
+  border-color: #e0e0e0;
+}
+body.admin .panelgrid--dashboard .panel:is(:hover, :focus-within) {
+  border-color: #d4d4d4;
+  box-shadow: var(--adm-surface-shadow-raised);
+}
 body.admin .panel__head { padding: .85rem 1.1rem; border-bottom: 1px solid var(--adm-line); }
 body.admin .panel__head h2,
 body.admin .panel__head h3 { margin: 0; font-size: 1.05rem; font-weight: 800; }
@@ -1052,7 +1106,6 @@ body.admin .chip {
 }
 body.admin .chip:hover { background: #ececec; color: var(--adm-ink); }
 body.admin .chip.is-active { background: var(--adm-ink); color: #fff; }
-body.admin .pos-clear { font-size: .85rem; }
 /* narrow (stacked) layout only: a shortcut down to the sale below the catalogue */
 body.admin .pos-jump {
   display: block; margin: 0 0 1rem; padding: .6rem .9rem;
@@ -1061,7 +1114,12 @@ body.admin .pos-jump {
 body.admin .pos-jump::after { content: " \2193"; }
 body.admin .pos-jump:hover { color: #fff; background: #000; }
 
-/* catalogue cards */
+/* catalogue sections and cards */
+body.admin .pos-catalog-group + .pos-catalog-group { margin-top: 1.5rem; }
+body.admin .pos-catalog-group__title {
+  margin: 0 0 .75rem; font-family: var(--adm-mono); font-size: .85rem;
+  font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
 body.admin .pos-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(min(11.5rem, 100%), 1fr)); gap: 1rem;
   margin: 0; padding: 0; list-style: none;
@@ -1084,6 +1142,13 @@ body.admin .pos-item--out .pos-item__price { color: #999; }
 
 /* current sale panel */
 body.admin .pos-sale { background: #fff; border: 1px solid var(--adm-line); }
+@media screen and (prefers-reduced-motion: no-preference) {
+  @keyframes pos-cart-add {
+    from { opacity: .72; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  body.admin .pos-sale--added { animation: pos-cart-add 650ms var(--motion-ease) both; }
+}
 body.admin .pos-sale__head {
   margin: 0; padding: .85rem 1.1rem; background: var(--adm-side); color: #fff;
   font-family: var(--adm-mono); font-size: .85rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
@@ -1135,6 +1200,13 @@ body.admin .pos-sold-links { display: flex; flex-wrap: wrap; gap: .6rem; }
 body.admin .btnlink--outline { background: #fff; color: var(--adm-ink); border-color: var(--adm-ink); }
 body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: var(--adm-ink); color: #fff; }
 
+/* One depth scale across genuine Admin surfaces; only action-bearing Dashboard
+   surfaces gain the stronger hover shadow above. Tables stay flat inside panels. */
+body.admin :is(.card, .dash-card, .panel, .tablepanel, .pos-item, .pos-sale) {
+  box-shadow: var(--adm-surface-shadow);
+  transition: border-color var(--motion-panel) var(--motion-ease), box-shadow var(--motion-panel) var(--motion-ease);
+}
+
 /* two columns from 68rem. Between 68rem and 80rem the 15rem sidebar leaves
    little room, so the sale panel stays at 22rem — the catalogue then keeps two
    card columns instead of one (Phase 7.4a); the full 26rem panel from 80rem. */
@@ -1178,7 +1250,7 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
   body.admin .adm-nav__icon { display: none; }
   body.admin .adm-main { padding: 1.25rem 1rem 2rem; }
 }
-@media (max-width: 30rem) {
+@media (max-width: 40rem) {
   body.admin .adm-user { display: none; }
 }
 /* touch: the quiet text actions (Deactivate / Activate, Remove, Reject request,
@@ -1193,6 +1265,7 @@ body.admin .btnlink--outline:hover { background: var(--adm-ink); border-color: v
    background colours (dark table headers / filled badges would print blank). */
 @media print {
   body.admin { background: #fff; }
+  body.admin :is(.card, .dash-card, .panel, .tablepanel, .pos-item, .pos-sale) { box-shadow: none !important; }
   body.admin .adm-side,
   body.admin .adm-skip { display: none !important; }
   body.admin .adm { display: block; }

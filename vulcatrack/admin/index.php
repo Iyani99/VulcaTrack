@@ -49,12 +49,12 @@ $pageTitle = 'Dashboard';
 $navActive = 'dashboard';
 require __DIR__ . '/../src/Views/partials/admin_top.php';
 ?>
-<header class="pagehead">
+<header class="pagehead pagehead--dashboard">
   <div>
     <h1>Dashboard Overview</h1>
     <p class="pagehead__meta">Figures for <?= e($today) ?></p>
   </div>
-  <a class="btnlink" href="<?= e(vulcatrack_url('/admin/pos.php')) ?>">+ New sale</a>
+  <a class="btnlink btnlink--new-sale" href="<?= e(vulcatrack_url('/admin/pos.php')) ?>">+ New sale</a>
 </header>
 
 <div class="dash-cards">
@@ -90,7 +90,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 </div>
 
 <h2 class="dash-section">Needs Attention</h2>
-<div class="panelgrid">
+<div class="panelgrid panelgrid--dashboard">
   <section class="panel">
     <header class="panel__head"><h3>Low stock items</h3></header>
     <?php if (!$lowItems): ?>
