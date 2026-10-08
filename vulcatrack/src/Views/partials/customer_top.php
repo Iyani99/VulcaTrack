@@ -51,6 +51,7 @@ $nav = [
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($pageTitle ?? 'VulcaTrack') ?> &mdash; VulcaTrack</title>
 <link rel="stylesheet" href="<?= e(vulcatrack_asset('/assets/css/app.css')) ?>">
+<script defer src="<?= e(vulcatrack_asset('/assets/js/customer-nav.js')) ?>"></script>
 <?php if (!empty($useMap)): ?>
 <link rel="stylesheet" href="<?= e(vulcatrack_asset('/assets/lib/leaflet/leaflet.css')) ?>">
 <script defer src="<?= e(vulcatrack_asset('/assets/lib/leaflet/leaflet.js')) ?>"></script>
@@ -65,6 +66,7 @@ $nav = [
     <?php foreach ($nav as $key => [$label, $path]): ?>
       <a href="<?= e(vulcatrack_url($path)) ?>"<?= $navActive === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= e($label) ?></a>
     <?php endforeach; ?>
+    <span class="appnav__indicator" aria-hidden="true"></span>
   </nav>
   <div class="appbar__account">
     <a class="appbar__user" href="<?= e(vulcatrack_url('/customer/profile.php')) ?>" aria-label="<?= e($shellName) ?> (Profile)"><?php

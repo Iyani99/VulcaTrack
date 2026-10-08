@@ -116,14 +116,14 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
   <?php if (!empty($errors['form'])): ?>
     <p class="cu-alert" role="alert"><?= e($errors['form']) ?></p>
   <?php elseif ($errors): ?>
-    <p class="cu-alert" role="alert">Please check the highlighted steps below.</p>
+    <p class="cu-alert" role="alert" data-rescue-field-alert>Please check the highlighted steps below.</p>
   <?php endif; ?>
 
   <form method="post" action="<?= e(vulcatrack_url('/customer/rescue.php')) ?>" novalidate>
     <?= Csrf::field() ?>
 
-    <fieldset class="cu-card rb-step<?= !empty($errors['vehicle_id']) ? ' rb-step--error' : '' ?>"<?= !empty($errors['vehicle_id']) ? ' aria-describedby="err-vehicle"' : '' ?>>
-      <legend class="rb-step__title"><span class="rb-step__num">1</span>Select vehicle</legend>
+    <fieldset class="cu-card rb-step<?= !empty($errors['vehicle_id']) ? ' rb-step--error' : '' ?>" data-rescue-step="vehicle"<?= !empty($errors['vehicle_id']) ? ' aria-describedby="err-vehicle"' : '' ?>>
+      <legend class="rb-step__title"><span class="rb-step__num">1</span>Select vehicle<span class="rb-step__done" aria-hidden="true">&#10003;</span></legend>
       <div class="rb-vehicles">
         <?php foreach ($vehicles as $veh): ?>
           <?php $details = array_filter([$veh['make'] ?? '', $veh['model'] ?? '']); ?>
@@ -139,16 +139,16 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
       <p class="rb-note">Not listed? <a href="<?= e(vulcatrack_url('/customer/vehicles.php')) ?>">Manage my vehicles</a></p>
     </fieldset>
 
-    <section class="cu-card rb-step<?= !empty($errors['problem_description']) ? ' rb-step--error' : '' ?>">
-      <h2 class="rb-step__title"><span class="rb-step__num">2</span>Describe the issue</h2>
+    <section class="cu-card rb-step<?= !empty($errors['problem_description']) ? ' rb-step--error' : '' ?>" data-rescue-step="problem">
+      <h2 class="rb-step__title"><span class="rb-step__num">2</span>Describe the issue<span class="rb-step__done" aria-hidden="true">&#10003;</span></h2>
       <label class="sr-only" for="problem_description">Describe the problem</label>
       <textarea id="problem_description" name="problem_description" rows="4" maxlength="2000" required
                 placeholder="What happened? e.g. flat rear tire, the car can't move, parked beside the public market."<?= !empty($errors['problem_description']) ? ' aria-invalid="true" aria-describedby="err-problem"' : '' ?>><?= e($old['problem_description']) ?></textarea>
       <?php if (!empty($errors['problem_description'])): ?><small class="error" id="err-problem"><?= e($errors['problem_description']) ?></small><?php endif; ?>
     </section>
 
-    <section class="cu-card rb-step<?= !empty($errors['location']) ? ' rb-step--error' : '' ?>">
-      <h2 class="rb-step__title"><span class="rb-step__num">3</span>Confirm location</h2>
+    <section class="cu-card rb-step<?= !empty($errors['location']) ? ' rb-step--error' : '' ?>" data-rescue-step="location">
+      <h2 class="rb-step__title"><span class="rb-step__num">3</span>Confirm location<span class="rb-step__done" aria-hidden="true">&#10003;</span></h2>
 
       <div class="mapwrap">
         <div id="otg-map" class="otg-map"
@@ -212,6 +212,7 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
   </form>
 
   <script src="<?= e(vulcatrack_asset('/assets/js/otg-map.js')) ?>" defer></script>
+  <script src="<?= e(vulcatrack_asset('/assets/js/rescue-completion.js')) ?>" defer></script>
 <?php endif; ?>
 </div>
 

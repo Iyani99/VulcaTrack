@@ -32,4 +32,4 @@
       <span class="cauth-brand__sub">On-the-Go Vulcanizing Services</span>
     </span>
   </a>
-  <section class="cauth-card" aria-labelledby="cauth-title">
+  <section class="cauth-card<?= !empty($customerLogin) ? ' cauth-card--customer-login' : '' ?>" aria-labelledby="cauth-title">

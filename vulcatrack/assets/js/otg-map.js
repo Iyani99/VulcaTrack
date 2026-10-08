@@ -97,6 +97,9 @@
     if (latInput) { latInput.value = lat.toFixed(7); }
     if (lngInput) { lngInput.value = lng.toFixed(7); }
     setStatus('Location set: ' + lat.toFixed(5) + ', ' + lng.toFixed(5), 'ok');
+    if (!readonly && el.closest('.rb')) {
+      el.dispatchEvent(new Event('otg:locationchange'));
+    }
   }
 
   function drawLine() {

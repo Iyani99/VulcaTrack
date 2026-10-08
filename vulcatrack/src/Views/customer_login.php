@@ -9,6 +9,7 @@
  * phone login); there is no "Forgot password?" link (no reset flow exists).
  */
 $backLink = ['Back to home page', '/'];
+$customerLogin = true;
 require __DIR__ . '/partials/customer_auth_top.php';
 ?>
 <h1 class="cauth-title" id="cauth-title">Welcome! Please log in.</h1>
