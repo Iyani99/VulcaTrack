@@ -42,6 +42,7 @@ $nav = [
     'dashboard' => ['Home',          '/customer/dashboard.php'],
     'rescue'    => ['Book a Rescue', '/customer/rescue.php'],
     'bookings'  => ['My Bookings',   '/customer/bookings.php'],
+    'purchases' => ['Purchase History', '/customer/purchases.php'],
     'profile'   => ['Profile',       '/customer/profile.php'],
 ];
 ?><!doctype html>

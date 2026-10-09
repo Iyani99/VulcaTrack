@@ -188,6 +188,61 @@ class SaleRepository
     }
 
     /**
+     * Customer purchase history, newest first. Ordinary sales must name this
+     * customer; Rescue sales additionally require an eligible request owned by
+     * the same customer. A missing or mismatched request is never disclosed.
+     * Walk-in sales have no customer_id and cannot match.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public function listForCustomer(int $customerId): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT s.sale_id, s.sale_date, s.total_amount, s.service_request_id
+             FROM sales s
+             LEFT JOIN service_requests sr ON sr.request_id = s.service_request_id
+             WHERE s.customer_id = ?
+               AND (s.service_request_id IS NULL
+                    OR (sr.customer_id = ? AND sr.status IN ('accepted', 'completed')))
+             ORDER BY s.sale_date DESC, s.sale_id DESC"
+        );
+        $stmt->execute([$customerId, $customerId]);
+        $rows = $stmt->fetchAll();
+        foreach ($rows as $i => $row) {
+            $rows[$i]['total_amount_centavos'] = Money::toCentavos((string) $row['total_amount']);
+        }
+        return $rows;
+    }
+
+    /**
+     * One customer-owned sale. The Rescue owner and eligible status are checked
+     * in the same query, so a mismatched Rescue link cannot expose its details.
+     * Null also covers another customer's sale, a walk-in sale, or an unknown id.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function findForCustomer(int $saleId, int $customerId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT s.sale_id, s.sale_date, s.total_amount, s.service_request_id,
+                    sr.status AS rescue_status
+             FROM sales s
+             LEFT JOIN service_requests sr ON sr.request_id = s.service_request_id
+             WHERE s.sale_id = ? AND s.customer_id = ?
+               AND (s.service_request_id IS NULL
+                    OR (sr.customer_id = ? AND sr.status IN ('accepted', 'completed')))
+             LIMIT 1"
+        );
+        $stmt->execute([$saleId, $customerId, $customerId]);
+        $row = $stmt->fetch();
+        if ($row === false) {
+            return null;
+        }
+        $row['total_amount_centavos'] = Money::toCentavos((string) $row['total_amount']);
+        return $row;
+    }
+
+    /**
      * Recorded sales for the admin Sales History list, newest first
      * (sale_date DESC, then sale_id DESC so equal timestamps stay in a fixed
      * order). One query: each sale joined to its recording admin and, for a
