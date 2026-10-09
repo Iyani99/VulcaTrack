@@ -59,6 +59,7 @@ unset($_SESSION['tireman_flash']);
 
 $status   = tireman_status($_GET);
 $tiremen  = $repo->list($status === 'all' ? null : $status === 'active');
+$assignmentSummaries = $repo->assignmentSummaries();
 
 $pageTitle = 'Tiremen';
 $navActive = 'tiremen';
@@ -94,24 +95,27 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <p class="muted"><?= e($countText) ?></p>
   <p class="muted">No Tiremen to show.</p>
 <?php else: ?>
-  <div class="tablepanel">
-  <div class="table-scroll">
-  <table class="datatable mobile-records">
-    <thead>
-      <tr><th>Name</th><th>Contact number</th><th>State</th><th></th></tr>
-    </thead>
-    <tbody>
+  <div class="tireman-grid">
     <?php foreach ($tiremen as $row): ?>
-      <?php $isActive = $row['is_active'] === 1; ?>
-      <tr>
-        <td class="cell-strong" data-label="Name" data-record-primary><?= e($row['name']) ?></td>
-        <td data-label="Contact number"><?= e($row['contact_number']) ?></td>
-        <td data-label="State" data-record-status>
-          <span class="badge badge--<?= $isActive ? 'active' : 'inactive' ?>">
-            <?= $isActive ? 'Active' : 'Inactive' ?>
-          </span>
-        </td>
-        <td class="rowactions" data-label="Actions" data-record-actions>
+      <?php
+        $isActive = $row['is_active'] === 1;
+        $counts = $assignmentSummaries[$row['tireman_id']] ?? ['assigned' => 0, 'completed' => 0];
+      ?>
+      <article class="tireman-card">
+        <div class="tireman-card__top">
+          <span class="tireman-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21c0-4 3-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg></span>
+          <div class="tireman-card__identity">
+            <h2><?= e($row['name']) ?></h2>
+            <span class="badge badge--<?= $isActive ? 'active' : 'inactive' ?>"><?= $isActive ? 'Active' : 'Inactive' ?></span>
+          </div>
+        </div>
+        <dl class="tireman-card__facts">
+          <div><dt>Contact</dt><dd><?= e($row['contact_number']) ?></dd></div>
+          <div><dt>Assigned rescues</dt><dd><?= $counts['assigned'] ?></dd></div>
+          <div><dt>Completed</dt><dd><?= $counts['completed'] ?></dd></div>
+        </dl>
+        <div class="tireman-card__actions">
+          <a class="tireman-card__view" href="<?= e(vulcatrack_url('/admin/tireman-view.php?id=' . (int) $row['tireman_id'])) ?>">View details <span aria-hidden="true">&rarr;</span></a>
           <a href="<?= e(vulcatrack_url('/admin/tireman-edit.php?id=' . (int) $row['tireman_id'])) ?>">Edit</a>
           <form method="post" action="<?= e(vulcatrack_url('/admin/tiremen.php')) ?>">
             <?= Csrf::field() ?>
@@ -128,14 +132,11 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
               <button type="submit" class="linklike linklike--neutral">Activate</button>
             <?php endif; ?>
           </form>
-        </td>
-      </tr>
+        </div>
+      </article>
     <?php endforeach; ?>
-    </tbody>
-  </table>
   </div>
-  <p class="tablepanel__foot"><?= e($countText) ?></p>
-  </div>
+  <p class="tireman-count muted"><?= e($countText) ?></p>
 <?php endif; ?>
 
 <?php require __DIR__ . '/../src/Views/partials/admin_bottom.php'; ?>

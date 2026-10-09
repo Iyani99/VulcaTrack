@@ -69,6 +69,40 @@ final class TiremanRepository
         return $this->list(true);
     }
 
+    /** @return array<int,array{assigned: int, completed: int}> Indexed by Tireman ID. */
+    public function assignmentSummaries(): array
+    {
+        $rows = $this->pdo->query(
+            "SELECT tireman_id, COUNT(*) AS assigned,
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed
+             FROM service_requests WHERE tireman_id IS NOT NULL GROUP BY tireman_id"
+        )->fetchAll();
+        $summaries = [];
+        foreach ($rows as $row) {
+            $summaries[(int) $row['tireman_id']] = [
+                'assigned' => (int) $row['assigned'],
+                'completed' => (int) $row['completed'],
+            ];
+        }
+        return $summaries;
+    }
+
+    /** @return array<int,array<string,mixed>> Rescue history for an existing Tireman. */
+    public function listAssignments(int $tiremanId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT sr.request_id, sr.status, sr.requested_at, sr.updated_at,
+                    c.full_name AS customer_name, v.make, v.model, v.plate_number
+             FROM service_requests sr
+             JOIN customers c ON c.customer_id = sr.customer_id
+             JOIN vehicles v ON v.vehicle_id = sr.vehicle_id
+             WHERE sr.tireman_id = ?
+             ORDER BY sr.requested_at DESC, sr.request_id DESC'
+        );
+        $stmt->execute([$tiremanId]);
+        return $stmt->fetchAll();
+    }
+
     /** Insert a Tireman (active by default). Callers pass validated values. */
     public function create(string $name, string $contactNumber): int
     {

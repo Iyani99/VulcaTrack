@@ -35,8 +35,11 @@ if ($editing) {
         $pageTitle = 'Item not found';
         $navActive = 'inventory';
         require __DIR__ . '/../src/Views/partials/admin_top.php';
-        echo '<h1>Item not found</h1><p class="muted">No inventory item has that id.</p>';
-        echo '<p><a href="' . e(vulcatrack_url('/admin/inventory.php')) . '">Back to inventory</a></p>';
+        $notFoundTitle = 'Item not found';
+        $notFoundMessage = 'No inventory item has that number.';
+        $notFoundBackUrl = vulcatrack_url('/admin/inventory.php');
+        $notFoundBackLabel = 'Back to inventory';
+        require __DIR__ . '/../src/Views/partials/not_found.php';
         require __DIR__ . '/../src/Views/partials/admin_bottom.php';
         exit;
     }

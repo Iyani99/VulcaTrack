@@ -63,8 +63,11 @@ if ($request === null) {
     $pageTitle = 'Request not found';
     $navActive = 'rescue';
     require __DIR__ . '/../src/Views/partials/admin_top.php';
-    echo '<h1>Request not found</h1><p class="muted">No rescue request has that number.</p>';
-    echo '<p><a href="' . e(vulcatrack_url('/admin/rescue.php')) . '">Back to rescue requests</a></p>';
+    $notFoundTitle = 'Request not found';
+    $notFoundMessage = 'No rescue request has that number.';
+    $notFoundBackUrl = vulcatrack_url('/admin/rescue.php');
+    $notFoundBackLabel = 'Back to rescue requests';
+    require __DIR__ . '/../src/Views/partials/not_found.php';
     require __DIR__ . '/../src/Views/partials/admin_bottom.php';
     exit;
 }

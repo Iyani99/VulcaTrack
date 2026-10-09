@@ -30,10 +30,20 @@ require __DIR__ . '/partials/customer_auth_top.php';
          value="<?= e($old['email'] ?? '') ?>" required autofocus autocomplete="email">
 
   <label for="password">Password</label>
-  <input type="password" id="password" name="password" required autocomplete="current-password">
+  <div class="cauth-password">
+    <input type="password" id="password" name="password" required autocomplete="current-password">
+    <button class="cauth-password__toggle" type="button" aria-label="Show password" aria-pressed="false" aria-controls="password">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M2.5 12s3.5-5.5 9.5-5.5 9.5 5.5 9.5 5.5-3.5 5.5-9.5 5.5S2.5 12 2.5 12Z"/>
+        <circle cx="12" cy="12" r="2.5"/>
+        <path class="cauth-password__slash" d="M3.5 20.5 20.5 3.5"/>
+      </svg>
+    </button>
+  </div>
 
   <button type="submit" class="cauth-submit">Log in</button>
 </form>
+<script defer src="<?= e(vulcatrack_asset('/assets/js/customer-password.js')) ?>"></script>
 
 <p class="cauth-alt">Don't have an account? <a href="<?= e(vulcatrack_url('/register.php')) ?>">Sign up</a></p>
 <p class="cauth-admin"><a href="<?= e(vulcatrack_url('/admin/login.php')) ?>">Admin? Sign in here</a></p>

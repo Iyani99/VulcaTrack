@@ -85,13 +85,17 @@ function feedback_when(string $datetime): string
 $pageTitle = $request ? 'Rate Request #' . $requestId : 'Request not found';
 $navActive = 'bookings';
 $mainClass = 'app--wide';
+if ($request === null) {
+    http_response_code(404);
+}
 require __DIR__ . '/../src/Views/partials/customer_top.php';
 
 if ($request === null) {
-    http_response_code(404);
-    echo '<h1>Request not found</h1>';
-    echo '<p class="muted">That request is not on your account.</p>';
-    echo '<p><a href="' . e(vulcatrack_url('/customer/bookings.php')) . '">Back to my bookings</a></p>';
+    $notFoundTitle = 'Request not found';
+    $notFoundMessage = 'That request is not on your account.';
+    $notFoundBackUrl = vulcatrack_url('/customer/bookings.php');
+    $notFoundBackLabel = 'Back to my bookings';
+    require __DIR__ . '/../src/Views/partials/not_found.php';
     require __DIR__ . '/../src/Views/partials/customer_bottom.php';
     exit;
 }

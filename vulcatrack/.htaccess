@@ -2,6 +2,7 @@
 
 Options -Indexes
 DirectoryIndex index.php index.html
+ErrorDocument 404 /vulcatrack/404.php
 
 # Block source / data file types from being served directly
 <FilesMatch "\.(md|sql|dbml|example|dist|ini|log|lock)$">

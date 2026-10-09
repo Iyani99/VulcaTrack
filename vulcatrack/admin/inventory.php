@@ -133,7 +133,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <h1>Inventory</h1>
     <p class="pagehead__meta">Products and services in one list.</p>
   </div>
-  <a class="btnlink" href="<?= e(vulcatrack_url('/admin/item-edit.php')) ?>">Add item</a>
+  <a class="btnlink btnlink--new-sale" href="<?= e(vulcatrack_url('/admin/item-edit.php')) ?>">Add item</a>
 </div>
 
 <?php if ($flash !== null): ?>

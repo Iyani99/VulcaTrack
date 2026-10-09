@@ -32,8 +32,11 @@ if ($editing && $tireman === null) {
     $pageTitle = 'Tireman not found';
     $navActive = 'tiremen';
     require __DIR__ . '/../src/Views/partials/admin_top.php';
-    echo '<h1>Tireman not found</h1><p class="muted">No Tireman has that id.</p>';
-    echo '<p><a href="' . e(vulcatrack_url('/admin/tiremen.php')) . '">Back to Tiremen</a></p>';
+    $notFoundTitle = 'Tireman not found';
+    $notFoundMessage = 'No Tireman has that number.';
+    $notFoundBackUrl = vulcatrack_url('/admin/tiremen.php');
+    $notFoundBackLabel = 'Back to Tiremen';
+    require __DIR__ . '/../src/Views/partials/not_found.php';
     require __DIR__ . '/../src/Views/partials/admin_bottom.php';
     exit;
 }

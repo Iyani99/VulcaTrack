@@ -71,8 +71,11 @@ if ($sale === null) {
     $pageTitle = 'Sale not found';
     $navActive = 'pos';
     require __DIR__ . '/../src/Views/partials/admin_top.php';
-    echo '<h1>Sale not found</h1><p class="muted">No recorded sale has that number.</p>';
-    echo '<p><a href="' . e(vulcatrack_url('/admin/pos.php')) . '">Back to POS</a></p>';
+    $notFoundTitle = 'Sale not found';
+    $notFoundMessage = 'No recorded sale has that number.';
+    $notFoundBackUrl = vulcatrack_url('/admin/pos.php');
+    $notFoundBackLabel = 'Back to POS';
+    require __DIR__ . '/../src/Views/partials/not_found.php';
     require __DIR__ . '/../src/Views/partials/admin_bottom.php';
     exit;
 }

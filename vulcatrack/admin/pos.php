@@ -499,7 +499,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <?php else: ?>
     <?php foreach (['service' => 'Services Offered', 'product' => 'Products'] as $groupType => $groupTitle): ?>
       <?php if (!$catalogGroups[$groupType]) { continue; } ?>
-    <section class="pos-catalog-group" aria-labelledby="pos-group-<?= $groupType ?>">
+    <section class="pos-catalog-group pos-catalog-group--<?= $groupType ?>" aria-labelledby="pos-group-<?= $groupType ?>">
       <h3 class="pos-catalog-group__title" id="pos-group-<?= $groupType ?>"><?= $groupTitle ?></h3>
       <ul class="pos-grid">
     <?php foreach ($catalogGroups[$groupType] as $row): ?>
