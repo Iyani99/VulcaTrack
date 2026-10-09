@@ -32,6 +32,25 @@ test('ReportPeriod validates query state and uses exact calendar boundaries', fu
     assert_count(12, ReportPeriod::monthOptions([], $today, null), 'an empty shop can still choose the past year of months');
 });
 
+test('ReportPeriod accepts only chart focus buckets inside the selected interval', function () {
+    $today = '2026-10-09';
+    $daily = ReportPeriod::resolve('7d', null, $today);
+    assert_same('2026-10-03', ReportPeriod::resolveFocus('2026-10-03', $daily));
+    assert_same('2026-10-09', ReportPeriod::resolveFocus('2026-10-09', $daily));
+    foreach (['2026-10-02', '2026-10-10', '2026-02-30', '2026-10', ['2026-10-09']] as $bad) {
+        assert_same(null, ReportPeriod::resolveFocus($bad, $daily));
+    }
+    $year = ReportPeriod::resolve('365d', null, $today);
+    assert_same('2025-10', ReportPeriod::resolveFocus('2025-10', $year), 'partial first month remains a real bucket');
+    assert_same('2026-10', ReportPeriod::resolveFocus('2026-10', $year));
+    foreach (['2025-09', '2026-11', '2026-10-09', '2026-13'] as $bad) {
+        assert_same(null, ReportPeriod::resolveFocus($bad, $year));
+    }
+    $month = ReportPeriod::resolve('month', '2024-02', $today);
+    assert_same('2024-02-29', ReportPeriod::resolveFocus('2024-02-29', $month));
+    assert_same(null, ReportPeriod::resolveFocus('2024-03-01', $month));
+});
+
 test('ReportChart fills rolling-year monthly buckets including partial and empty months', function () {
     $rows = [['month' => '2026-01', 'transaction_count' => 2, 'total_centavos' => 12345]];
     $filled = ReportChart::fillMonths($rows, '2025-12-15', '2026-02-03');

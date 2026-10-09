@@ -2,6 +2,7 @@
 
 namespace VulcaTrack\Repository;
 
+use DateTimeImmutable;
 use InvalidArgumentException;
 use PDO;
 use VulcaTrack\Support\OtgStatus;
@@ -120,6 +121,32 @@ final class ServiceRequestRepository
         $stmt->execute([$customerId]);
 
         return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Current resolved statuses for requests submitted in an inclusive date window.
+     * This is not a completion-date metric: the schema has no completion timestamp.
+     * @return array{completed:int,rejected:int}
+     */
+    public function resolvedRequestedBetween(string $from, string $to): array
+    {
+        if (!SaleRepository::isValidDay($from) || !SaleRepository::isValidDay($to) || $from > $to) {
+            throw new InvalidArgumentException('Invalid Rescue report range.');
+        }
+        $whereTo = $to === '9999-12-31' ? '' : ' AND requested_at < ?';
+        $params = [$from . ' 00:00:00'];
+        if ($whereTo !== '') {
+            $params[] = (new DateTimeImmutable($to))->modify('+1 day')->format('Y-m-d') . ' 00:00:00';
+        }
+        $stmt = $this->pdo->prepare(
+            "SELECT COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) AS completed,
+                    COALESCE(SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END), 0) AS rejected
+             FROM service_requests
+             WHERE requested_at >= ?" . $whereTo
+        );
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return ['completed' => (int) $row['completed'], 'rejected' => (int) $row['rejected']];
     }
 
     /** @return array<string,mixed>|null the customer's most recent request */

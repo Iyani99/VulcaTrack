@@ -14,6 +14,12 @@
       period.addEventListener('change', showMonth);
     });
 
+    var selectedPoint = document.querySelector('.rpt-plot__scroll .rpt-point.is-selected');
+    if (selectedPoint) {
+      var chartScroll = selectedPoint.closest('.rpt-plot__scroll');
+      chartScroll.scrollLeft = selectedPoint.offsetLeft + selectedPoint.offsetWidth / 2 - chartScroll.clientWidth / 2;
+    }
+
     if (!('IntersectionObserver' in window) ||
         window.matchMedia('(prefers-reduced-motion: reduce)').matches) { return; }
 

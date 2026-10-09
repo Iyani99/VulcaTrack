@@ -51,6 +51,24 @@ final class ReportPeriod
         ];
     }
 
+    /** A chart bucket inside the resolved period, or null for malformed/out-of-range input. */
+    public static function resolveFocus($focus, array $period): ?string
+    {
+        if (!is_string($focus)) {
+            return null;
+        }
+        if ($period['monthly']) {
+            return preg_match('/^[1-9]\d{3}-(0[1-9]|1[0-2])$/D', $focus) === 1
+                && $focus >= substr($period['from'], 0, 7)
+                && $focus <= substr($period['to'], 0, 7)
+                ? $focus : null;
+        }
+        return preg_match('/^([1-9]\d{3})-(\d{2})-(\d{2})$/D', $focus, $parts) === 1
+            && checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1])
+            && $focus >= $period['from'] && $focus <= $period['to']
+            ? $focus : null;
+    }
+
     /** @return array<int,string> Every month from first recorded sale through the current/sold latest month. */
     public static function monthOptions(array $recordedMonths, string $today, ?string $selected): array
     {

@@ -14,6 +14,7 @@
  */
 
 use VulcaTrack\Repository\SaleRepository;
+use VulcaTrack\Repository\ServiceRequestRepository;
 use VulcaTrack\Support\Money;
 use VulcaTrack\Support\ReportChart;
 use VulcaTrack\Support\ReportPeriod;
@@ -47,6 +48,15 @@ function reports_pct(float $value): string
     return sprintf('%.4F%%', $value);
 }
 
+/** Keep the validated main period when a chart point is selected or cleared. */
+function reports_period_url(array $period, ?string $focus = null): string
+{
+    $query = ['period' => $period['period']];
+    if ($period['month'] !== null) { $query['month'] = $period['month']; }
+    if ($focus !== null) { $query['focus'] = $focus; }
+    return vulcatrack_url('/admin/reports.php') . '?' . http_build_query($query);
+}
+
 $today = date('Y-m-d');
 $sales = new SaleRepository(vulcatrack_db());
 $period = ReportPeriod::resolve($_GET['period'] ?? null, $_GET['month'] ?? null, $today, '30d', true);
@@ -56,6 +66,11 @@ $to = $period['to'];
 $rangeLabel = $period['label'] . ': ' . $from . ($from === $to ? '' : ' to ' . $to);
 
 $summary = $sales->summarize($from, $to);
+$resolvedRescues = (new ServiceRequestRepository(vulcatrack_db()))->resolvedRequestedBetween($from, $to);
+$resolvedCount = $resolvedRescues['completed'] + $resolvedRescues['rejected'];
+$rescueRate = $resolvedCount > 0
+    ? rtrim(rtrim(number_format($resolvedRescues['completed'] * 100 / $resolvedCount, 1, '.', ''), '0'), '.') . '%'
+    : null;
 $daily   = $sales->listDailyTotals($from, $to);
 $items   = $sales->listItemTotals($from, $to);
 $sources = $sales->summarizeBySource($from, $to);
@@ -68,6 +83,16 @@ $days = $period['monthly']
         ReportChart::fillMonths($sales->listMonthlyTotals($from, $to), $from, $to))
     : ReportChart::fillDays($daily, $from, $period['days']);
 $slotCount = count($days);
+$explicitFocus = ReportPeriod::resolveFocus($_GET['focus'] ?? null, $period);
+$focus = $explicitFocus ?? ($period['period'] === 'today' ? $from : null);
+$focusRow = null;
+foreach ($days as $day) {
+    if ($day['day'] === $focus) { $focusRow = $day; break; }
+}
+$focusFrom = $focus === null ? null : ($period['monthly'] ? max($from, $focus . '-01') : $focus);
+$focusTo = $focus === null ? null : ($period['monthly']
+    ? min($to, (new DateTimeImmutable($focus . '-01'))->modify('last day of this month')->format('Y-m-d'))
+    : $focus);
 $winTotal = 0;
 $winCount = 0;
 $peak     = null; // index of the (first) highest period
@@ -78,19 +103,31 @@ foreach ($days as $i => $d) {
         $peak = $i;
     }
 }
+$transactionCount = (int) $summary['count'];
+$totalCentavos = (int) $summary['total_centavos'];
+// Round the integer-centavo quotient to the nearest centavo, half up.
+$averageCentavos = $transactionCount > 0
+    ? intdiv($totalCentavos, $transactionCount)
+        + ((($totalCentavos % $transactionCount) >= intdiv($transactionCount + 1, 2)) ? 1 : 0)
+    : null;
+$transactionContext = $period['period'] === 'today' ? 'For today.'
+    : ($period['period'] === 'month' ? 'Across ' . $period['label'] . '.'
+    : 'Across the selected ' . $period['days'] . '-day range.');
 $scale = ReportChart::scale($peak === null ? 0 : $days[$peak]['total_centavos']);
 $ticks = $scale['step'] > 0 ? range(0, $scale['max'], $scale['step']) : [0]; // centavos; no sales → just ₱0
-// no bar to draw: either no sales at all, or only ₱0 sales (a free service) — never claim "no sales" then
-$emptyWindow = $winCount === 0 ? 'No sales in this window' : 'No revenue in this window';
-
-// SVG geometry (px vertically, % horizontally so the plot fills any width).
-$chartH   = 230;
-$plotTop  = 26;              // headroom for the peak-value label
-$baseline = $chartH - 28;    // x-axis labels sit below it
+// Line geometry: the same validated buckets drive chart coordinates and focus.
+$chartH   = 238;
+$plotTop  = 22;
+$baseline = 188;
 $plotH    = $baseline - $plotTop;
 $slot     = 100 / $slotCount;
-$barW     = min($slot * 0.62, 3.4); // thin bars (about 24px at desktop widths), never filling the slot
 $yOf      = fn (int $c): float => $baseline - ($scale['max'] > 0 ? $c / $scale['max'] * $plotH : 0);
+$lineCoords = [];
+foreach ($days as $i => $day) {
+    $lineCoords[] = sprintf('%.2F %.2F', ($i + 0.5) * 1000 / $slotCount, $yOf($day['total_centavos']));
+}
+$linePath = 'M ' . implode(' L ', $lineCoords);
+$chartMobileWidth = max(280, $slotCount * 28);
 
 $pageTitle = 'Reports';
 $navActive = 'reports';
@@ -108,13 +145,33 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <p class="report-range">Range: <strong><?= e($rangeLabel) ?></strong></p>
 
   <div class="cardgrid">
-    <section class="card card--stat">
+    <section class="card card--stat rpt-summary-card">
       <p class="card__label">Transactions</p>
-      <p class="card__num"><?= (int) $summary['count'] ?></p>
+      <p class="card__num"><?= $transactionCount ?></p>
+      <?php if ($transactionCount === 0): ?>
+        <p class="rpt-summary-card__context">No transactions in this period.</p>
+      <?php else: ?>
+        <p class="rpt-summary-card__context"><?= (int) $sources['in_shop']['count'] ?> in-shop &middot; <?= (int) $sources['rescue']['count'] ?> Rescue-linked</p>
+        <p class="rpt-summary-card__note"><?= e($transactionContext) ?></p>
+      <?php endif; ?>
     </section>
-    <section class="card card--stat card--accent">
+    <section class="card card--stat card--accent rpt-summary-card">
       <p class="card__label">Total Sales</p>
-      <p class="card__num"><?= reports_peso((int) $summary['total_centavos']) ?></p>
+      <p class="card__num"><?= reports_peso($totalCentavos) ?></p>
+      <p class="rpt-summary-card__context">Average sale: <?= $averageCentavos === null ? '&mdash;' : reports_peso($averageCentavos) ?></p>
+      <?php if ($peak !== null): ?>
+        <p class="rpt-summary-card__note">Peak <?= $period['monthly'] ? 'month' : 'day' ?>: <strong><?= reports_day($days[$peak]['day'], false, $period['monthly']) ?> &middot; <?= reports_peso((int) $days[$peak]['total_centavos']) ?></strong></p>
+      <?php else: ?>
+        <p class="rpt-summary-card__note"><?= $transactionCount === 0 ? 'No sales in this period.' : 'No sales revenue in this period.' ?></p>
+      <?php endif; ?>
+    </section>
+    <section class="card card--stat rpt-rescue-rate" aria-label="Rescue Success Rate for the selected report period">
+      <p class="card__label">Rescue Success Rate</p>
+      <p class="card__num"><?= $rescueRate === null ? '&mdash;' : e($rescueRate) ?></p>
+      <p class="rpt-rescue-rate__context"><?= $resolvedCount === 0
+          ? 'No resolved rescues'
+          : (int) $resolvedRescues['completed'] . ' of ' . $resolvedCount . ' resolved rescues completed' ?></p>
+      <p class="rpt-rescue-rate__note">Requests submitted in this range, by current status. Pending and accepted are excluded.</p>
     </section>
   </div>
 
@@ -131,51 +188,68 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       Chart total: <strong><?= reports_peso($winTotal) ?></strong>
       from <?= $winCount ?> <?= $winCount === 1 ? 'transaction' : 'transactions' ?>
     </p>
-    <div class="rpt-plot">
-      <svg class="rpt-plot__bars" width="100%" height="<?= $chartH ?>" role="img" aria-labelledby="rpt-svg-title rpt-svg-desc">
-        <title id="rpt-svg-title"><?= $period['monthly'] ? 'Monthly' : 'Daily' ?> sales, <?= reports_day($from) ?> to <?= reports_day($to) ?></title>
-        <desc id="rpt-svg-desc"><?php if ($peak === null): ?><?= $emptyWindow ?>.<?php else: ?>Total <?= reports_peso($winTotal) ?> from <?= $winCount ?> <?= $winCount === 1 ? 'transaction' : 'transactions' ?>; highest <?= $period['monthly'] ? 'month' : 'day' ?> <?= reports_day($days[$peak]['day'], false, $period['monthly']) ?> at <?= reports_peso($days[$peak]['total_centavos']) ?>. Exact values are in the Daily Sales table.<?php endif; ?></desc>
-        <defs><clipPath id="rpt-clip"><rect x="0" y="0" width="100%" height="<?= $baseline ?>"/></clipPath></defs>
-        <?php foreach ($ticks as $t): if ($t > 0): ?>
-          <line class="rpt-grid" x1="0" x2="100%" y1="<?= round($yOf($t), 1) ?>" y2="<?= round($yOf($t), 1) ?>"/>
-        <?php endif; endforeach; ?>
-        <line class="rpt-base" x1="0" x2="100%" y1="<?= $baseline ?>" y2="<?= $baseline ?>"/>
-        <?php foreach ($days as $i => $d): $c = $d['total_centavos']; $n = $d['transaction_count']; ?>
-          <g class="rpt-day" data-day="<?= e($d['day']) ?>" data-centavos="<?= $c ?>">
-            <title><?= reports_day($d['day'], false, $period['monthly']) ?>: <?= reports_peso($c) ?> &middot; <?= $n ?> <?= $n === 1 ? 'transaction' : 'transactions' ?></title>
-            <rect class="rpt-hit" x="<?= reports_pct($i * $slot) ?>" y="0" width="<?= reports_pct($slot) ?>" height="<?= $baseline ?>"/>
-            <?php if ($c > 0): $top = min($yOf($c), $baseline - 2); /* a tiny day still shows 2px above zero */ ?>
-              <rect class="rpt-bar" clip-path="url(#rpt-clip)" x="<?= reports_pct(($i + 0.5) * $slot - $barW / 2) ?>" y="<?= round($top, 1) ?>" width="<?= reports_pct($barW) ?>" height="<?= round($baseline - $top + 4, 1) ?>" rx="3"/>
+    <div class="rpt-plot" role="group" aria-label="Sales performance line chart; select a point to focus its period">
+      <div class="rpt-plot__scroll" tabindex="0" aria-label="Sales graph; scroll horizontally for more dates">
+        <div class="rpt-plot__canvas" style="--rpt-mobile-width: <?= $chartMobileWidth ?>px">
+          <svg class="rpt-plot__line" width="100%" height="<?= $chartH ?>" viewBox="0 0 1000 <?= $chartH ?>" preserveAspectRatio="none" aria-hidden="true">
+            <?php foreach ($ticks as $tick): if ($tick > 0): ?>
+              <line class="rpt-grid" x1="0" x2="1000" y1="<?= round($yOf($tick), 1) ?>" y2="<?= round($yOf($tick), 1) ?>"/>
+            <?php endif; endforeach; ?>
+            <line class="rpt-base" x1="0" x2="1000" y1="<?= $baseline ?>" y2="<?= $baseline ?>"/>
+            <?php if ($slotCount > 1): ?>
+              <path class="rpt-line" pathLength="1" d="<?= e($linePath) ?>"/>
             <?php endif; ?>
-          </g>
-        <?php endforeach; ?>
-        <?php if ($peak !== null):
-            $cx = ($peak + 0.5) * $slot;
-            $anchor = $cx < 12 ? 'start' : ($cx > 88 ? 'end' : 'middle');
-            $lx = $anchor === 'start' ? $peak * $slot : ($anchor === 'end' ? ($peak + 1) * $slot : $cx); ?>
-          <text class="rpt-peak" x="<?= reports_pct($lx) ?>" y="<?= round(min($yOf($days[$peak]['total_centavos']), $baseline - 2) - 8, 1) ?>" text-anchor="<?= $anchor ?>"><?= reports_peso($days[$peak]['total_centavos']) ?></text>
-        <?php else: ?>
-          <text class="rpt-empty" x="50%" y="<?= round($plotTop + $plotH / 2, 1) ?>" text-anchor="middle"><?= $emptyWindow ?></text>
-        <?php endif; ?>
-        <?php $labels = ReportChart::labelIndexes($slotCount); $lastLabel = end($labels);
-        $midLabel = $labels[intdiv(count($labels) - 1, 2)];
-        foreach ($labels as $i):
-            if ($slotCount === 1) { $anchor = 'middle'; $lx = 50; }
-            elseif ($i === 0) { $anchor = 'start'; $lx = 0; }
-            elseif ($i === $lastLabel) { $anchor = 'end'; $lx = 100; }
-            else { $anchor = 'middle'; $lx = ($i + 0.5) * $slot; }
-            // a narrow plot keeps only the first, middle and last label of a long window (CSS container query)
-            $minor = $slotCount > 12 && $i !== 0 && $i !== $lastLabel && $i !== $midLabel; ?>
-          <text class="rpt-xlabel<?= $minor ? ' rpt-xlabel--minor' : '' ?>" x="<?= reports_pct($lx) ?>" y="<?= $baseline + 19 ?>" text-anchor="<?= $anchor ?>"><?= reports_day($days[$i]['day'], true, $period['monthly']) ?></text>
-        <?php endforeach; ?>
-      </svg>
-      <svg class="rpt-plot__axis" width="100%" height="<?= $chartH ?>" aria-hidden="true">
-        <?php foreach ($ticks as $t): ?>
-          <text class="rpt-ytick" x="8" y="<?= round($yOf($t) + 4, 1) ?>"><?= reports_axis_peso($t) ?></text>
+          </svg>
+          <?php foreach ($days as $i => $day):
+              $dayKey = $day['day'];
+              $dayTotal = (int) $day['total_centavos'];
+              $dayCount = (int) $day['transaction_count'];
+              $pointLabel = (new DateTimeImmutable($period['monthly'] ? $dayKey . '-01' : $dayKey))
+                  ->format($period['monthly'] ? 'F Y' : 'F j, Y');
+          ?>
+            <a class="rpt-point<?= $focus === $dayKey ? ' is-selected' : '' ?>"
+               href="<?= e(reports_period_url($period, $dayKey) . '#focused-period') ?>"
+               style="left: <?= reports_pct(($i + 0.5) * $slot) ?>; top: <?= round($yOf($dayTotal), 1) ?>px; width: min(24px, <?= reports_pct($slot * .9) ?>)"
+               aria-label="<?= e($pointLabel . ': ₱' . Money::formatDisplay($dayTotal) . ' in sales from ' . $dayCount . ($dayCount === 1 ? ' transaction' : ' transactions') . '. View details.') ?>"
+               <?= $focus === $dayKey ? 'aria-current="true"' : '' ?>>
+              <span class="rpt-point__dot" aria-hidden="true"></span>
+            </a>
+          <?php endforeach; ?>
+          <?php $labels = ReportChart::labelIndexes($slotCount); $lastLabel = end($labels);
+          foreach ($labels as $i): ?>
+            <span class="rpt-xlabel<?= $i === 0 ? ' rpt-xlabel--first' : ($i === $lastLabel ? ' rpt-xlabel--last' : '') ?>"
+                  style="left: <?= reports_pct(($i + 0.5) * $slot) ?>"><?= reports_day($days[$i]['day'], true, $period['monthly']) ?></span>
+          <?php endforeach; ?>
+        </div>
+      </div>
+      <svg class="rpt-plot__axis" width="76" height="<?= $chartH ?>" aria-hidden="true">
+        <?php foreach ($ticks as $tick): ?>
+          <text class="rpt-ytick" x="8" y="<?= round($yOf($tick) + 4, 1) ?>"><?= reports_axis_peso($tick) ?></text>
         <?php endforeach; ?>
       </svg>
     </div>
-    <p class="panel__foot muted"><?= $period['monthly'] ? 'Months' : 'Days' ?> without sales are shown as &#8369;0. Hover a <?= $period['monthly'] ? 'month' : 'day' ?> for its total; exact sales dates are in the Daily Sales table.</p>
+    <p class="panel__foot muted"><?= $period['monthly'] ? 'Months' : 'Days' ?> without sales remain at &#8369;0. Select a chart point to view its details; the graph scrolls on small screens.</p>
+    <?php if ($focusRow !== null): ?>
+      <section class="rpt-focus" id="focused-period" aria-labelledby="rpt-focus-title">
+        <div class="rpt-focus__head">
+          <div>
+            <p class="rpt-focus__eyebrow">Focused <?= $period['monthly'] ? 'month' : 'date' ?></p>
+            <h3 id="rpt-focus-title"><?= reports_day($focus, false, $period['monthly']) ?></h3>
+          </div>
+          <?php if ($explicitFocus !== null && $period['period'] !== 'today'): ?>
+            <a href="<?= e(reports_period_url($period)) ?>">Whole interval</a>
+          <?php endif; ?>
+        </div>
+        <?php if ($period['monthly'] && ($focusFrom !== $focus . '-01' || $focusTo !== (new DateTimeImmutable($focus . '-01'))->modify('last day of this month')->format('Y-m-d'))): ?>
+          <p class="rpt-focus__scope">Within the selected report range: <?= e($focusFrom) ?> to <?= e($focusTo) ?></p>
+        <?php endif; ?>
+        <dl class="rpt-focus__stats">
+          <div><dt>Transactions</dt><dd><?= (int) $focusRow['transaction_count'] ?></dd></div>
+          <div><dt>Sales total</dt><dd><?= reports_peso((int) $focusRow['total_centavos']) ?></dd></div>
+        </dl>
+        <a class="rpt-focus__sales" href="<?= e(vulcatrack_url('/admin/sales.php') . '?' . http_build_query(['from' => $focusFrom, 'to' => $focusTo])) ?>">View in Sales History &rarr;</a>
+      </section>
+    <?php endif; ?>
   </section>
 
   <section class="panel rpt-source" aria-labelledby="rpt-source-h">
@@ -213,16 +287,17 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php if (!$daily): ?>
       <p class="panel__note muted"><?= e($empty) ?></p>
     <?php else: ?>
-      <p class="panel__note muted">Days without sales are not listed.</p>
+      <p class="panel__note muted">Days without sales are not listed.<?= $focusRow !== null ? ' Dates in the focused period are marked below.' : '' ?></p>
       <div class="table-scroll">
       <table class="datatable">
         <thead>
           <tr><th>Date</th><th class="num">Transactions</th><th class="num">Total Sales</th></tr>
         </thead>
         <tbody>
-        <?php foreach ($daily as $d): ?>
-          <tr>
-            <td><?= e($d['day']) ?></td>
+        <?php foreach ($daily as $d):
+            $rowFocused = $focus !== null && ($period['monthly'] ? substr($d['day'], 0, 7) === $focus : $d['day'] === $focus); ?>
+          <tr<?= $rowFocused ? ' class="rpt-row--focused" aria-current="true"' : '' ?>>
+            <td><?= $rowFocused ? '<span class="rpt-row__marker">Focus</span> ' : '' ?><?= e($d['day']) ?></td>
             <td class="num"><?= (int) $d['transaction_count'] ?></td>
             <td class="num"><?= reports_peso((int) $d['total_centavos']) ?></td>
           </tr>
