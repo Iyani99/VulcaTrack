@@ -82,6 +82,29 @@ final class ReportChart
         return $out;
     }
 
+    /** Fill every calendar month intersecting a rolling window, including zero months. */
+    public static function fillMonths(array $rows, string $from, string $to): array
+    {
+        $byMonth = [];
+        foreach ($rows as $row) {
+            $byMonth[$row['month']] = $row;
+        }
+        $cursor = new DateTimeImmutable(substr($from, 0, 7) . '-01');
+        $last = substr($to, 0, 7);
+        $out = [];
+        while ($cursor->format('Y-m') <= $last) {
+            $month = $cursor->format('Y-m');
+            $out[] = [
+                'month' => $month,
+                'transaction_count' => (int) ($byMonth[$month]['transaction_count'] ?? 0),
+                'total_centavos' => (int) ($byMonth[$month]['total_centavos'] ?? 0),
+            ];
+            if ($month === $last) { break; }
+            $cursor = $cursor->modify('+1 month');
+        }
+        return $out;
+    }
+
     /**
      * A y-axis for a largest value of $maxCentavos: a clean whole-peso step
      * (1, 2, 2.5 or 5 × a power of ten) giving about $ticks gridlines, and the

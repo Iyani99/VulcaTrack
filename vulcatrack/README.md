@@ -37,9 +37,9 @@ list with a status filter, detail page with a read-only map) and Chunk 6.3 the
 **status actions**: accept (with an active Tireman), reassign, reject, complete --
 rejected / completed are final. **Sales History** lists every recorded sale, newest
 first, with an optional From / To date filter; each row opens its Transaction Summary.
-**Sales Reports** totals the same kind of range: transactions, total sales, daily
-totals, source split and items sold. The later Sales Performance chart has its
-own stated day window. No schema change.
+**Sales Reports** originally totaled the same kind of range: transactions,
+total sales, daily totals, source split and items sold. Later period controls
+give all report figures one shared window. No schema change.
 
 ## Design / decision documents
 
@@ -146,7 +146,7 @@ database table (Decision 37); route/ETA code reads from here.
 | `admin/pos.php` | Point of Sale: pick active items, session-backed cart (one line per item; max 50 items / 9,999 per item), optional link to an **existing** customer (blank = walk-in; the POS never creates accounts), cash received + change (checked on the server, **never stored**), then **Complete sale**. **Rescue mode** (Phase 7.3d): opened from a Rescue request with *Record sale in POS* -- the customer is locked to the request's customer, the usual cart and checkout record the sale linked to that request, and the result card links back to it. It only starts from an empty ordinary cart, and a POS form from another tab that no longer matches the cart's context is refused. |
 | `admin/transaction-summary.php?id=N` | Printable **Transaction Summary** of a recorded sale -- shop name/address, sale no., date/time, cashier, customer or Walk-in, *Rescue request #N* for a Rescue sale, lines with the **frozen** unit price, total. Browser print; *"For transaction reference only. Not an official BIR invoice."* No payment method is shown (none is stored). |
 | `admin/sales.php` | Phase 6, read-only **Sales History**: every recorded sale, newest first (sale no., date/time, cashier, customer or Walk-in, **source** -- *In-shop* or *Rescue #N* linking to the request, stored total). Optional From / To filter on the sale date (both inclusive; no filter by default). *View* opens the sale's Transaction Summary. Recorded sales cannot be edited or deleted. |
-| `admin/reports.php` | Read-only **Sales Reports** over an optional From / To range (all recorded sales by default; the range is shown). **Transactions** and **Total Sales** cards; **Sales Performance** chart with its own stated day window; **Sales by Source** (In-shop / Rescue); **Daily Sales** (date, transactions, total, newest first, only days with sales); **Items Sold** (item, quantity, revenue from the price recorded at sale time). No export. Sold item types are protected from edits; the report does not currently show a product/service split. |
+| `admin/reports.php` | Read-only **Sales Reports** for Today, the last 7, 30, or 365 days, or a selected calendar month (30 days by default). One validated date range governs the **Transactions** and **Total Sales** cards, **Sales Performance** chart, **Sales by Source** (In-shop / Rescue), **Daily Sales** table, and **Items Sold** table. Daily chart slots include zero-sales days; the rolling year chart groups by month. Item revenue uses the recorded sale-time price. No export or product/service split; sold item types remain protected from edits. |
 | `admin/tiremen.php` | Phase 6.1. Tiremen (the non-login people who perform OTG jobs): Active / Inactive / All filter; activate / deactivate is POST + CSRF (soft -- never deleted) and returns to the same filter. Tiremen are assigned to requests on the Rescue detail page (active ones only). |
 | `admin/tireman-edit.php` | Add (`?id` absent) / edit (`?id=N`) a Tireman's name and contact number. |
 | `admin/rescue.php` | Phase 6.2, read-only list. Every customer's OTG requests, filtered by status (Pending by default / Accepted / Rejected / Completed / All), newest first. |

@@ -292,6 +292,34 @@ class SaleRepository
         return $rows;
     }
 
+    /** Monthly totals inside an inclusive date window; boundary months may be partial. */
+    public function listMonthlyTotals(string $from, string $to): array
+    {
+        [$where, $params] = $this->saleDateRange($from, $to);
+        $stmt = $this->pdo->prepare(
+            'SELECT DATE_FORMAT(s.sale_date, \'%Y-%m\') AS sale_month, COUNT(*) AS sale_count, SUM(s.total_amount) AS total
+             FROM sales s' . $where . '
+             GROUP BY sale_month ORDER BY sale_month ASC'
+        );
+        $stmt->execute($params);
+        $rows = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $rows[] = [
+                'month' => (string) $row['sale_month'],
+                'transaction_count' => (int) $row['sale_count'],
+                'total_centavos' => Money::toCentavos((string) $row['total']),
+            ];
+        }
+        return $rows;
+    }
+
+    /** Recorded months for the shared month selector, newest first. */
+    public function listSaleMonths(): array
+    {
+        return $this->pdo->query("SELECT DISTINCT DATE_FORMAT(sale_date, '%Y-%m') AS sale_month FROM sales ORDER BY sale_month DESC")
+            ->fetchAll(PDO::FETCH_COLUMN);
+    }
+
     /**
      * Sales by source for the range (Phase 7.4d): 'in_shop' — sales with no
      * Rescue request (service_request_id IS NULL) — and 'rescue' — sales

@@ -37,6 +37,9 @@ $nav = [
 <link rel="icon" type="image/png" sizes="192x192" href="<?= e(vulcatrack_asset('/assets/img/vulcatrack-favicon.png')) ?>">
 <link rel="stylesheet" href="<?= e(vulcatrack_asset('/assets/css/app.css')) ?>">
 <script src="<?= e(vulcatrack_asset('/assets/js/admin-nav.js')) ?>"></script>
+<?php if (!empty($useReportMotion)): ?>
+<script defer src="<?= e(vulcatrack_asset('/assets/js/report-motion.js')) ?>"></script>
+<?php endif; ?>
 <?php if (!empty($useMap)): ?>
 <link rel="stylesheet" href="<?= e(vulcatrack_asset('/assets/lib/leaflet/leaflet.css')) ?>">
 <script defer src="<?= e(vulcatrack_asset('/assets/lib/leaflet/leaflet.js')) ?>"></script>

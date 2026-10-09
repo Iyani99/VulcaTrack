@@ -130,7 +130,7 @@ test('admin dashboard: guards, sales-today / low-stock / pending cards, links', 
         assert_same((string) ($basePending + 2), $pendingValue, 'only pending requests count');
 
         // each card links to the page behind its number
-        assert_contains('href="/vulcatrack/admin/reports.php?from=' . $today . '&amp;to=' . $today . '"', $html);
+        assert_contains('href="/vulcatrack/admin/reports.php?period=today"', $html);
         assert_contains('href="/vulcatrack/admin/inventory.php?low_stock=1"', $html);
         assert_contains('href="/vulcatrack/admin/rescue.php?status=pending"', $html);
         assert_not_contains('<form method="post" action="/vulcatrack/admin/index.php"', $html, 'read-only');
@@ -157,7 +157,7 @@ test('admin dashboard: guards, sales-today / low-stock / pending cards, links', 
 
         // The trend reuses recorded daily totals and fills the seven calendar
         // days oldest first, including any day with no recorded sales.
-        assert_contains('<h2 id="dash-trend-title">Sales Trend — Last 7 Days</h2>', $html);
+        assert_contains('<h2 id="dash-trend-title">Sales Trend — Last 7 days</h2>', $html);
         assert_contains('class="dash-trend__line" pathLength="1"', $html, 'the line is ready for a progressive draw');
         preg_match_all('/<li data-day="(\d{4}-\d{2}-\d{2})" data-centavos="(\d+)">/', $html, $trendRows, PREG_SET_ORDER);
         assert_count(7, $trendRows, 'exactly seven trend days');
@@ -169,7 +169,33 @@ test('admin dashboard: guards, sales-today / low-stock / pending cards, links', 
             assert_same((string) $expected, $trendRows[$i][2], 'trend day uses the recorded total, including zero days');
             $expectedTotal += $expected;
         }
-        assert_contains('7-day total <strong>&#8369;' . Money::formatDisplay($expectedTotal) . '</strong>', $html);
+        assert_contains('Trend total <strong>&#8369;' . Money::formatDisplay($expectedTotal) . '</strong>', $html);
+
+        $dashboardUrl = '/vulcatrack/admin/index.php';
+        $thirty = $server->request($dashboardUrl . '?period=30d')['body'];
+        assert_contains('Sales Trend — Last 30 days', $thirty);
+        preg_match_all('/<li data-day="(\d{4}-\d{2}-\d{2})" data-centavos="(\d+)">/', $thirty, $thirtyRows);
+        assert_count(30, $thirtyRows[0], '30d keeps one recorded or zero slot for each day');
+        assert_contains('Total Sales (Today)', $thirty, 'the period does not redefine the today card');
+        assert_contains('&#8369;' . Money::formatDisplay($baseSales['total_centavos'] + 12345), $thirty);
+
+        $year = $server->request($dashboardUrl . '?period=365d')['body'];
+        assert_contains('Sales Trend — Last 365 days', $year);
+        preg_match_all('/<li data-day="(\d{4}-\d{2})" data-centavos="(\d+)">/', $year, $monthRows);
+        assert_true(count($monthRows[0]) >= 12 && count($monthRows[0]) <= 13, 'rolling 365 days is grouped into calendar months');
+        assert_contains('data-day="' . substr($today, 0, 7) . '"', $year);
+
+        $selected = substr($today, 0, 7);
+        $month = $server->request($dashboardUrl . '?period=month&month=' . $selected)['body'];
+        assert_contains('Sales Trend — ' . date('M Y', strtotime($selected . '-01')), $month);
+        preg_match_all('/<li data-day="(\d{4}-\d{2}-\d{2})" data-centavos="(\d+)">/', $month, $monthDays);
+        assert_count((int) date('t', strtotime($selected . '-01')), $monthDays[0], 'specific month includes every calendar day');
+
+        $emptyMonth = $server->request($dashboardUrl . '?period=month&month=1000-02')['body'];
+        assert_same(28, preg_match_all('/<li data-day="1000-02-\d{2}" data-centavos="0">/', $emptyMonth), 'empty historical month has real zero days');
+        foreach (['?period=bad', '?period=month&month=2026-02-31', '?period[]=30d'] as $badPeriod) {
+            assert_contains('Sales Trend — Last 7 days', $server->request($dashboardUrl . $badPeriod)['body'], 'invalid period falls back to 7d');
+        }
 
         // the Inventory low-stock view lists the seeded low product and not the others
         $inv = $server->request('/vulcatrack/admin/inventory.php?low_stock=1&q=' . $tag)['body'];

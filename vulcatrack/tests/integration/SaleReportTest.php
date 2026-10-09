@@ -1,7 +1,7 @@
 <?php
 /**
  * Integration tests for the Sales Reports reads on SaleRepository —
- * summarize(), listDailyTotals(), listItemTotals(), summarizeBySource(). Each test runs inside a
+ * summarize(), listDailyTotals(), listMonthlyTotals(), listItemTotals(), summarizeBySource(). Each test runs inside a
  * transaction that is rolled back, so the database is left untouched.
  *
  * Sales are seeded through createSale() / addSaleItem() with fixed 2001 dates
@@ -83,6 +83,18 @@ test('SaleRepository::listDailyTotals groups by calendar day of sale_date, newes
         assert_same([['day' => '2001-07-02', 'transaction_count' => 1, 'total_centavos' => 300000]],
             $repo->listDailyTotals('2001-07-02', '2001-07-02'), 'From = To keeps only that day');
         assert_same([], $repo->listDailyTotals('2001-01-01', '2001-01-31'), 'no rows for an empty range');
+    });
+});
+
+test('SaleRepository::listMonthlyTotals respects partial boundary months', function () {
+    $pdo = test_pdo();
+    TestDb::rollback($pdo, function () use ($pdo) {
+        report_fixture($pdo);
+        $repo = new SaleRepository($pdo);
+        assert_same([['month' => '2001-07', 'transaction_count' => 2, 'total_centavos' => 319550]],
+            $repo->listMonthlyTotals('2001-07-02', '2001-08-02'), 'July 1 is excluded even though it shares a month');
+        assert_same([], $repo->listMonthlyTotals('2001-08-01', '2001-08-31'), 'empty month has no DB group for ReportChart to fill');
+        assert_true(in_array('2001-07', $repo->listSaleMonths(), true));
     });
 });
 

@@ -8,6 +8,37 @@
 namespace VulcaTrack\Tests;
 
 use VulcaTrack\Support\ReportChart;
+use VulcaTrack\Support\ReportPeriod;
+
+test('ReportPeriod validates query state and uses exact calendar boundaries', function () {
+    $today = '2026-10-09';
+    assert_same(['from' => '2026-10-03', 'to' => $today, 'days' => 7], array_intersect_key(ReportPeriod::resolve(null, null, $today), array_flip(['from', 'to', 'days'])));
+    assert_same('2026-09-10', ReportPeriod::resolve('30d', null, $today)['from']);
+    assert_same('2025-10-10', ReportPeriod::resolve('365d', null, $today)['from']);
+    $february = ReportPeriod::resolve('month', '2024-02', $today);
+    assert_same('2024-02-29', $february['to'], 'leap-year month ends on the 29th');
+    assert_same(29, $february['days']);
+    assert_same('Feb 2024', $february['label']);
+    foreach (['2026-13', '2026-2', '2026-02-01', ['2026-02'], '0999-12'] as $badMonth) {
+        assert_same('7d', ReportPeriod::resolve('month', $badMonth, $today)['period']);
+    }
+    assert_same('30d', ReportPeriod::resolve(['365d'], null, $today, '30d')['period']);
+    assert_same('7d', ReportPeriod::resolve('today', null, $today)['period'], 'Today is reserved for the Reports card link');
+    assert_same(1, ReportPeriod::resolve('today', null, $today, '30d', true)['days']);
+    $options = ReportPeriod::monthOptions(['2001-07', '2026-08'], $today, null);
+    assert_same('2026-10', $options[0]);
+    assert_same('2001-07', end($options));
+    assert_true(in_array('2001-08', $options, true), 'empty months between recorded sales remain selectable');
+    assert_count(12, ReportPeriod::monthOptions([], $today, null), 'an empty shop can still choose the past year of months');
+});
+
+test('ReportChart fills rolling-year monthly buckets including partial and empty months', function () {
+    $rows = [['month' => '2026-01', 'transaction_count' => 2, 'total_centavos' => 12345]];
+    $filled = ReportChart::fillMonths($rows, '2025-12-15', '2026-02-03');
+    assert_same(['2025-12', '2026-01', '2026-02'], array_column($filled, 'month'));
+    assert_same([0, 2, 0], array_column($filled, 'transaction_count'));
+    assert_same([0, 12345, 0], array_column($filled, 'total_centavos'));
+});
 
 test('ReportChart::window charts a From–To range of up to 92 days in full', function () {
     assert_same(['from' => '2026-09-01', 'to' => '2026-09-30', 'days' => 30, 'follows_filter' => true],

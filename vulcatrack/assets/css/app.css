@@ -920,8 +920,14 @@ body.admin .dash-card:is(:hover, :focus-within) { border-color: #d4d4d4; box-sha
 .dash-card__link:hover { color: var(--adm-red); border-bottom-color: var(--adm-red); }
 .dash-card--alert .dash-card__link { color: var(--adm-red-dark); border-bottom-color: var(--adm-red-dark); }
 
-/* Seven real calendar days, oldest to newest; labels remain readable below the line. */
+/* Sales trend uses daily points or monthly buckets for the rolling year. */
 body.admin .dash-trend { margin: 0 0 1.5rem; }
+body.admin .report-period { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem .75rem; margin: .5rem 1.1rem 0; padding: .6rem 0; border: 0; background: none; }
+body.admin .report-period label { display: grid; gap: .2rem; min-width: 0; }
+body.admin .report-period select { max-width: min(100%, 16rem); min-width: 0; min-height: 2.75rem; margin: 0; }
+body.admin .report-period button { min-height: 2.75rem; }
+body.admin .report-period__month[hidden] { display: none; }
+body.admin .pagehead .report-period { margin: 0; }
 body.admin .dash-trend__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .35rem 1rem; }
 body.admin .dash-trend__range { margin: .2rem 0 0; font-size: .82rem; color: var(--adm-muted); }
 body.admin .dash-trend__total { margin: 0; font-size: .82rem; color: var(--adm-muted); }
@@ -933,13 +939,15 @@ body.admin .dash-trend__plot svg { display: block; width: 100%; height: 150px; o
 body.admin .dash-trend__grid { stroke: #dedede; stroke-width: 1; vector-effect: non-scaling-stroke; }
 body.admin .dash-trend__line { fill: none; stroke: var(--adm-red); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 body.admin .dash-trend__xlabels { display: none; }
+body.admin .dash-trend__xlabels--long { display: grid; grid-template-columns: repeat(var(--trend-columns), minmax(0, 1fr)); margin: .2rem 0 .4rem 5.5rem; font-family: var(--adm-mono); font-size: .62rem; color: var(--adm-muted); text-align: center; }
 body.admin .dash-trend__days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .3rem; margin: .35rem 0 0 5.5rem; padding: 0; list-style: none; }
+body.admin .dash-trend__days--long { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 body.admin .dash-trend__days li { min-width: 0; text-align: center; overflow-wrap: anywhere; }
 body.admin .dash-trend__day { display: block; font-family: var(--adm-mono); font-size: .68rem; color: var(--adm-muted); }
 body.admin .dash-trend__days strong { display: block; font-size: .8rem; color: var(--adm-ink); }
 @media (max-width: 48rem) {
   body.admin .dash-trend__plot { grid-template-columns: 4.5rem minmax(0, 1fr); }
-  body.admin .dash-trend__xlabels { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin: .2rem 0 .4rem 4.5rem; font-family: var(--adm-mono); font-size: .62rem; color: var(--adm-muted); text-align: center; }
+  body.admin .dash-trend__xlabels { display: grid; grid-template-columns: repeat(var(--trend-columns), minmax(0, 1fr)); margin: .2rem 0 .4rem 4.5rem; font-family: var(--adm-mono); font-size: .62rem; color: var(--adm-muted); text-align: center; }
   body.admin .dash-trend__days { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 .8rem; margin-left: 0; }
   body.admin .dash-trend__days li { display: flex; justify-content: space-between; gap: .5rem; padding: .35rem 0; border-bottom: 1px solid var(--adm-line-soft); text-align: left; }
 }
@@ -1071,7 +1079,6 @@ body.admin .rpt-visuals { display: grid; grid-template-columns: minmax(0, 1fr); 
 body.admin .rpt-chart .panel__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; }
 body.admin .rpt-chart__window { margin: 0; font-size: .85rem; color: #444; }
 body.admin .rpt-chart__total { color: #444; }
-body.admin .rpt-chart__scope { margin: 0 1.1rem .6rem; padding: .5rem .7rem; border-left: 3px solid var(--adm-ink); background: #f6f6f6; font-size: .82rem; color: #333; }
 body.admin .rpt-plot { display: flex; padding: 0 0 0 .75rem; background: var(--adm-side); container-type: inline-size; }
 /* the chart's width follows its column, not the viewport: thin out the day labels when the plot is narrow */
 @container (max-width: 34rem) {
@@ -1103,11 +1110,14 @@ body.admin .rpt-src__meter span { display: block; height: 100%; max-width: 100%;
 body.admin .rpt-src__row--rescue .rpt-src__meter span { background: var(--adm-red); }
 @media screen and (prefers-reduced-motion: no-preference) {
   @keyframes dash-trend-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-  body.admin .dash-trend__line { stroke-dasharray: 1; animation: dash-trend-draw 760ms var(--motion-ease) 100ms both; }
+  body.admin.report-motion-ready .dash-trend__line { stroke-dasharray: 1; animation: dash-trend-draw 760ms var(--motion-ease) 100ms both; animation-play-state: paused; }
+  body.admin.report-motion-ready .dash-trend.is-revealed .dash-trend__line { animation-play-state: running; }
   @keyframes rpt-bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-  body.admin .rpt-bar { transform-box: fill-box; transform-origin: center bottom; animation: rpt-bar-grow 760ms var(--motion-ease) both; }
+  body.admin.report-motion-ready .rpt-bar { transform-box: fill-box; transform-origin: center bottom; animation: rpt-bar-grow 760ms var(--motion-ease) both; animation-play-state: paused; }
+  body.admin.report-motion-ready .rpt-chart.is-revealed .rpt-bar { animation-play-state: running; }
   @keyframes rpt-meter-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-  body.admin .rpt-src__meter span { transform-origin: left center; animation: rpt-meter-grow 720ms var(--motion-ease) both; }
+  body.admin.report-motion-ready .rpt-src__meter span { transform-origin: left center; animation: rpt-meter-grow 720ms var(--motion-ease) both; animation-play-state: paused; }
+  body.admin.report-motion-ready .rpt-source.is-revealed .rpt-src__meter span { animation-play-state: running; }
 }
 body.admin .rpt-src__facts { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin: .55rem 0 0; }
 body.admin .rpt-src__facts dt { font-family: var(--adm-mono); font-size: .68rem; letter-spacing: .07em; text-transform: uppercase; color: #555; }
