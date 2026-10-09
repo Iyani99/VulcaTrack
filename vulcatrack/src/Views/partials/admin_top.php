@@ -58,6 +58,7 @@ $nav = [
     <?php foreach ($nav as $key => [$label, $path, $icon]): ?>
       <a href="<?= e(vulcatrack_url($path)) ?>"<?= $navActive === $key ? ' class="is-active" aria-current="page"' : '' ?>><svg class="adm-nav__icon" viewBox="0 0 24 24" aria-hidden="true"><?= $icon ?></svg><span><?= e($label) ?></span></a>
     <?php endforeach; ?>
+    <span class="adm-nav__indicator" aria-hidden="true"></span>
   </nav>
   <div class="adm-side__foot">
     <p class="adm-user"><span class="adm-user__label">Signed in as</span> <span class="adm-user__name"><?= e((string) ($shellAdmin['name'] ?? '')) ?></span></p>

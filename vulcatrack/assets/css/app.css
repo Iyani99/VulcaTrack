@@ -689,7 +689,7 @@ body.admin .adm-brand__sub {
   margin-top: .15rem; font-family: var(--adm-mono); font-size: .7rem;
   letter-spacing: .08em; text-transform: uppercase; color: #9a9ca0;
 }
-body.admin .adm-nav { display: flex; flex-direction: column; gap: .22rem; padding: 1.25rem .55rem; }
+body.admin .adm-nav { position: relative; display: flex; flex-direction: column; gap: .22rem; padding: 1.25rem .55rem; }
 body.admin .adm-nav a {
   display: flex; align-items: center; gap: .8rem; min-height: 3.25rem; padding: .85rem .9rem;
   border-left: 3px solid transparent; color: var(--adm-side-text); text-decoration: none;
@@ -700,6 +700,13 @@ body.admin .adm-nav a {
 body.admin .adm-nav a:is(:hover, :focus-visible) { background: #303236; color: #fff; }
 body.admin .adm-nav a[aria-current="page"] { border-left-color: var(--adm-red); background: var(--adm-side-hover); color: #fff; font-weight: 700; }
 body.admin .adm-nav a[aria-current="page"]:is(:hover, :focus-visible) { background: #303236; }
+body.admin .adm-nav__indicator {
+  position: absolute; top: 0; left: 0; width: 3px; height: 0; opacity: 0;
+  background: var(--adm-red); pointer-events: none;
+  transition: transform 280ms var(--motion-ease), width 280ms var(--motion-ease), height 280ms var(--motion-ease);
+}
+body.admin .adm-nav.has-indicator .adm-nav__indicator { opacity: 1; }
+body.admin .adm-nav.has-indicator a[aria-current="page"] { border-left-color: transparent; }
 @media (min-width: 60.0625rem) and (prefers-reduced-motion: no-preference) {
   body.admin .adm-nav a:is(:hover, :focus-visible) { transform: translateX(2px) scale(1.025); }
   body.admin .adm-nav a:active { transform: translateX(1px) scale(.99); transition-duration: var(--motion-press); }
@@ -1338,6 +1345,7 @@ body.admin :is(.card, .dash-card, .panel, .tablepanel, .pos-item, .pos-sale) {
   body.admin .adm-nav { grid-area: nav; flex-direction: row; flex-wrap: wrap; gap: 0 .15rem; padding: 0 .5rem .35rem; }
   body.admin .adm-nav a { padding: .5rem .55rem; border-left: 0; border-bottom: 3px solid transparent; font-size: .8rem; }
   body.admin .adm-nav a[aria-current="page"] { border-bottom-color: var(--adm-red); }
+  body.admin .adm-nav.has-indicator a[aria-current="page"] { border-bottom-color: transparent; }
   body.admin .adm-nav__icon { display: none; }
   body.admin .adm-main { padding: 1.25rem 1rem 2rem; }
 }
