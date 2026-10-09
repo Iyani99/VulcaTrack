@@ -41,10 +41,10 @@ function reports_day_param(string $name): ?string
     return (is_string($value) && SaleRepository::isValidDay($value)) ? $value : null;
 }
 
-/** Recorded centavos → "₱1234.50" (escaped). */
+/** Recorded centavos → compact UI peso text (escaped). */
 function reports_peso(int $centavos): string
 {
-    return '&#8369;' . e(Money::format($centavos));
+    return '&#8369;' . e(Money::formatDisplay($centavos));
 }
 
 /** 'YYYY-MM-DD' → "Sep 29, 2026" (or "Sep 29" when $short). */

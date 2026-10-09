@@ -118,8 +118,7 @@ $when     = txn_datetime((string) $sale['sale_date']);
   <article class="txn-doc">
     <header class="txn-head">
       <p class="txn-brand">
-        <svg class="txn-brand__pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
-        <span>Vulca<span class="txn-brand__red">Track</span></span>
+        <img src="<?= e(vulcatrack_asset('/assets/img/vulcatrack-logo.svg')) ?>" alt="VulcaTrack — On-the-Go Vulcanizing Services" width="5117" height="1638">
       </p>
       <p class="txn-shop"><?= e($shop['name']) ?></p>
       <p class="txn-address"><?= e($shop['address']) ?></p>

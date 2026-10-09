@@ -257,7 +257,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <p class="rescue-sale__state">Sale recorded</p>
     <dl class="kv">
       <dt>Sale no.</dt><dd>Sale #<?= (int) $linkedSale['sale_id'] ?></dd>
-      <dt>Total</dt><dd class="rescue-sale__total">&#8369;<?= e(Money::format((int) $linkedSale['total_amount_centavos'])) ?></dd>
+      <dt>Total</dt><dd class="rescue-sale__total">&#8369;<?= e(Money::formatDisplay((int) $linkedSale['total_amount_centavos'])) ?></dd>
       <dt>Date / time</dt><dd><?= e(rescue_when((string) $linkedSale['sale_date'])) ?></dd>
       <dt>Recorded by</dt><dd><?= e($linkedSale['admin_name']) ?></dd>
     </dl>

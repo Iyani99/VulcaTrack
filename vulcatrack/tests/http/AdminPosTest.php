@@ -139,6 +139,8 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         assert_not_contains("{$tag} Patching", $productGroup[1]);
         assert_not_contains('stock--na', $serviceGroup[1], 'services do not show a meaningless stock indicator');
         assert_contains('stock stock--ok', $productGroup[1], 'products retain stock status');
+        assert_contains('<p class="pos-item__price">&#8369;150</p>', $productGroup[1], 'whole-peso catalogue price is compact');
+        assert_contains('<p class="pos-item__price">&#8369;200.50</p>', $serviceGroup[1], 'nonzero centavos stay visible');
         assert_contains('<section class="pos-sale" id="sale"', $html, 'Current sale panel');
         assert_not_contains('pos-sale--added', $html, 'initial POS load has no cart-add entrance');
         assert_not_contains('pos-item--product', $html, 'product-specific card treatment is removed');
@@ -293,7 +295,7 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         $body = $page();
         assert_contains('recorded', $body);
         assert_contains('&#8369;820.50', $body, 'total');
-        assert_contains('&#8369;1000.00', $body, 'cash received');
+        assert_contains('&#8369;1,000', $body, 'cash received uses grouped whole pesos');
         assert_contains('&#8369;179.50', $body, 'change = 1000.00 - 820.50, integer centavos');
         assert_contains("{$tag} Linked Customer", $body);
         assert_contains('No items yet', $body, 'the cart is cleared after the sale');
@@ -311,7 +313,7 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         assert_contains('&#8369;820.50', $summary['body'], 'the linked document shows the recorded total');
         // Decision 54: cash received / change live only on the one-time POS card above (from the
         // session); the stored document — even opened straight from that card — never has them.
-        assert_not_contains('&#8369;1000.00', $summary['body'], 'no cash received on the Transaction Summary');
+        assert_not_contains('&#8369;1,000', $summary['body'], 'no cash received on the Transaction Summary');
         assert_not_contains('&#8369;179.50', $summary['body'], 'no change on the Transaction Summary');
         assert_not_contains('Cash received', $summary['body']);
         assert_not_contains('Cash received', $page(), 'nor on the POS once the one-time card has been shown');
@@ -332,7 +334,7 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         // ================= walk-in checkout, exact cash =================
         $post(['_action' => 'add', 'item_id' => (string) $S, 'quantity' => '1']);
         assert_same(302, $checkout('200.50')['status']);
-        assert_contains('&#8369;0.00', $page(), 'exact cash → zero change');
+        assert_contains('<dd class="pos-change-final">&#8369;0</dd>', $page(), 'exact cash → zero change');
         $walkIn = $q('SELECT customer_id, total_amount FROM sales WHERE admin_id = ? ORDER BY sale_id DESC LIMIT 1', [$adminId])->fetch(\PDO::FETCH_ASSOC);
         assert_null($walkIn['customer_id'], 'walk-in sale stores customer_id NULL');
         assert_same('200.50', $walkIn['total_amount']);

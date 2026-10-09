@@ -54,6 +54,7 @@ $allOk = array_reduce($checks, static function ($carry, $row) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VulcaTrack -- Environment Check</title>
+<link rel="icon" type="image/png" sizes="192x192" href="<?= e(vulcatrack_asset('/assets/img/vulcatrack-favicon.png')) ?>">
 <style>
   body{font-family:system-ui,"Segoe UI",Arial,sans-serif;margin:2rem auto;max-width:48rem;padding:0 1rem;color:#1a1a1a}
   table{border-collapse:collapse;width:100%;margin-top:1rem}

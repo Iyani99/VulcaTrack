@@ -196,7 +196,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
           </span>
         </td>
         <td><?= $row['category'] !== null && $row['category'] !== '' ? e($row['category']) : '<span class="muted">—</span>' ?></td>
-        <td class="num cell-money">&#8369;<?= e(Money::format((int) $row['price_centavos'])) ?></td>
+        <td class="num cell-money">&#8369;<?= e(Money::formatDisplay((int) $row['price_centavos'])) ?></td>
         <td><span class="stock stock--<?= $chip ?>"><?= e($chipLabel) ?></span></td>
         <td class="num">
           <?php if ($isProduct && $row['reorder_level'] !== null): ?>

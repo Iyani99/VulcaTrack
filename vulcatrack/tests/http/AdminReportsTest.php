@@ -159,12 +159,12 @@ test('sales reports: guards, cards, daily + items tables, escaping, date filters
         $f = $flat($html);
         assert_contains('Range: <strong>2001-07-01 to 2001-07-31</strong>', $html);
         assert_contains('<p class="card__label">Transactions</p> ' . $card('3'), $f, 'Transactions card');
-        assert_contains('<p class="card__label">Total Sales</p> ' . $card('&#8369;632.00'), $f, 'Total Sales card');
+        assert_contains('<p class="card__label">Total Sales</p> ' . $card('&#8369;632'), $f, 'Total Sales card');
         assert_true(strpos($f, $dayRow('2001-07-02', 1, '45.50')) !== false
             && strpos($f, $dayRow('2001-07-02', 1, '45.50')) < strpos($f, $dayRow('2001-07-01', 2, '586.50')),
             'daily rows: 23:59:59 stays on its day, 00:00:00 starts the next; newest day first');
-        assert_true(strpos($f, $itemRow($valveName, 4, '182.00')) !== false
-            && strpos($f, $itemRow($valveName, 4, '182.00')) < strpos($f, $itemRow($patchName, 3, '450.00')),
+        assert_true(strpos($f, $itemRow($valveName, 4, '182')) !== false
+            && strpos($f, $itemRow($valveName, 4, '182')) < strpos($f, $itemRow($patchName, 3, '450')),
             'items sold: frozen revenue, most units first');
         assert_not_contains('999.99', $html, 'the current catalog price is never used');
         assert_not_contains('<img src=x', $html, 'item names are escaped');
@@ -178,11 +178,11 @@ test('sales reports: guards, cards, daily + items tables, escaping, date filters
         assert_contains($chartDay('2001-07-01', 58650), $html, 'a day with two sales: its recorded total');
         assert_contains($chartDay('2001-07-02', 4550), $html);
         assert_contains($chartDay('2001-07-03', 0), $html, 'a day without sales is a real zero day');
-        assert_contains('<title>Jul 3, 2001: &#8369;0.00 &middot; 0 transactions</title>', $html, 'zero day tooltip');
+        assert_contains('<title>Jul 3, 2001: &#8369;0 &middot; 0 transactions</title>', $html, 'zero day tooltip');
         assert_contains('<title>Jul 1, 2001: &#8369;586.50 &middot; 2 transactions</title>', $html);
         assert_same(2, $barCount($html), 'bars only for the two days with revenue — no filler bars');
         assert_same(1, preg_match_all('~<text class="rpt-peak"[^>]*>&#8369;586\.50</text>~', $html), 'only the peak day is labelled, with its real total');
-        assert_contains('Chart total: <strong>&#8369;632.00</strong> from 3 transactions', $f, 'chart total = the cards for this range');
+        assert_contains('Chart total: <strong>&#8369;632</strong> from 3 transactions', $f, 'chart total = the cards for this range');
         assert_contains('>&#8369;600</text>', $html, 'clean y-axis top');
         assert_not_contains('rpt-chart__scope', $html, 'no window note when the chart is the filter range');
         assert_contains('role="img" aria-labelledby="rpt-svg-title rpt-svg-desc"', $html, 'the SVG is labelled for assistive tech');
@@ -191,15 +191,15 @@ test('sales reports: guards, cards, daily + items tables, escaping, date filters
         }
 
         // ================= Sales by Source: In-shop only in July =================
-        $assertSource($html, 'inshop', '100.0%', 3, '632.00');
-        $assertSource($html, 'rescue', '0.0%', 0, '0.00');
+        $assertSource($html, 'inshop', '100.0%', 3, '632');
+        $assertSource($html, 'rescue', '0.0%', 0, '0');
         assert_contains('For <strong>2001-07-01 to 2001-07-31</strong>', $f, 'the source panel states its range');
 
         // Rescue only (August) — chart + source
         $html = $server->request($URL . '?from=2001-08-01&to=2001-08-31')['body'];
         $assertClean($html, 'reports august');
-        $assertSource($html, 'rescue', '100.0%', 1, '368.00');
-        $assertSource($html, 'inshop', '0.0%', 0, '0.00');
+        $assertSource($html, 'rescue', '100.0%', 1, '368');
+        $assertSource($html, 'inshop', '0.0%', 0, '0');
         assert_contains($chartDay('2001-08-10', 36800), $html, 'the Rescue sale is charted on its day');
         assert_same(1, $barCount($html));
 
@@ -207,8 +207,8 @@ test('sales reports: guards, cards, daily + items tables, escaping, date filters
         $html = $server->request($URL . '?from=2001-07-01&to=2001-08-31')['body'];
         assert_contains('(62 days)', $html);
         assert_same(62, $dayCount($html));
-        $assertSource($html, 'inshop', '63.2%', 3, '632.00');
-        $assertSource($html, 'rescue', '36.8%', 1, '368.00');
+        $assertSource($html, 'inshop', '63.2%', 3, '632');
+        $assertSource($html, 'rescue', '36.8%', 1, '368');
         assert_contains('style="width: 63.2%"', $html, 'the meter shows revenue share only');
 
         // a ₱0 sale: a real transaction, but no revenue to share or to draw
@@ -216,12 +216,12 @@ test('sales reports: guards, cards, daily + items tables, escaping, date filters
         $f = $flat($html);
         $assertClean($html, 'reports september');
         assert_contains($card('1'), $f);
-        $assertSource($html, 'inshop', '&mdash;', 1, '0.00');
-        $assertSource($html, 'rescue', '&mdash;', 0, '0.00');
+        $assertSource($html, 'inshop', '&mdash;', 1, '0');
+        $assertSource($html, 'rescue', '&mdash;', 0, '0');
         assert_contains('No revenue in this range, so no revenue share is shown.', $html, 'no fake percentages');
         assert_same(0, $barCount($html));
         assert_contains('>No revenue in this window</text>', $html, 'not "no sales" — there was one');
-        assert_contains('Chart total: <strong>&#8369;0.00</strong> from 1 transaction', $f);
+        assert_contains('Chart total: <strong>&#8369;0</strong> from 1 transaction', $f);
 
         // ================= chart window vs a wider or one-sided filter =================
         $f = $flat($server->request($URL . '?from=2001-07-01&to=2001-12-31')['body']);
@@ -243,7 +243,7 @@ test('sales reports: guards, cards, daily + items tables, escaping, date filters
         assert_contains($card('2'), $f);
         assert_contains($card('&#8369;586.50'), $f);
         assert_not_contains('<td>2001-07-02</td>', $f);
-        assert_contains($itemRow($patchName, 3, '450.00'), $f);
+        assert_contains($itemRow($patchName, 3, '450'), $f);
         assert_contains($itemRow($valveName, 3, '136.50'), $f);
 
         // ================= From only / To only (row checks; open ends may include dev sales) =================
@@ -284,14 +284,14 @@ test('sales reports: guards, cards, daily + items tables, escaping, date filters
         assert_same(200, $r['status']);
         $f = $flat($r['body']);
         assert_contains($card('0'), $f, '0 transactions');
-        assert_contains($card('&#8369;0.00'), $f, '₱0.00 total');
+        assert_contains($card('&#8369;0'), $f, '₱0 total');
         assert_same(3, substr_count($f, 'No sales in this date range.'), 'both tables and Sales by Source show the empty message');
         assert_not_contains('<table', $f);
         assert_not_contains('rpt-src__share', $f, 'no percentages without sales');
         assert_same(31, $dayCount($f), 'the empty month is still charted as 31 zero days');
         assert_same(0, $barCount($f));
         assert_contains('>No sales in this window</text>', $f);
-        assert_contains('Chart total: <strong>&#8369;0.00</strong> from 0 transactions', $f);
+        assert_contains('Chart total: <strong>&#8369;0</strong> from 0 transactions', $f);
         assert_contains('>Clear</a>', $f);
 
         $log = $server->serverStderr();

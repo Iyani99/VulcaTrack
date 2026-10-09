@@ -27,6 +27,18 @@ test('Money::format renders integer centavos as a two-place decimal string', fun
     assert_same('1.50', Money::format(150));
 });
 
+test('Money::formatDisplay groups whole pesos and keeps nonzero centavos', function () {
+    assert_same('900', Money::formatDisplay(90000));
+    assert_same('1,250', Money::formatDisplay(125000));
+    assert_same('899.50', Money::formatDisplay(89950));
+    assert_same('100.05', Money::formatDisplay(10005));
+    assert_same('0', Money::formatDisplay(0));
+    assert_same('0.05', Money::formatDisplay(5));
+    assert_same('99,999,999.99', Money::formatDisplay(Money::MAX_CENTAVOS));
+    assert_same('-1,250.05', Money::formatDisplay(-125005));
+    assert_same('1250.00', Money::format(125000), 'fixed-precision storage and document formatting remains unchanged');
+});
+
 test('Money round-trips a DB-style decimal string without drift', function () {
     foreach (['0.00', '0.01', '7.00', '19.99', '1234.56', '99999999.99'] as $decimal) {
         assert_same($decimal, Money::format(Money::toCentavos($decimal)), "round-trip {$decimal}");

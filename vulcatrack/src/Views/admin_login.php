@@ -11,6 +11,7 @@
  * customer login, which in turn links here.
  */
 $backLink = ['Back to Customer Login', '/login.php'];
+$adminLogin = true;
 require __DIR__ . '/partials/customer_auth_top.php';
 ?>
 <h1 class="cauth-title cauth-title--tight" id="cauth-title">Administrator Access</h1>

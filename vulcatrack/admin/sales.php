@@ -89,7 +89,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
         <td><?= $s['service_request_id'] !== null
             ? '<a class="tag tag--rescue" href="' . e(vulcatrack_url('/admin/rescue-view.php?id=' . (int) $s['service_request_id'])) . '">Rescue #' . (int) $s['service_request_id'] . '</a>'
             : '<span class="tag tag--inshop">In-shop</span>' ?></td>
-        <td class="num cell-money">&#8369;<?= e(Money::format((int) $s['total_amount_centavos'])) ?></td>
+        <td class="num cell-money">&#8369;<?= e(Money::formatDisplay((int) $s['total_amount_centavos'])) ?></td>
         <td class="rowactions">
           <a href="<?= e(vulcatrack_url('/admin/transaction-summary.php?id=' . (int) $s['sale_id'])) ?>">View</a>
         </td>

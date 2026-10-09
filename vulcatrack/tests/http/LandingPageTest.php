@@ -48,8 +48,18 @@ test('landing page: public, accurate content, entry links, no stale or live-trac
                   'id="features"', 'id="how-it-works"'] as $link) {
             assert_contains($link, $html, "landing page has {$link}");
         }
+        assert_contains('/assets/js/landing-motion.js', $html, 'landing reveal script is loaded');
+        assert_contains('class="lp-btn lp-btn--rescue"', $html, 'hero rescue action has the primary treatment');
+        assert_not_contains('class="lp-btn lp-btn--dark"', $html, 'hero no longer has an Admin Portal button');
+        assert_same(11, substr_count($html, 'data-lp-reveal'), 'two headings, two subtitles, three features and four steps reveal');
+        assert_true(strpos($html, '<h3>Book</h3>') < strpos($html, '<h3>Status</h3>')
+            && strpos($html, '<h3>Status</h3>') < strpos($html, '<h3>Service</h3>')
+            && strpos($html, '<h3>Service</h3>') < strpos($html, '<h3>Done</h3>'), 'process cards follow booking order');
         assert_not_contains('localhost', $html, 'no hard-coded host');
         assert_contains('>Login</a>', $html, 'a guest sees Login');
+
+        $adminLogin = $server->request('/vulcatrack/admin/login.php');
+        assert_same(200, $adminLogin['status'], 'Admin Login remains available at its separate route');
 
         // Book a Rescue is the guarded booking page: a guest ends at the customer login.
         $r = $server->request('/vulcatrack/customer/rescue.php');

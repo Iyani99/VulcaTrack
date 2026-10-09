@@ -50,6 +50,7 @@ $nav = [
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($pageTitle ?? 'VulcaTrack') ?> &mdash; VulcaTrack</title>
+<link rel="icon" type="image/png" sizes="192x192" href="<?= e(vulcatrack_asset('/assets/img/vulcatrack-favicon.png')) ?>">
 <link rel="stylesheet" href="<?= e(vulcatrack_asset('/assets/css/app.css')) ?>">
 <script defer src="<?= e(vulcatrack_asset('/assets/js/customer-nav.js')) ?>"></script>
 <?php if (!empty($useMap)): ?>
@@ -61,7 +62,7 @@ $nav = [
 <div class="cust">
 <a class="cust-skip" href="#main">Skip to content</a>
 <header class="appbar">
-  <a class="appbar__brand" href="<?= e(vulcatrack_url('/customer/dashboard.php')) ?>">Vulca<span class="cust-red">Track</span></a>
+  <a class="appbar__brand" href="<?= e(vulcatrack_url('/customer/dashboard.php')) ?>"><img src="<?= e(vulcatrack_asset('/assets/img/vulcatrack-logo.svg')) ?>" alt="VulcaTrack — On-the-Go Vulcanizing Services" width="5117" height="1638"></a>
   <nav class="appnav" aria-label="Customer">
     <?php foreach ($nav as $key => [$label, $path]): ?>
       <a href="<?= e(vulcatrack_url($path)) ?>"<?= $navActive === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= e($label) ?></a>

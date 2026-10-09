@@ -20,6 +20,8 @@
  * Needs Attention (Phase 7.3b): the first few low-stock items and pending
  * requests, rendered from those same two reads (no extra query), each list
  * linking to its full page. No activity feed or comparisons (not in scope).
+ * The seven-day Sales Trend uses SaleRepository::listDailyTotals() and
+ * ReportChart::fillDays() to show every calendar day, including zero days.
  *
  * Read-only: GET, admin guard, no forms.
  */
@@ -28,6 +30,7 @@ use VulcaTrack\Repository\ItemRepository;
 use VulcaTrack\Repository\SaleRepository;
 use VulcaTrack\Repository\ServiceRequestRepository;
 use VulcaTrack\Support\Money;
+use VulcaTrack\Support\ReportChart;
 
 require __DIR__ . '/../includes/bootstrap.php';
 require __DIR__ . '/../includes/auth.php';
@@ -36,7 +39,18 @@ $admin = require_admin();
 $pdo   = vulcatrack_db();
 
 $today      = date('Y-m-d'); // app timezone (config app.timezone), same as sale_date
-$salesToday = (new SaleRepository($pdo))->summarize($today, $today);
+$saleRepo   = new SaleRepository($pdo);
+$salesToday = $saleRepo->summarize($today, $today);
+$trendFrom  = (new DateTimeImmutable($today))->modify('-6 days')->format('Y-m-d');
+$trendDays  = ReportChart::fillDays($saleRepo->listDailyTotals($trendFrom, $today), $trendFrom, 7);
+$trendMax   = max(array_column($trendDays, 'total_centavos'));
+$trendScale = ReportChart::scale($trendMax);
+$trendTotal = array_sum(array_column($trendDays, 'total_centavos'));
+$trendY     = static fn (int $centavos): float => 146 - ($trendScale['max'] > 0 ? $centavos / $trendScale['max'] * 132 : 0);
+$trendPoints = [];
+foreach ($trendDays as $i => $day) {
+    $trendPoints[] = (50 + $i * 100) . ',' . round($trendY($day['total_centavos']), 1);
+}
 // The same two reads feed both the card counts and the Needs Attention lists
 // below (Phase 7.3b) — no extra query.
 $lowItems   = (new ItemRepository($pdo))->lowStockProducts();          // by item name
@@ -63,7 +77,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <svg class="dash-card__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 6h20v12H2zm2 2v8h16V8zm8 1.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM5 10h2v4H5zm12 0h2v4h-2z"/></svg>
       Total Sales (Today)
     </h2>
-    <p class="dash-card__value">&#8369;<?= e(Money::format((int) $salesToday['total_centavos'])) ?></p>
+    <p class="dash-card__value">&#8369;<?= e(Money::formatDisplay((int) $salesToday['total_centavos'])) ?></p>
     <p class="dash-card__note"><?= (int) $salesToday['count'] ?> <?= (int) $salesToday['count'] === 1 ? 'transaction' : 'transactions' ?> recorded today</p>
     <a class="dash-card__link" href="<?= e(vulcatrack_url('/admin/reports.php?from=' . $today . '&to=' . $today)) ?>">View today's report</a>
   </section>
@@ -130,5 +144,39 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     </p>
   </section>
 </div>
+
+<section class="panel dash-trend" aria-labelledby="dash-trend-title">
+  <header class="panel__head dash-trend__head">
+    <div>
+      <h2 id="dash-trend-title">Sales Trend — Last 7 Days</h2>
+      <p class="dash-trend__range"><?= e((new DateTimeImmutable($trendFrom))->format('M j')) ?> – <?= e((new DateTimeImmutable($today))->format('M j, Y')) ?></p>
+    </div>
+    <p class="dash-trend__total">7-day total <strong>&#8369;<?= e(Money::formatDisplay($trendTotal)) ?></strong></p>
+  </header>
+  <div class="dash-trend__body">
+    <div class="dash-trend__plot">
+      <div class="dash-trend__axis" aria-hidden="true">
+        <span>&#8369;<?= e(Money::formatDisplay($trendScale['max'])) ?></span>
+        <span>&#8369;0</span>
+      </div>
+      <svg viewBox="0 0 700 160" preserveAspectRatio="none" aria-hidden="true">
+        <line class="dash-trend__grid" x1="8" y1="14" x2="692" y2="14"/>
+        <line class="dash-trend__grid" x1="8" y1="146" x2="692" y2="146"/>
+        <polyline class="dash-trend__line" pathLength="1" points="<?= e(implode(' ', $trendPoints)) ?>"/>
+      </svg>
+    </div>
+    <div class="dash-trend__xlabels" aria-hidden="true">
+      <?php foreach ($trendDays as $day): ?><span><?= e((new DateTimeImmutable($day['day']))->format('D')) ?></span><?php endforeach; ?>
+    </div>
+    <ol class="dash-trend__days">
+      <?php foreach ($trendDays as $day): ?>
+        <li data-day="<?= e($day['day']) ?>" data-centavos="<?= (int) $day['total_centavos'] ?>">
+          <span class="dash-trend__day"><?= e((new DateTimeImmutable($day['day']))->format('D, M j')) ?></span>
+          <strong>&#8369;<?= e(Money::formatDisplay($day['total_centavos'])) ?></strong>
+        </li>
+      <?php endforeach; ?>
+    </ol>
+  </div>
+</section>
 
 <?php require __DIR__ . '/../src/Views/partials/admin_bottom.php'; ?>

@@ -23,6 +23,7 @@ use VulcaTrack\Repository\ItemRepository;
 use VulcaTrack\Repository\SaleRepository;
 use VulcaTrack\Repository\ServiceRequestRepository;
 use VulcaTrack\Support\Money;
+use VulcaTrack\Support\ReportChart;
 
 test('admin dashboard: guards, sales-today / low-stock / pending cards, links', function () {
     $pdo = test_pdo();
@@ -32,9 +33,12 @@ test('admin dashboard: guards, sales-today / low-stock / pending cards, links', 
     $password = 'dashboard-password-123';
     $today = date('Y-m-d');
     $yesterday = date('Y-m-d', strtotime('-1 day'));
+    $trendFrom = date('Y-m-d', strtotime('-6 days'));
+    $middleDay = date('Y-m-d', strtotime('-3 days'));
 
     // baselines, read exactly as the page reads them
     $baseSales   = (new SaleRepository($pdo))->summarize($today, $today);
+    $baseTrend   = ReportChart::fillDays((new SaleRepository($pdo))->listDailyTotals($trendFrom, $today), $trendFrom, 7);
     $baseLow     = count((new ItemRepository($pdo))->lowStockProducts());
     $basePending = count((new ServiceRequestRepository($pdo))->listForAdmin('pending'));
 
@@ -54,6 +58,8 @@ test('admin dashboard: guards, sales-today / low-stock / pending cards, links', 
     $sale = $pdo->prepare('INSERT INTO sales (customer_id, admin_id, sale_date, total_amount) VALUES (NULL,?,?,?)');
     $sale->execute([$adminId, $today . ' 00:00:05', '123.45']);
     $sale->execute([$adminId, $yesterday . ' 23:59:59', '999.99']);
+    $sale->execute([$adminId, $middleDay . ' 12:00:00', '0.05']);
+    $sale->execute([$adminId, $trendFrom . ' 12:00:00', '1250.00']);
 
     // items: only the first is low stock by the Inventory rule
     $item = $pdo->prepare('INSERT INTO items (item_name, item_type, price, stock_quantity, reorder_level, is_active) VALUES (?,?,?,?,?,?)');
@@ -116,7 +122,7 @@ test('admin dashboard: guards, sales-today / low-stock / pending cards, links', 
         assert_count(3, $m[1], 'three summary cards');
         [$salesValue, $lowValue, $pendingValue] = $m[1];
 
-        $expectedSales = Money::format($baseSales['total_centavos'] + 12345);
+        $expectedSales = Money::formatDisplay($baseSales['total_centavos'] + 12345);
         assert_same('&#8369;' . $expectedSales, $salesValue, 'today\'s sale counts, yesterday\'s does not');
         $n = $baseSales['count'] + 1;
         assert_contains($n . ' ' . ($n === 1 ? 'transaction' : 'transactions') . ' recorded today', $html);
@@ -148,6 +154,22 @@ test('admin dashboard: guards, sales-today / low-stock / pending cards, links', 
             assert_contains('View all ' . ($baseLow + 1) . ' low-stock items', $html, 'a longer list links to Inventory');
         }
         assert_true(substr_count($html, '<li>') <= 10, 'at most 5 rows per list');
+
+        // The trend reuses recorded daily totals and fills the seven calendar
+        // days oldest first, including any day with no recorded sales.
+        assert_contains('<h2 id="dash-trend-title">Sales Trend — Last 7 Days</h2>', $html);
+        assert_contains('class="dash-trend__line" pathLength="1"', $html, 'the line is ready for a progressive draw');
+        preg_match_all('/<li data-day="(\d{4}-\d{2}-\d{2})" data-centavos="(\d+)">/', $html, $trendRows, PREG_SET_ORDER);
+        assert_count(7, $trendRows, 'exactly seven trend days');
+        $additions = [$today => 12345, $yesterday => 99999, $middleDay => 5, $trendFrom => 125000];
+        $expectedTotal = 0;
+        foreach ($baseTrend as $i => $day) {
+            $expected = $day['total_centavos'] + ($additions[$day['day']] ?? 0);
+            assert_same($day['day'], $trendRows[$i][1], 'trend ordering follows calendar days');
+            assert_same((string) $expected, $trendRows[$i][2], 'trend day uses the recorded total, including zero days');
+            $expectedTotal += $expected;
+        }
+        assert_contains('7-day total <strong>&#8369;' . Money::formatDisplay($expectedTotal) . '</strong>', $html);
 
         // the Inventory low-stock view lists the seeded low product and not the others
         $inv = $server->request('/vulcatrack/admin/inventory.php?low_stock=1&q=' . $tag)['body'];

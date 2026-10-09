@@ -108,7 +108,7 @@ function pos_flash(string $type, string $message): void
 
 function pos_peso(int $centavos): string
 {
-    return '&#8369;' . e(Money::format($centavos));
+    return '&#8369;' . e(Money::formatDisplay($centavos));
 }
 
 /**
@@ -305,8 +305,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($tender === null) {
             $errors[] = 'Enter the cash received as an amount like 500 or 500.00.';
         } elseif ($tender < $expected) {
-            $errors[] = 'Cash received (₱' . Money::format($tender) . ') is less than the total (₱'
-                      . Money::format($expected) . ').';
+            $errors[] = 'Cash received (₱' . Money::formatDisplay($tender) . ') is less than the total (₱'
+                      . Money::formatDisplay($expected) . ').';
         }
     }
 
@@ -702,7 +702,8 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   }
   function fmt(c) {
     var r = c % 100;
-    return '₱' + Math.floor(c / 100) + '.' + (r < 10 ? '0' : '') + r;
+    var whole = String(Math.floor(c / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return '₱' + whole + (r === 0 ? '' : '.' + (r < 10 ? '0' : '') + r);
   }
   function sync() {
     var c = toCentavos(input.value);

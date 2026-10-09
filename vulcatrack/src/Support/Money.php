@@ -11,7 +11,8 @@ use InvalidArgumentException;
  * strings ("99.95"). Application logic converts those strings to integer
  * centavos through this helper, does its arithmetic with plain integers
  * (add / subtract / multiply by a quantity), then formats back to a two-place
- * decimal string for storage or display.
+ * decimal string for storage or fixed-precision documents. formatDisplay()
+ * is for compact UI text only; it never participates in calculations.
  *
  *   Money::toCentavos('100.00')  => 10000
  *   Money::toCentavos('99.95')   => 9995
@@ -89,5 +90,16 @@ final class Money
         $abs  = abs($centavos);
 
         return $sign . intdiv($abs, 100) . '.' . str_pad((string) ($abs % 100), 2, '0', STR_PAD_LEFT);
+    }
+
+    /** Group whole pesos for UI text; show two decimal places only when needed. */
+    public static function formatDisplay(int $centavos): string
+    {
+        $sign = $centavos < 0 ? '-' : '';
+        $abs = abs($centavos);
+        $whole = number_format(intdiv($abs, 100), 0, '.', ',');
+        $fraction = $abs % 100;
+
+        return $sign . $whole . ($fraction === 0 ? '' : '.' . str_pad((string) $fraction, 2, '0', STR_PAD_LEFT));
     }
 }

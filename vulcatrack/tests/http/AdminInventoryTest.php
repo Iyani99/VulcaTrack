@@ -162,9 +162,9 @@ test('admin inventory: guard, actor separation, filters, low-stock and escaping'
         assert_contains('<option value="all" selected>', $pre['body']);
         assert_contains('name="low_stock" value="1" checked', $pre['body']);
 
-        // 12. Price uses the Money helper (two-decimal peso string), not a float.
-        assert_contains('12.50', $r['body']);
-        assert_contains('250.00', $r['body']);
+        // 12. Display prices keep nonzero cents and omit .00 for whole pesos.
+        assert_contains('&#8369;12.50', $r['body']);
+        assert_contains('&#8369;250', $r['body']);
 
         // 13. The server process logged no PHP warnings/notices/fatals.
         $stderr = $server->serverStderr();

@@ -116,7 +116,7 @@ test('sales history: guards, newest-first list, walk-in/customer, escaping, date
         assert_contains('<td><span class="tag tag--walkin">Walk-in</span></td>', $html, 'a sale without a customer shows Walk-in');
         assert_not_contains('tag--customer">Walk-in', $html, 'Walk-in is never shown as a registered customer');
         assert_contains('&#8369;286.50', $html, 'stored total');
-        assert_contains('&#8369;1234.05', $html, 'stored total, no thousands separator (existing convention)');
+        assert_contains('&#8369;1,234.05', $html, 'stored total retains cents and groups thousands');
 
         // ================= From only =================
         $html = $server->request($URL . '?from=2001-05-20')['body'];
