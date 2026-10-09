@@ -992,8 +992,8 @@ body.admin .tablepanel__foot { margin: 0; padding: .65rem .9rem; border-top: 1px
 body.admin .linklike--neutral { color: var(--adm-ink); } /* a non-destructive text action (Activate) — red stays for Deactivate / Reject / Remove */
 body.admin .datatable td.cell-strong { font-weight: 700; }
 body.admin .datatable td.cell-money { font-size: 1rem; font-weight: 800; }
-/* short values that must read as one unit (date / time, plate number): never
-   split at a hyphen — on phones the table scrolls instead (Phase 7.4a) */
+/* Keep short values together in desktop tables; mobile record cards override
+   this where their labelled value columns need wrapping. */
 body.admin .datatable td.nowrap { white-space: nowrap; }
 
 /* stock chips (Inventory + Dashboard): a coloured square + a short label */
@@ -1058,7 +1058,7 @@ body.admin .acct-confirm { margin: 1.25rem 0 0; padding: .8rem .9rem .9rem; bord
 body.admin .acct-confirm legend { padding: 0 .35rem; font-family: var(--adm-mono); font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
 body.admin .acct-confirm label { margin-top: 0; }
 body.admin .acct-form button[type="submit"] { width: 100%; min-height: 2.75rem; margin-top: 1.1rem; }
-/* emails stay whole: on narrow panels the table scrolls in its own box (Phase 7.4a pattern) */
+/* Keep desktop email cells whole; mobile record cards allow long addresses to wrap. */
 body.admin .acct-grid .table-scroll > .datatable { min-width: 30rem; }
 body.admin .acct-grid td.acct-email { white-space: nowrap; }
 
@@ -1523,7 +1523,8 @@ body.admin :is(.card, .dash-card, .panel, .tablepanel, .pos-item, .pos-sale) {
 .cust .cu-status--completed { background: var(--cu-ink); color: #fff; }
 .cust .cu-status--rejected  { background: #fff; color: var(--cu-ink); border-color: var(--cu-ink); }
 
-/* tables: black header row, thin rows; scroll inside .table-scroll on phones */
+/* Tables use a black header and thin rows on desktop. Operational lists use
+   labelled record cards at narrow widths below. */
 .cust .cu-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--cu-line); }
 .cust .table-scroll > .cu-table { min-width: 30rem; }
 .cust .cu-table th {
@@ -1632,7 +1633,7 @@ body.admin :is(.card, .dash-card, .panel, .tablepanel, .pos-item, .pos-sale) {
 @media (max-width: 30rem) {
   .cust .appbar__name { display: none; }
   .cust .cd-hero .cu-btn { width: 100%; }
-  /* phones: fit all five columns (status in view) instead of scrolling them */
+  /* Compact any remaining customer tables on phones. */
   .cust .table-scroll > .cu-table { min-width: 0; }
   .cust .cu-table th,
   .cust .cu-table td { padding: .6rem .35rem; font-size: .82rem; }
@@ -1915,8 +1916,7 @@ body.admin :is(.card, .dash-card, .panel, .tablepanel, .pos-item, .pos-sale) {
    Bookings lists real request data only (no Amount column, no dead filter). */
 
 .cust .cu-notice { margin: 0 0 1.25rem; padding: .7rem .9rem; background: #eef6f0; border-left: 4px solid #1c6b32; color: #154d25; font-size: .9rem; }
-/* many-column tables keep their columns and scroll on phones instead of
-   being squeezed to fit (outranks the Dashboard's phone min-width: 0) */
+/* Wide tables retain their desktop minimum where no mobile record layout applies. */
 .cust .table-scroll > .cu-table.cu-table--wide { min-width: 40rem; }
 /* the scroll box is the containing block for absolutely positioned .sr-only
    text in its cells — otherwise that text escapes the scroll clip and widens
@@ -2387,6 +2387,81 @@ body.admin :is(.card, .dash-card, .panel, .tablepanel, .pos-item, .pos-sale) {
   .cust .ph-line { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; }
   .cust .ph-line__name { grid-column: 1 / -1; }
   .cust .ph-line__subtotal { text-align: left; }
+}
+
+.mobile-record-prefix { display: none; }
+
+/* Operational records keep their semantic desktop tables. On phones, each row
+   becomes a labelled card so status and actions remain visible without panning. */
+@media (max-width: 40rem) {
+  .mobile-record-prefix { display: inline; }
+  body.admin .table-scroll > .datatable.mobile-records,
+  .cust .table-scroll > .cu-table.mobile-records,
+  .cust .table-scroll > .cu-table.cu-table--wide.mobile-records {
+    display: block; width: 100%; min-width: 0; border: 0; background: transparent;
+  }
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) thead {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) tbody {
+    display: grid; gap: .75rem;
+  }
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) tbody tr {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0 .55rem; min-width: 0; padding: .25rem .8rem;
+    border: 1px solid #d9d9d9; background: #fff;
+  }
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) tbody td {
+    display: grid; grid-column: 1 / -1; grid-template-columns: minmax(0, 6.3rem) minmax(0, 1fr);
+    align-items: start; gap: .35rem .55rem; min-width: 0; padding: .55rem 0;
+    border-bottom: 1px solid #ededed; background: transparent;
+    font-size: .88rem; text-align: left; white-space: normal; overflow-wrap: anywhere;
+  }
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) tbody td::before {
+    content: attr(data-label); align-self: start; padding-top: .08rem;
+    color: #666; font-size: .68rem; font-weight: 700; letter-spacing: .05em;
+    line-height: 1.4; text-transform: uppercase;
+  }
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) tbody td > :is(.badge, .tag, .stock, .cu-status) { justify-self: start; }
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) tbody td[data-record-primary] {
+    display: block; grid-column: 1; grid-row: 1; align-self: center;
+    padding: .65rem 0; font-size: 1rem; font-weight: 800; line-height: 1.3;
+  }
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) tbody td[data-record-primary]::before,
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) tbody td[data-record-status]::before,
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) tbody td[data-record-actions]::before { display: none; }
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) tbody td[data-record-status] {
+    display: block; grid-column: 2; grid-row: 1; align-self: center;
+    padding: .65rem 0; text-align: right;
+  }
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) tbody td[data-record-actions] {
+    display: flex; flex-wrap: wrap; gap: .5rem; padding: .7rem 0;
+    border-bottom: 0;
+  }
+  :is(body.admin .datatable.mobile-records, .cust .cu-table.mobile-records) tbody td:last-child:not([data-record-actions]) { border-bottom: 0; }
+  body.admin .datatable.mobile-records tbody tr:nth-child(even) > *,
+  body.admin .datatable.mobile-records tbody tr:is(:hover, :focus-within) > *,
+  .cust .cu-table.mobile-records tbody tr:is(:hover, :focus-within) > * { background: transparent; }
+  body.admin .datatable.mobile-records td.num { text-align: left; }
+  body.admin .datatable.mobile-records td.nowrap,
+  body.admin .acct-grid .datatable.mobile-records td.acct-email,
+  .cust .cu-table.mobile-records td.nowrap { white-space: normal; }
+  body.admin .datatable.mobile-records td.rowactions { display: flex; white-space: normal; }
+  body.admin .datatable.mobile-records td.rowactions > * + * { margin-left: 0; }
+  body.admin .datatable.mobile-records td.rowactions > :is(a, form) { flex: 1 1 auto; min-width: 0; }
+  body.admin .datatable.mobile-records td.rowactions > a,
+  body.admin .datatable.mobile-records td.rowactions button,
+  .cust .cu-table.mobile-records td[data-record-actions] a {
+    display: flex; align-items: center; justify-content: center; width: 100%;
+    min-height: 2.75rem; padding: .5rem .7rem; text-align: center;
+    text-decoration: none;
+  }
+  body.admin .datatable.mobile-records td.rowactions > a { border: 1px solid #1b1c1e; color: #1b1c1e; }
+  body.admin .datatable.mobile-records td.rowactions button { border: 1px solid currentColor; }
+  .cust .cu-table.mobile-records td[data-record-actions] a { border: 1px solid var(--cu-red-dark); color: var(--cu-red-dark); }
+  body.admin .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  body.admin .tabs .tab { display: flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .5rem .2rem; font-size: .7rem; text-align: center; }
 }
 
 /* Customer content settles beneath the stable header; the short delays never hide it. */

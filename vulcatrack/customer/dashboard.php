@@ -135,17 +135,17 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
       <p class="cu-empty">No rescue requests yet. Your requests will appear here.</p>
     <?php else: ?>
       <div class="table-scroll">
-      <table class="cu-table">
+      <table class="cu-table mobile-records">
         <thead><tr><th>Date</th><th>Request</th><th>Vehicle</th><th>Status</th><th><span class="sr-only">Details</span></th></tr></thead>
         <tbody>
         <?php foreach ($recent as $r): ?>
           <?php [$day, $time] = dash_when((string) $r['requested_at']); ?>
           <tr>
-            <td class="nowrap"><?= e($day) ?><?php if ($time !== ''): ?><span class="cu-table__sub"><?= e($time) ?></span><?php endif; ?></td>
-            <td class="nowrap">#<?= (int) $r['request_id'] ?></td>
-            <td class="nowrap"><?= e($r['plate_number']) ?></td>
-            <td><span class="cu-status cu-status--<?= e($r['status']) ?>"><?= e(OtgStatus::label($r['status'], $r['tireman_id'] !== null)) ?></span></td>
-            <td class="cu-table__action"><a href="<?= e(vulcatrack_url('/customer/booking.php?id=' . (int) $r['request_id'])) ?>">View</a></td>
+            <td class="nowrap" data-label="Date"><span><?= e($day) ?><?php if ($time !== ''): ?><span class="cu-table__sub"><?= e($time) ?></span><?php endif; ?></span></td>
+            <td class="nowrap" data-label="Request" data-record-primary>#<?= (int) $r['request_id'] ?></td>
+            <td class="nowrap" data-label="Vehicle"><?= e($r['plate_number']) ?></td>
+            <td data-label="Status" data-record-status><span class="cu-status cu-status--<?= e($r['status']) ?>"><?= e(OtgStatus::label($r['status'], $r['tireman_id'] !== null)) ?></span></td>
+            <td class="cu-table__action" data-label="Action" data-record-actions><a href="<?= e(vulcatrack_url('/customer/booking.php?id=' . (int) $r['request_id'])) ?>">View</a></td>
           </tr>
         <?php endforeach; ?>
         </tbody>

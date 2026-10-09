@@ -47,18 +47,18 @@ require __DIR__ . '/../src/Views/partials/customer_top.php';
   </section>
 <?php else: ?>
   <div class="table-scroll">
-  <table class="cu-table cu-table--wide bk-table">
+  <table class="cu-table cu-table--wide bk-table mobile-records">
     <thead><tr><th>Request #</th><th>Date &amp; time</th><th>Vehicle</th><th>Status</th><th>ETA at request</th><th><span class="sr-only">Details</span></th></tr></thead>
     <tbody>
     <?php foreach ($requests as $r): ?>
       <?php $vehicle = trim(implode(' ', array_filter([$r['make'] ?? '', $r['model'] ?? '']))); ?>
       <tr class="bk-row--<?= e($r['status']) ?>">
-        <td class="nowrap bk-ref">#<?= (int) $r['request_id'] ?></td>
-        <td class="nowrap"><?= e(bookings_when((string) $r['requested_at'])) ?></td>
-        <td><?= $vehicle !== '' ? e($vehicle) . ' &middot; ' : '' ?><span class="nowrap"><?= e($r['plate_number']) ?></span></td>
-        <td><span class="cu-status cu-status--<?= e($r['status']) ?>"><?= e(OtgStatus::label($r['status'], $r['tireman_id'] !== null)) ?></span></td>
-        <td class="nowrap bk-eta"><?= $r['eta_minutes'] !== null ? (int) $r['eta_minutes'] . ' mins' : '—' ?></td>
-        <td class="cu-table__action"><a href="<?= e(vulcatrack_url('/customer/booking.php?id=' . (int) $r['request_id'])) ?>">View<span class="sr-only"> request #<?= (int) $r['request_id'] ?></span></a></td>
+        <td class="nowrap bk-ref" data-label="Request" data-record-primary>#<?= (int) $r['request_id'] ?></td>
+        <td class="nowrap" data-label="Date &amp; time"><?= e(bookings_when((string) $r['requested_at'])) ?></td>
+        <td data-label="Vehicle"><span><?= $vehicle !== '' ? e($vehicle) . ' &middot; ' : '' ?><span class="nowrap"><?= e($r['plate_number']) ?></span></span></td>
+        <td data-label="Status" data-record-status><span class="cu-status cu-status--<?= e($r['status']) ?>"><?= e(OtgStatus::label($r['status'], $r['tireman_id'] !== null)) ?></span></td>
+        <td class="nowrap bk-eta" data-label="ETA at request"><?= $r['eta_minutes'] !== null ? (int) $r['eta_minutes'] . ' mins' : '—' ?></td>
+        <td class="cu-table__action" data-label="Action" data-record-actions><a href="<?= e(vulcatrack_url('/customer/booking.php?id=' . (int) $r['request_id'])) ?>">View<span class="sr-only"> request #<?= (int) $r['request_id'] ?></span></a></td>
       </tr>
     <?php endforeach; ?>
     </tbody>

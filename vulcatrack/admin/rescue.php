@@ -53,22 +53,22 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 <?php else: ?>
   <div class="tablepanel">
   <div class="table-scroll">
-  <table class="datatable">
+  <table class="datatable mobile-records">
     <thead>
       <tr><th>#</th><th>Requested</th><th>Customer</th><th>Vehicle</th><th>Status</th><th>Tireman</th><th></th></tr>
     </thead>
     <tbody>
     <?php foreach ($requests as $r): ?>
       <tr>
-        <td class="cell-strong"><?= (int) $r['request_id'] ?></td>
-        <td class="muted nowrap"><?= e($r['requested_at']) ?></td>
-        <td class="cell-strong"><?= e($r['customer_name']) ?></td>
-        <td class="nowrap"><?= e($r['plate_number']) ?></td>
-        <td>
+        <td class="cell-strong" data-label="Request" data-record-primary><span class="mobile-record-prefix" aria-hidden="true">#</span><?= (int) $r['request_id'] ?></td>
+        <td class="muted nowrap" data-label="Requested"><?= e($r['requested_at']) ?></td>
+        <td class="cell-strong" data-label="Customer"><?= e($r['customer_name']) ?></td>
+        <td class="nowrap" data-label="Vehicle"><?= e($r['plate_number']) ?></td>
+        <td data-label="Status" data-record-status>
           <span class="badge <?= e(OtgStatus::badgeClass($r['status'])) ?>"><?= e(OtgStatus::adminLabel($r['status'])) ?></span>
         </td>
-        <td><?= $r['tireman_name'] !== null ? e($r['tireman_name']) : '<span class="muted">Unassigned</span>' ?></td>
-        <td class="rowactions">
+        <td data-label="Tireman"><?= $r['tireman_name'] !== null ? e($r['tireman_name']) : '<span class="muted">Unassigned</span>' ?></td>
+        <td class="rowactions" data-label="Action" data-record-actions>
           <a href="<?= e(vulcatrack_url('/admin/rescue-view.php?id=' . (int) $r['request_id'])) ?>">View</a>
         </td>
       </tr>

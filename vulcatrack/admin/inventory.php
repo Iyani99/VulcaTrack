@@ -177,7 +177,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 <?php else: ?>
   <div class="tablepanel">
   <div class="table-scroll">
-  <table class="datatable">
+  <table class="datatable mobile-records">
     <thead>
       <tr>
         <th>Name</th><th>Type</th><th>Category</th><th class="num">Price</th>
@@ -189,28 +189,28 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <?php $isProduct = inv_is_product($row); $isLow = isset($lowStockIds[(int) $row['item_id']]); ?>
       <?php [$chip, $chipLabel] = inv_stock_chip($row, $isLow); ?>
       <tr>
-        <td class="cell-strong"><?= e($row['item_name']) ?></td>
-        <td>
+        <td class="cell-strong" data-label="Item" data-record-primary><?= e($row['item_name']) ?></td>
+        <td data-label="Type">
           <span class="badge badge--<?= $isProduct ? 'product' : 'service' ?>">
             <?= $isProduct ? 'Product' : 'Service' ?>
           </span>
         </td>
-        <td><?= $row['category'] !== null && $row['category'] !== '' ? e($row['category']) : '<span class="muted">—</span>' ?></td>
-        <td class="num cell-money">&#8369;<?= e(Money::formatDisplay((int) $row['price_centavos'])) ?></td>
-        <td><span class="stock stock--<?= $chip ?>"><?= e($chipLabel) ?></span></td>
-        <td class="num">
+        <td data-label="Category"><?= $row['category'] !== null && $row['category'] !== '' ? e($row['category']) : '<span class="muted">—</span>' ?></td>
+        <td class="num cell-money" data-label="Price">&#8369;<?= e(Money::formatDisplay((int) $row['price_centavos'])) ?></td>
+        <td data-label="Stock"><span class="stock stock--<?= $chip ?>"><?= e($chipLabel) ?></span></td>
+        <td class="num" data-label="Reorder">
           <?php if ($isProduct && $row['reorder_level'] !== null): ?>
             <?= (int) $row['reorder_level'] ?>
           <?php else: ?>
             <span class="muted">—</span>
           <?php endif; ?>
         </td>
-        <td>
+        <td data-label="State" data-record-status>
           <span class="badge badge--<?= (int) $row['is_active'] === 1 ? 'active' : 'inactive' ?>">
             <?= (int) $row['is_active'] === 1 ? 'Active' : 'Inactive' ?>
           </span>
         </td>
-        <td class="rowactions">
+        <td class="rowactions" data-label="Actions" data-record-actions>
           <a href="<?= e(vulcatrack_url('/admin/item-edit.php?id=' . (int) $row['item_id'])) ?>">Edit</a>
           <form method="post" action="<?= e(vulcatrack_url('/admin/inventory.php')) ?>">
             <?= Csrf::field() ?>

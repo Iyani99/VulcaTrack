@@ -96,7 +96,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 <?php else: ?>
   <div class="tablepanel">
   <div class="table-scroll">
-  <table class="datatable">
+  <table class="datatable mobile-records">
     <thead>
       <tr><th>Name</th><th>Contact number</th><th>State</th><th></th></tr>
     </thead>
@@ -104,14 +104,14 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php foreach ($tiremen as $row): ?>
       <?php $isActive = $row['is_active'] === 1; ?>
       <tr>
-        <td class="cell-strong"><?= e($row['name']) ?></td>
-        <td><?= e($row['contact_number']) ?></td>
-        <td>
+        <td class="cell-strong" data-label="Name" data-record-primary><?= e($row['name']) ?></td>
+        <td data-label="Contact number"><?= e($row['contact_number']) ?></td>
+        <td data-label="State" data-record-status>
           <span class="badge badge--<?= $isActive ? 'active' : 'inactive' ?>">
             <?= $isActive ? 'Active' : 'Inactive' ?>
           </span>
         </td>
-        <td class="rowactions">
+        <td class="rowactions" data-label="Actions" data-record-actions>
           <a href="<?= e(vulcatrack_url('/admin/tireman-edit.php?id=' . (int) $row['tireman_id'])) ?>">Edit</a>
           <form method="post" action="<?= e(vulcatrack_url('/admin/tiremen.php')) ?>">
             <?= Csrf::field() ?>

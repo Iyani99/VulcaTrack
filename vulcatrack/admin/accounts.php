@@ -118,16 +118,16 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <section class="panel" aria-labelledby="acct-list-h">
     <header class="panel__head"><h2 id="acct-list-h">Existing Administrators</h2></header>
     <div class="table-scroll">
-    <table class="datatable">
+    <table class="datatable mobile-records">
       <thead>
         <tr><th scope="col">Full name</th><th scope="col">Email</th><th scope="col">Created</th></tr>
       </thead>
       <tbody>
       <?php foreach ($admins as $a): ?>
         <tr>
-          <td class="cell-strong"><?= e($a['full_name']) ?><?php if ($a['admin_id'] === $adminId): ?> <span class="tag tag--customer">You</span><?php endif; ?></td>
-          <td class="acct-email"><?= e($a['email']) ?></td>
-          <td class="nowrap"><?= e(accounts_when($a['created_at'])) ?></td>
+          <td class="cell-strong" data-label="Full name" data-record-primary><?= e($a['full_name']) ?><?php if ($a['admin_id'] === $adminId): ?> <span class="tag tag--customer">You</span><?php endif; ?></td>
+          <td class="acct-email" data-label="Email"><?= e($a['email']) ?></td>
+          <td class="nowrap" data-label="Created"><?= e(accounts_when($a['created_at'])) ?></td>
         </tr>
       <?php endforeach; ?>
       </tbody>

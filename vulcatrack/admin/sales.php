@@ -71,26 +71,26 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <?php $n = count($sales); ?>
   <div class="tablepanel">
   <div class="table-scroll">
-  <table class="datatable">
+  <table class="datatable mobile-records">
     <thead>
       <tr><th>Sale no.</th><th>Date / time</th><th>Cashier</th><th>Customer</th><th>Source</th><th class="num">Total</th><th></th></tr>
     </thead>
     <tbody>
     <?php foreach ($sales as $s): ?>
       <tr>
-        <td><?= (int) $s['sale_id'] ?></td>
-        <td class="muted nowrap"><?= e($s['sale_date']) ?></td>
-        <td><?= e($s['admin_name']) ?></td>
+        <td data-label="Sale" data-record-primary><span class="mobile-record-prefix" aria-hidden="true">#</span><?= (int) $s['sale_id'] ?></td>
+        <td class="muted nowrap" data-label="Date / time"><?= e($s['sale_date']) ?></td>
+        <td data-label="Cashier"><?= e($s['admin_name']) ?></td>
         <?php /* walk-in vs registered customer: a quiet tag vs a stronger neutral one (presentation only) */ ?>
-        <td><?= $s['customer_name'] !== null
+        <td data-label="Customer"><?= $s['customer_name'] !== null
             ? '<span class="tag tag--customer">' . e($s['customer_name']) . '</span>'
             : '<span class="tag tag--walkin">Walk-in</span>' ?></td>
         <?php /* source comes only from the Rescue link, never from the customer (Phase 7.3d) */ ?>
-        <td><?= $s['service_request_id'] !== null
+        <td data-label="Source"><?= $s['service_request_id'] !== null
             ? '<a class="tag tag--rescue" href="' . e(vulcatrack_url('/admin/rescue-view.php?id=' . (int) $s['service_request_id'])) . '">Rescue #' . (int) $s['service_request_id'] . '</a>'
             : '<span class="tag tag--inshop">In-shop</span>' ?></td>
-        <td class="num cell-money">&#8369;<?= e(Money::formatDisplay((int) $s['total_amount_centavos'])) ?></td>
-        <td class="rowactions">
+        <td class="num cell-money" data-label="Total">&#8369;<?= e(Money::formatDisplay((int) $s['total_amount_centavos'])) ?></td>
+        <td class="rowactions" data-label="Action" data-record-actions>
           <a href="<?= e(vulcatrack_url('/admin/transaction-summary.php?id=' . (int) $s['sale_id'])) ?>">View</a>
         </td>
       </tr>
