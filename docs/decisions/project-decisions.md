@@ -1,7 +1,7 @@
 # VulcaTrack — Project Decision Record
 
 **Status:** Authoritative record of CONFIRMED project decisions.
-**Last updated:** 2026-10-08 (documentation and paper-diagram clarification only; no new decision)
+**Last updated:** 2026-10-12 (post-defense Decisions 80–100; architecture only, not implemented)
 **Earlier revision note (2026-09-28):** **Decision 69 added** (Phase 7.1: an item's type is fixed
 once it has recorded sales). Earlier the same day: **Phase 6 closed** (status only), and
 **Decisions 65–68 added** (owner-approved Rescue status rules, Phase 6.3; Decision 25
@@ -67,6 +67,10 @@ Figma prototype lives **outside** the repo application and is provided/accessed 
 
 These are settled. Treat them as binding unless a later, explicitly approved decision
 changes them.
+
+**Reading note:** Decisions 80–100 record the approved post-defense direction. Earlier
+implementation descriptions, eight-table limits, and out-of-scope lists remain as
+historical pre-defense context where those later decisions explicitly supersede them.
 
 ### On-the-Go (OTG) service requests
 
@@ -984,6 +988,254 @@ Unless explicitly approved later, do **not** introduce:
 - Password reset / "forgot password", email verification, 2FA, CAPTCHA,
   account lockout / login rate-limiting (not in Phase 3 scope; none decided)
 - Public admin registration page (Decisions 18/40/46)
+
+---
+
+## Confirmed Project Decisions — 2026-10-12 (post-defense architecture)
+
+These decisions define the target domain before implementation. The current application
+and eight-table schema still implement the pre-defense model. No feature, migration, or
+database change is made by recording these decisions. Earlier entries retain their
+historical meaning; the explicit refinements below govern future work.
+
+80. **Tireman becomes a third, separate authenticated actor.** Admin provisions
+    credentials internally; there is no public Tireman registration. Historical
+    Tireman records without credentials remain valid but cannot sign in. An inactive
+    Tireman cannot authenticate or receive new assignments. Tireman access covers only
+    their own dashboard, assignments, assigned supplies, Rescue history, and logout.
+    It excludes Admin Accounts, full Sales History, financial Reports, unrestricted
+    Inventory administration, and other Tiremen's protected data. This supports
+    operational self-service without granting Admin authority. **Supersedes** the
+    no-login/no-dashboard parts of Decisions 19, 20, 22, 23, 26, and 47 and the
+    historical out-of-scope list; **retains** Customer/Admin separation and the
+    no-public-Admin-registration rule (Decisions 18, 40, 46). No GPS, payroll, or
+    Tireman scoring is implied.
+
+81. **Account state and work availability are separate.** `tiremen.is_active` controls
+    account participation: inactive means no login or new assignment. On Duty makes an
+    active, credentialed Tireman eligible for new automatic offers; Off Duty excludes
+    them from new offers. Busy is derived from open offers and accepted unfinished
+    Rescues, not independently stored. Going Off Duty does not erase accepted work;
+    deactivation likewise must not silently discard existing work. No shift calendar
+    is approved. This avoids conflating access with capacity. **Refines** Decisions
+    23, 24, 27, and 28; their historical references remain valid.
+
+82. **VulcaTrack is designed to support 24/7 On-the-Go Rescue operations.** The
+    ordinary flow is Customer submission → automatic assignment attempt → Tireman
+    acknowledgment → Tireman work, with Admin supervision, manual intervention,
+    reassignment where allowed, and exception handling. Admin also manages accounts,
+    inventory issuance, and reporting; ordinary dispatch no longer requires an Admin
+    action. This reduces dependence on a continuously present dispatcher. It is a
+    product operating model, not a claim that local XAMPP is verified 24/7 hosting.
+    **Refines** Decisions 24, 25, and 66; **retains** the non-live GPS and frozen-ETA
+    limits of Decisions 4–6, 32, 33, 48, and 60.
+
+83. **Automatic dispatch uses an offer, not an immediate assignment.** Submission
+    leaves the Rescue `pending` and `service_requests.tireman_id` NULL while one
+    eligible Tireman has an open offer. Only that Tireman's acknowledgment makes the
+    Rescue `accepted` and sets `tireman_id` together. Eligibility requires active,
+    credentialed, On Duty, and below capacity; V1 capacity is at most one open Rescue
+    offer **or** one accepted unfinished Rescue per Tireman. Rank eligible Tiremen by
+    lowest active workload, then longest since a previous offer/fair offer history,
+    then stable `tireman_id`. Do not infer proximity without live Tireman GPS. On
+    decline or expiry, offer to the next eligible Tireman without repeating that
+    Rescue to the same Tireman. With none eligible, keep it pending for Admin attention
+    and manual intervention. Admin may supervise or override the dispatch process,
+    but an unacknowledged offer must never masquerade as an accepted assignment.
+    Reassignment cannot replace an accepted `tireman_id` with an unacknowledged
+    candidate; the precise exceptional handoff workflow remains to be designed.
+    Offer history must preserve outcomes and prevent duplicate/concurrent open offers.
+    Automated or Tireman actions must not fabricate an acting Admin: `admin_id` is
+    NULL until an Admin actually changes status or assignment, then continues to mean
+    the last Admin who did so. This separates a tentative offer from accepted work.
+    **Supersedes** Admin-only ordinary acceptance in Decisions 24, 25, and 66;
+    **refines** Decision 67. Exact expiry/notification delivery and Admin exception
+    controls require implementation design, not a fifth Rescue status.
+
+84. **The Rescue lifecycle retains exactly four statuses:** `pending` (no accepted
+    Tireman), `accepted` (Tireman acknowledged the assignment), `rejected` (ended under
+    an authorized rejection workflow), and `completed` (work finished). Offer states
+    such as offered, acknowledged, declined, expired, or superseded belong to separate
+    assignment-offer history, never `service_requests.status`. This keeps Customer
+    wording, accepted/completed Rescue Sale eligibility, and completed-Rescue feedback
+    coherent. **Retains** Decisions 7, 10, 11, 65, 68, 70–74, and 78; **refines**
+    Decision 66's assumption that only Admin acceptance creates `accepted`.
+
+85. **An authenticated Tireman may complete only their own accepted Rescue.** Admin
+    retains exceptional completion/override authority; allowed status, ownership,
+    and stale-state checks still apply. Completion does not require or create a Sale,
+    and the Customer's existing feedback eligibility remains. A Tireman completion
+    must not be attributed to a fictional Admin in `admin_id`. This lets the worker
+    close ordinary work while keeping financial recording independent. **Refines**
+    Decisions 65, 67, and 73; **retains** Decisions 71, 74, and 78.
+
+86. **`items.is_active` means offered versus archived/discontinued.** Active means
+    currently offered by the shop; archived means no longer offered but retained for
+    history. Slow movement alone never archives a Product. A Product should normally
+    be archived only after both shop stock and Tireman-held stock reach zero; a
+    Service has no physical-stock condition. Reactivation is allowed. Historical
+    Sales stay visible. This prevents hiding sellable stock and stranded field stock.
+    **Refines** Decisions 27–29 and 36; **retains** Decisions 15–17 and 69.
+
+87. **Product restocks require receipt history.** Each future restock records the
+    Product, positive quantity, optional free-text supplier name, timestamp, and
+    recording Admin. The record and shop-stock increase are atomic. `items.updated_at`
+    is not restock history. Existing stock is opening/historical stock with unknown
+    prior receipts; do not invent old restocks or suppliers. No Supplier Management
+    module is approved. This makes future increases traceable. **Extends** Decisions
+    16 and 36; no earlier numbered restock-history decision is superseded.
+
+88. **Routine stock changes use recorded business movements.** Restocks normally
+    increase shop stock; Sales, Tireman issues, and other explicitly approved
+    movements decrease it. Once movement history exists, unrestricted direct
+    replacement in Item Edit must cease to be the normal stock-change path. Any
+    future correction path must be auditable; its workflow is not decided here.
+    This protects the meaning of the new history. **Refines** Decision 36 and the
+    direct-edit implementation note in Decision 69; **retains** transactional,
+    nonnegative Sale stock rules in Decisions 16 and 61–63.
+
+89. **Slow-moving is a sales-history advisory for active Products with shop stock
+    above zero.** The initial default is no recorded Sale line for that Product
+    in 60 days, with an adjustable threshold under Decision 95. Show the configured
+    period in wording such as “No recorded sales in the last 60 days” and advise
+    “Review demand, display, promotion, or price.” This does not state how long
+    physical units have been held
+    and never automatically reduces price or archives an item. The Admin/Owner decides
+    any price change. This makes the signal honest without batch-age data.
+    **Extends** Decisions 16 and 36; **refines** Decision 28's inactive-item use so
+    slow movement does not itself cause deactivation.
+
+90. **Tireman-held Product stock has an append-only movement history.** Only Products
+    may be issued: issue decreases shop-available stock and increases the Tireman's
+    held balance; use decreases held balance; return decreases held balance and
+    restores shop stock. Record issued, used, and returned movements, with enough
+    actor/time/item/Tireman context and Rescue context for usage for an audit. Shop
+    and held balances may
+    never become negative; movements affecting both balances are atomic. Derive held
+    balance from the ledger unless later scale justifies a cache. No generic adjusted
+    movement is approved before correction rules exist. This establishes custody
+    without treating field stock as shop stock. **Extends** Decisions 15, 16, and 36;
+    **refines** Decision 28's item archive rule through Decision 86.
+
+91. **Tireman Product usage is operational consumption, not a Sale.** A Tireman may
+    record use only from their own held balance for an appropriate Rescue assigned to
+    them, without a negative balance. Usage does not create or alter a Sale; it may
+    later be compared with Rescue-linked Sale lines for reconciliation without
+    fabricating a transaction. Rescue completion and Sale remain independent. This
+    prevents stock custody records from becoming false financial records.
+    **Extends** Decision 16; **retains** Decisions 13, 70–73, and 76.
+
+92. **The former eight-table limit is superseded for justified post-defense domains.**
+    The present schema still has eight application tables, but future tables may hold
+    genuine histories such as `inventory_restocks`, `rescue_assignment_offers`, and
+    `tireman_inventory_movements`. Every new table needs a clear purpose, constraints
+    and foreign keys, a safe migration, tests, and documentation. This is no blanket
+    approval for unnecessary tables or for running `schema.sql` on existing data.
+    The new historical requirements cannot safely be forced into unrelated columns.
+    **Supersedes** earlier “exactly 8 tables” scope statements, including the
+    introductions around Decisions 65, 70, 77, and 78 and the historical
+    out-of-scope list; **retains**
+    Decision 38's text-schema documentation principle. No table is added now.
+
+93. **Automated DB-backed tests are isolated to `vulcatrack_test`.** Test mode
+    fails closed for missing test configuration, an unexpected database name,
+    `vulcatrack` as target, or a `SELECT DATABASE()` result other than
+    `vulcatrack_test`; HTTP child processes inherit and enforce test mode. Tests
+    must never write the normal `vulcatrack` database. This records the completed
+    Batch 1 engineering safeguard, rather than a new product feature. **Extends**
+    the earlier test-harness practice; no earlier numbered domain decision is
+    superseded.
+
+94. **Tireman authorization separation is mandatory; Admin role tiers remain open.**
+    Tiremen cannot enter Admin modules. Existing Admin accounts remain equivalent.
+    Owner/Staff RBAC is a pending business decision, and additional password prompts
+    need a specific threat/use case before approval. This protects the new actor
+    boundary without inventing an Admin hierarchy. **Refines** Decisions 19, 47,
+    and 79; **retains** Decision 79's current equal-Admin behavior and existing
+    reauthentication for creating an Admin account.
+
+95. **The slow-moving threshold is configurable in principle, initially 60 days.**
+    An active Product with shop stock above zero is slow-moving when it has no
+    recorded Sale line for that Product in the configured recent period. Authorized
+    management must be able to adjust the period; implementation should choose the
+    smallest clean persistence and UI design, without assuming a settings table now.
+    Describe the actual configured period, for example “No recorded sales in the configured
+    60-day period.” This is sales performance, not physical age, expiry, or
+    deterioration. Do not infer manufacturing age from restock dates or reduce
+    prices automatically; batch/manufacturing data is outside current scope.
+    Keep the recommendation advisory: “Review demand, display, promotion, or
+    price.” This prevents a fixed number from becoming a misleading product-age
+    claim. **Refines** Decision 89; **retains** Decision 86's archive distinction.
+
+96. **Admin receives an Activity Log of meaningful state-changing events.** Each
+    entry should give a human-readable account of what changed, when, and which
+    Admin, Tireman, Customer, or system process caused it. Relevant events include
+    item creation/edit/archive/reactivation, restock and Tireman stock movements,
+    Tireman account/duty changes, Rescue submission/offer outcomes/override/final
+    actions, completed Sales, Admin account creation, and useful security events.
+    Routine page views, refreshes, and navigation are excluded. Never record
+    passwords, hashes, session/CSRF tokens, or sensitive credentials. The Activity
+    Log is an oversight narrative, not the authoritative ledger: restocks, Tireman
+    custody, offers, and Sales remain authoritative in their own domain records.
+    A dedicated log table is likely justified but its final design is deferred.
+    This gives management traceability without duplicating business truth.
+    **Extends** Decisions 79, 83, 87, 90, and 92; it does not replace their records.
+
+97. **Admin Sales History gains operational finding and period summaries.** Its
+    primary job remains finding, reviewing, filtering, and opening actual recorded
+    transactions; the existing Transaction Summary links remain. Show the selected
+    day/period clearly, with today's date prominent but subordinate to the page
+    title when viewing Today. Provide direct single-day selection and arbitrary
+    From/To ranges; quick periods should include Today, Yesterday, 7 Days, 30 Days,
+    and Custom where useful. Source filtering includes All, In-Shop, and
+    Rescue-linked. Evaluate Newest First, Oldest First, Highest Total, and Lowest
+    Total, omitting sort options with little operational value. Summaries must use
+    the currently filtered result set, not all-time data: useful measures include
+    transaction count, total Sales value, source counts, Product/Service quantities,
+    and Product/Service revenue. Keep the presentation compact and scannable.
+    Reports retains trends, averages, peak periods, Rescue Success Rate, and broader
+    analytics; Sales History must not duplicate it. This improves daily review
+    without changing Sale facts. **Extends** Decision 49 and the Sales History
+    implementation; **retains** Decisions 35, 50, 70, and 76.
+
+98. **Polish each post-defense UI feature in its own implementation batch.** Before
+    building a page or interaction, inspect the closest accepted VulcaTrack pattern
+    and reuse or adapt its typography, spacing, red/black/white language, panels,
+    buttons, controls, filters, badges, tables, mobile cards, overlays, navigation,
+    and focus/hover/selected/empty/error/success states. Reuse fitting interaction
+    patterns and timing; where none fits, create an interaction that feels native to
+    VulcaTrack. Do not defer a broad UI/UX cleanup until all features are done.
+    This standing rule applies to restocks, Inventory filters/archive/slow-moving
+    settings, Tireman login/dashboard/availability/inventory/usage, Rescue offers
+    and dispatch feedback, Activity Log, Sales History, Reports inventory additions,
+    and future Admin security controls. This keeps new work coherent with the
+    accepted application. **Extends** the existing Customer/Admin UI direction;
+    it authorizes no feature implementation in this documentation batch.
+
+99. **Motion should be smooth, restrained, deliberate, and task-aware.** Prefer
+    short, smooth transitions over abrupt visual switching where motion helps;
+    reuse existing VulcaTrack easing and timing rather than introducing arbitrary
+    values. Do not animate only for decoration. Keep urgent validation, critical
+    errors, transactional confirmations, accessibility-sensitive actions, and
+    time-sensitive tasks immediate when delay would harm clarity. Continue honoring
+    `prefers-reduced-motion`. Avoid bounce, flashy transforms, excessive scale,
+    long decorative animation, and layout-shifting hover effects; hover/active
+    feedback should be subtle. This preserves continuity without slowing work.
+    **Extends** Decision 98 and the established Customer/Admin motion language.
+
+100. **Responsive behavior is part of every new feature batch.** Design and check
+     representative desktop and narrow mobile widths during implementation, avoiding
+     horizontal overflow and preserving hierarchy and usable touch targets. Use
+     desktop tables where clear and labelled stacked mobile cards for operational
+     records where practical; retain a compact table when it is clearer than cards.
+     This prevents a later mobile cleanup phase for the new features. **Extends**
+     Decision 98 and the existing responsive Customer/Admin patterns.
+
+Unless directly superseded above, the Customer/Admin auth split, no public Admin
+registration, DB-authoritative prices, product-only Sale stock deduction, Service
+stock exclusion, atomic Sales, stale-total protection, Rescue-linked Sale uniqueness
+and independence, feedback, Transaction Summary terminology and non-official status,
+and the no-live-GPS/no-continuous-ETA/no-automatic-price-cut rules remain in force.
 
 ---
 

@@ -2,6 +2,12 @@
 
 Verified against the local repository on **2026-10-08 (Asia/Manila)**. This is the starting context for future Codex work, not a new product decision or a claim that the deployed system was tested. Status terms below distinguish committed implementation, historical reports, deferred decisions, and open questions.
 
+**2026-10-12 architecture update:** The approved post-defense target is recorded in
+[Decisions 80–100](decisions/project-decisions.md). Sections describing the verified
+eight-table, Customer/Admin-only application remain a pre-defense implementation
+snapshot. The target rules below are documentation only; implementation, migrations,
+and production hosting are not verified by this update.
+
 ## 1. Purpose and authority
 
 **DO NOT EDIT `docs/PROJECT-CONTEXT.md`.** It is the original Claude-era broad project and development history, retained as a read-only reference for Codex even where its older summaries have drifted. This file is the current Codex-era continuity document. It records the cross-check at the stated checkpoint; it does not replace source inspection or approve features.
@@ -10,7 +16,7 @@ Verified against the local repository on **2026-10-08 (Asia/Manila)**. This is t
 |---|---|
 | `docs/CODEX-CONTEXT.md` | Current Codex continuity and verification provenance. Read first in future Codex sessions. |
 | `docs/PROJECT-CONTEXT.md` | Original Claude-era historical/project context. **Read-only for Codex.** |
-| `docs/decisions/project-decisions.md` | Approved decision history, including Decisions 60 and 65–79, with a dated clarification of Decision 77's later header display. Read historical entries in their dated context. |
+| `docs/decisions/project-decisions.md` | Approved decision history through Decision 100, including post-defense Decisions 80–100 and a dated clarification of Decision 77's later header display. Read historical entries in their dated context. |
 | `docs/ERD/schema.dbml` | Authoritative database design. |
 | `docs/DEVELOPMENT-LOG.md` | Chronological post-handoff log, currently an untracked local file. Preserve it; it is not a substitute for Git or current code. |
 
@@ -137,6 +143,11 @@ The avatar display difference is recorded as a later implementation clarificatio
 
 ## 17. Deferred and future work
 
+**Post-defense precedence:** the bullets below describe the 2026-10-08 checkpoint.
+Decisions 80–100 now approve Tireman login, offer-based automatic dispatch,
+restock/custody histories, and justified additional tables. Do not treat the older
+Tireman-login or ninth-table exclusions below as current policy.
+
 - **APPROVED BUT DEFERRED:** Decision 60 permits one-time road-following route display and road distance feeding the existing server-side, frozen ETA, with haversine fallback and no new table/route persistence. Current code still uses haversine. This is distinct from live tracking.
 - **DISCUSSED / NOT APPROVED:** persisting cash tender (`sales.cash_tendered DECIMAL(10,2) NULL` was considered); Customer deactivation, Rescue cancellation, emailed Transaction Summary, rate limiting/lockout, password reset, 2FA, historical-name snapshots, pagination, `sale_date` indexing, demo data, cosmetic/deployment refinements, and broader Admin customer-management scope remain candidate work or open questions, not current requirements. No `cancelled` status or ninth table is approved here.
 - **INTENTIONAL NON-FEATURES:** live GPS, moving Tireman marker, continuous ETA, in-app chat, customer online cart/checkout, online/GCash payment, Tireman login/dashboard/rankings, Admin RBAC/public Admin signup, Customer hard delete/current deactivation, current Customer Rescue cancellation, status-history/audit table, supplier/procurement module, multi-location stock, official BIR invoicing, persisted tender or route geometry. Do not label these absences bugs without a new decision.
@@ -176,3 +187,60 @@ Read this file first, then inspect the relevant code, decisions, DBML, migration
 **2026-10-09 — Admin UI/UX Chunk 2A:** Dashboard adds one seven-day Sales Trend from recorded daily totals, including zero days; its line draws in 760ms. Reports' existing daily bars grow from their baseline in 760ms and source-share meters grow from the left in 720ms. Reduced motion shows the final charts immediately. Ordinary Admin money text uses integer-centavo `Money::formatDisplay()` to group thousands and omit `.00` only for whole pesos; stored values, inputs, calculations, and the printable Transaction Summary retain fixed two-decimal `Money::format()`. Fresh full regression: **264 passed, 0 failed, 4,737 assertions across 49 files; OK**.
 
 **2026-10-09 — Brand assets:** `vulcatrack/assets/img/vulcatrack-logo.svg` is the user-provided canonical full lockup; `landing-tireman.svg` is the landing hero illustration. Both SVGs contain embedded PNG artwork, so display them at modest responsive sizes. `vulcatrack-favicon.png` is cropped from the canonical logo's tire/location-pin mark. Functional map/location icons remain separate.
+
+## 23. Post-defense architecture and Batch 1 checkpoint
+
+**2026-10-12, approved target, not yet implemented:** Decisions 80–100 supersede the
+historical no-login Tireman and fixed eight-table limits. Customer, Admin, and
+Tireman are distinct authenticated actors. Admin provisions Tireman credentials;
+historical uncredentialed workers remain valid records. `is_active` controls login
+and participation, On Duty/Off Duty controls new-offer availability, and Busy is
+derived from work. Tireman authorization is restricted to their own operations.
+Existing Admin accounts remain equal; Owner/Staff RBAC and extra step-up prompts
+are not approved.
+
+The intended ordinary Rescue flow is Customer submission → automatic offer to one
+eligible Tireman → Tireman acknowledgment → accepted assignment → Tireman work,
+with Admin supervision and exception handling. Pending remains pending through an
+open offer. V1 capacity is one open offer or one accepted unfinished Rescue per
+Tireman, with deterministic fair ordering and no proximity claim without live GPS.
+Decline/expiry moves to another eligible Tireman without repeating the offer for
+that Rescue; no eligible Tireman leaves it pending for Admin attention. The only
+Rescue statuses remain pending, accepted, rejected, completed; offer state belongs
+to separate history. The assigned Tireman may complete their own accepted Rescue;
+completion and Sale remain independent, and feedback rules remain. The exact
+exceptional reassignment/handoff and offer-delivery/expiry mechanics need design
+before implementation. The product is designed for 24/7 OTG operations; local
+XAMPP is not verified as 24/7 production hosting.
+
+For Inventory, `items.is_active` means offered versus archived; slow-moving stock
+stays active and is an advisory based on no recorded Sale line for that Product
+in a management-adjustable period (initial default 60 days), not physical unit age
+or deterioration. The threshold's persistence/UI design is deferred. Product archive
+normally requires
+zero shop and Tireman-held stock.
+Product restocks need atomic receipt records with optional free-text supplier;
+existing stock has unknown prior receipt history. Routine stock changes must use
+recorded movements, with auditable future corrections. Issued Product moves from
+shop to Tireman custody; use reduces held stock; return restores shop stock.
+Operational use is not a Sale. Properly justified new tables may hold restocks,
+assignment offers, and Tireman inventory movements; the current database remains
+eight tables until a safe migration is approved and implemented.
+
+An Admin-visible Activity Log is approved for meaningful state changes by Admin,
+Tireman, Customer, or system actors. It is an oversight narrative, not a replacement
+for restock, custody, offer, or Sale records; routine page views and credentials
+are excluded. Admin Sales History is approved for direct day/period and source filters,
+useful sorting, and summaries of the selected result set; Reports remains the place
+for broader analytics. Each post-defense feature must receive matching VulcaTrack
+UI/UX polish and responsive/mobile treatment in its own implementation batch.
+Prefer restrained, smooth motion using existing timing/easing when it helps; keep
+urgent feedback immediate and honor `prefers-reduced-motion`.
+
+**Batch 1 implemented at `91fcd49e409d3af904b41704efd91c2a3a4d7712`:**
+automated DB-backed tests use `vulcatrack_test`, fail closed for missing/wrong
+configuration, a normal `vulcatrack` target, or a selected-DB mismatch, and enforce
+test mode in HTTP children. The accepted complete-suite report is **269 passed,
+0 failed, 4,674 assertions, 50 files**. The reported normal `vulcatrack` before/after
+fingerprint was unchanged across all eight tables and 112 rows. These are accepted
+Batch 1 verification results, not a fresh test run in this documentation turn.
