@@ -364,7 +364,7 @@ test('admin Rescue sale: entry point, start_rescue checks, clean-cart rule, cust
         $inshopReg = (int) $pdo->lastInsertId();
         $hist = $server->request('/vulcatrack/admin/sales.php')['body'];
         assert_contains('<th>Customer</th><th>Source</th>', $hist, 'Source column');
-        $rowOf = fn (int $id) => preg_match('/<tr>\s*<td>' . $id . '<\/td>.*?<\/tr>/s', $hist, $m) ? $m[0] : '';
+        $rowOf = fn (int $id) => preg_match('/<tr>\s*<td data-label="Sale" data-record-primary><span class="mobile-record-prefix" aria-hidden="true">#<\/span>' . $id . '<\/td>.*?<\/tr>/s', $hist, $m) ? $m[0] : '';
         $w = $rowOf($inshopWalk);
         assert_contains('tag--walkin">Walk-in<', $w, '54. walk-in still shown');
         assert_contains('tag--inshop">In-shop<', $w, '50. unlinked = In-shop');

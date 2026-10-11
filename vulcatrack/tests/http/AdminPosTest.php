@@ -131,8 +131,8 @@ test('admin POS: guards, session cart, customer link, tender checks, stale-price
         assert_contains('<section class="pos-catalog" id="items"', $html, 'catalogue pane');
         assert_same(2, substr_count($html, '<ul class="pos-grid">'), 'each catalogue group uses the wrapping card grid');
         assert_true(strpos($html, 'id="pos-group-service"') < strpos($html, 'id="pos-group-product"'), 'Services Offered comes before Products');
-        assert_true(preg_match('#<section class="pos-catalog-group" aria-labelledby="pos-group-service">(.*?)</section>#s', $html, $serviceGroup) === 1);
-        assert_true(preg_match('#<section class="pos-catalog-group" aria-labelledby="pos-group-product">(.*?)</section>#s', $html, $productGroup) === 1);
+        assert_true(preg_match('#<section class="pos-catalog-group pos-catalog-group--service" aria-labelledby="pos-group-service">(.*?)</section>#s', $html, $serviceGroup) === 1);
+        assert_true(preg_match('#<section class="pos-catalog-group pos-catalog-group--product" aria-labelledby="pos-group-product">(.*?)</section>#s', $html, $productGroup) === 1);
         assert_contains("{$tag} Patching", $serviceGroup[1], 'service result belongs under Services Offered');
         assert_not_contains("{$tag} Tire Valve", $serviceGroup[1]);
         assert_contains("{$tag} Tire Valve", $productGroup[1], 'product result belongs under Products');

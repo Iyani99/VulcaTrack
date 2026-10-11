@@ -27,7 +27,9 @@ foreach (['pdo_mysql', 'mbstring', 'openssl', 'json', 'curl', 'fileinfo'] as $ex
 $serverOk = false;
 $serverInfo = '';
 try {
-    $serverInfo = vulcatrack_db(false)->query('SELECT VERSION()')->fetchColumn();
+    // Test mode keeps every connection pinned to the isolated database.
+    $serverInfo = vulcatrack_db(VULCATRACK_RUNNING_TESTS)
+        ->query('SELECT VERSION()')->fetchColumn();
     $serverOk = true;
 } catch (Throwable $e) {
     $serverInfo = $e->getMessage();

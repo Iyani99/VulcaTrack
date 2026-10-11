@@ -10,7 +10,7 @@ test('bootstrap defined the framework constants and loaded config', function () 
     assert_true(defined('VULCATRACK_ROOT'));
     assert_true(is_array($GLOBALS['vulcatrack_config']));
     assert_true(isset($GLOBALS['vulcatrack_config']['db']['name']));
-    assert_same('vulcatrack', $GLOBALS['vulcatrack_config']['db']['name']);
+    assert_same('vulcatrack_test', $GLOBALS['vulcatrack_config']['db']['name']);
 });
 
 test('the session idle timeout is the locked 30 minutes (Decision 45)', function () {

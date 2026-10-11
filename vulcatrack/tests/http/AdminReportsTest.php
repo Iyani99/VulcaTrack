@@ -63,7 +63,7 @@ test('sales reports: guarded, consistent period totals, chart, source and item b
         $pdo->prepare('DELETE FROM admins WHERE admin_id = ?')->execute([$adminId]);
     };
     $flat = static fn (string $html): string => preg_replace('/\s+/', ' ', $html);
-    $dayCount = static fn (string $html): int => substr_count($html, '<g class="rpt-day"');
+    $dayCount = static fn (string $html): int => substr_count($html, '<a class="rpt-point');
     $card = static fn (string $value): string => '<p class="card__num">' . $value . '</p>';
     $source = static function (string $html, string $key): string {
         return preg_match('~<li class="rpt-src__row rpt-src__row--' . $key . '">(.*?)</li>~s', $html, $match) === 1
@@ -115,11 +115,11 @@ test('sales reports: guarded, consistent period totals, chart, source and item b
         assert_contains($card('&#8369;632'), $f);
         assert_contains('Chart total: <strong>&#8369;632</strong> from 3 transactions', $f);
         assert_same(31, $dayCount($july));
-        assert_contains('<g class="rpt-day" data-day="2001-07-01" data-centavos="58650">', $july);
-        assert_contains('<g class="rpt-day" data-day="2001-07-03" data-centavos="0">', $july);
-        assert_contains('<title>Jul 1, 2001: &#8369;586.50 &middot; 2 transactions</title>', $july);
-        assert_contains('<title>Jul 3, 2001: &#8369;0 &middot; 0 transactions</title>', $july);
-        assert_same(2, substr_count($july, '<rect class="rpt-bar"'), 'only revenue days draw bars');
+        assert_contains('focus=2001-07-01#focused-period', $july);
+        assert_contains('focus=2001-07-03#focused-period', $july);
+        assert_contains('aria-label="July 1, 2001: ₱586.50 in sales from 2 transactions. View details."', $july);
+        assert_contains('aria-label="July 3, 2001: ₱0 in sales from 0 transactions. View details."', $july);
+        assert_contains('<path class="rpt-line"', $july, 'the report draws the current line chart');
         assert_contains('<td>2001-07-02</td> <td class="num">1</td> <td class="num">&#8369;45.50</td>', $f);
         assert_contains('<td>2001-07-01</td> <td class="num">2</td> <td class="num">&#8369;586.50</td>', $f);
         assert_contains('<td>' . e($valveName) . '</td>', $f, 'stored item name is escaped');
@@ -146,7 +146,7 @@ test('sales reports: guarded, consistent period totals, chart, source and item b
 
         $september = $flat($server->request($url . '?period=month&month=2001-09')['body']);
         assert_contains($card('1'), $september);
-        assert_contains('No revenue in this window', $september, 'a free sale has a count but no revenue bar');
+        assert_contains('No sales revenue in this period.', $september, 'a free sale has a count but no revenue');
         assert_contains('No revenue in this range, so no revenue share is shown.', $september);
         assert_contains('<dt>Transactions</dt><dd>1</dd>', $source($september, 'inshop'));
         assert_contains('<dt>Revenue</dt><dd>&#8369;0</dd>', $source($september, 'inshop'));
@@ -155,8 +155,8 @@ test('sales reports: guarded, consistent period totals, chart, source and item b
         assert_same(28, $dayCount($empty), 'historical non-leap February has 28 zero days');
         assert_contains($card('0'), $flat($empty));
         assert_contains('No sales in this date range.', $empty);
-        assert_contains('No sales in this window', $empty);
-        assert_same(0, substr_count($empty, '<rect class="rpt-bar"'));
+        assert_contains('No sales in this period.', $empty);
+        assert_contains('Chart total: <strong>&#8369;0</strong> from 0 transactions', $flat($empty));
         assert_not_contains('rpt-src__share', $empty, 'zero-sales range has no invented source share');
 
         $year = $server->request($url . '?period=365d')['body'];
@@ -164,7 +164,7 @@ test('sales reports: guarded, consistent period totals, chart, source and item b
         $yearSummary = $repo->summarize($yearPeriod['from'], $yearPeriod['to']);
         assert_contains('Monthly sales,', $year);
         assert_true($dayCount($year) >= 12 && $dayCount($year) <= 13, '365d uses monthly buckets');
-        assert_contains('data-day="' . substr($today, 0, 7) . '"', $year);
+        assert_contains('focus=' . substr($today, 0, 7) . '#focused-period', $year);
         assert_contains($card((string) $yearSummary['count']), $flat($year));
         assert_contains('Chart total: <strong>&#8369;' . Money::formatDisplay($yearSummary['total_centavos']) . '</strong>', $flat($year));
 

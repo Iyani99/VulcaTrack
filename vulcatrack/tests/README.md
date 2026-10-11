@@ -8,6 +8,8 @@ and Reports); each new chunk adds its own tests here.
 ## Running
 
 ```
+C:\xampp\php\php.exe vulcatrack/tests/setup-db.php --check  # validate target and schema, no writes
+C:\xampp\php\php.exe vulcatrack/tests/setup-db.php          # explicit reset of vulcatrack_test
 C:\xampp\php\php.exe vulcatrack/tests/run.php            # everything
 C:\xampp\php\php.exe vulcatrack/tests/run.php unit       # one suite
 C:\xampp\php\php.exe vulcatrack/tests/run.php --filter=Geo
@@ -15,15 +17,34 @@ C:\xampp\php\php.exe vulcatrack/tests/run.php --filter=Geo
 
 Exit code `0` = all passed, `1` = at least one failure.
 
-**Prerequisites:** MariaDB must be running (XAMPP Control Panel → MySQL → Start),
-the `vulcatrack` schema must be built (`database/schema.sql`), and
-`config/config.php` must exist. The `unit` suite needs none of that.
+**Prerequisites:** Copy `config/config.test.example.php` to the git-ignored
+`config/config.test.php`. The template reuses local connection settings from
+`config/config.php` but explicitly selects `vulcatrack_test`; it contains no
+credentials. All suites require both config files. Unit tests do not need
+MariaDB. Integration and HTTP tests require MariaDB and a test database built
+with the explicit `setup-db.php` command above.
+
+The runner and its HTTP child server always enable test mode. Missing test
+config, any configured name other than exactly `vulcatrack_test`, or a
+connection whose `SELECT DATABASE()` differs causes an immediate failure
+before DB-backed tests start. There is no fallback to `vulcatrack`. The setup
+command validates and discards `schema.sql`'s production `CREATE DATABASE` and
+`USE` statements; it runs only its table DDL on `vulcatrack_test`. Never run
+`database/schema.sql` unchanged as test setup. Reset is explicit, not part of
+the ordinary test command.
+
+For an additional database-level boundary, a dedicated MariaDB user can be
+granted privileges only on `vulcatrack_test` and placed in the local test
+config. The setup user needs CREATE/DROP/ALTER privileges on that database;
+tests need the DML privileges used by the suite. No MariaDB accounts are
+created or changed by this harness.
 
 ## Layout
 
 | Path | What it covers |
 |---|---|
 | `run.php` | Test runner. Discovers `*/*Test.php`, runs each `test()` case in isolation, promotes PHP warnings/notices to failures, tallies assertions. |
+| `setup-db.php` | Explicitly builds/resets only `vulcatrack_test` from validated canonical schema DDL. `--check` is read-only. |
 | `bootstrap.php` | Loads the assertion lib + the application bootstrap. |
 | `lib/Assert.php` | `test()` registry and `assert_*()` helpers. |
 | `lib/TestDb.php` | `TestDb::rollback()` — run DB work in a transaction that is always rolled back — plus a unique-email helper. |

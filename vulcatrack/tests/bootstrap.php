@@ -19,6 +19,10 @@ error_reporting(E_ALL);
 define('VULCATRACK_TEST_ROOT', __DIR__);
 define('VULCATRACK_APP_ROOT', dirname(__DIR__));
 
+if (getenv('VULCATRACK_TEST_MODE') !== '1') {
+    throw new \RuntimeException('VulcaTrack tests must start through tests/run.php in isolated test mode.');
+}
+
 require __DIR__ . '/lib/Assert.php';
 require __DIR__ . '/lib/TestDb.php';
 require __DIR__ . '/lib/HttpClient.php';
@@ -38,7 +42,7 @@ function app_path(string $relative): string
     return VULCATRACK_APP_ROOT . '/' . ltrim($relative, '/');
 }
 
-/** The shared PDO handle, or null when the database is unreachable. */
+/** The shared PDO handle. A connection failure aborts the suite. */
 function test_pdo(): ?\PDO
 {
     static $pdo = null;
@@ -48,9 +52,10 @@ function test_pdo(): ?\PDO
         try {
             $pdo = vulcatrack_db(true);
         } catch (\Throwable $e) {
-            fwrite(STDERR, "  [db] connection failed: " . $e->getMessage() . "\n");
-            $pdo = null;
+            throw new \RuntimeException('VulcaTrack test database connection failed; no tests were run.', 0, $e);
         }
     }
+    \vulcatrack_assert_test_database_name($GLOBALS['vulcatrack_config']['db']['name'] ?? null);
+    \vulcatrack_assert_test_database_connection($pdo);
     return $pdo;
 }

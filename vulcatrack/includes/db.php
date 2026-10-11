@@ -8,6 +8,22 @@
 
 require_once __DIR__ . '/bootstrap.php';
 
+/** Fail before connecting if test configuration names anything but the test DB. */
+function vulcatrack_assert_test_database_name($name): void
+{
+    if ($name !== 'vulcatrack_test') {
+        throw new RuntimeException('VulcaTrack tests require database vulcatrack_test.');
+    }
+}
+
+/** Confirm the server actually selected the intended database before any write. */
+function vulcatrack_assert_test_database_connection(PDO $pdo): void
+{
+    if ($pdo->query('SELECT DATABASE()')->fetchColumn() !== 'vulcatrack_test') {
+        throw new RuntimeException('VulcaTrack tests connected to an unexpected database; refusing to continue.');
+    }
+}
+
 /**
  * Return a shared PDO connection.
  *
@@ -22,10 +38,21 @@ function vulcatrack_db($withDatabase = true)
     $key = $withDatabase ? 'db' : 'server';
 
     if (isset($connections[$key])) {
+        if (VULCATRACK_RUNNING_TESTS) {
+            vulcatrack_assert_test_database_name($GLOBALS['vulcatrack_config']['db']['name'] ?? null);
+            vulcatrack_assert_test_database_connection($connections[$key]);
+        }
         return $connections[$key];
     }
 
     $cfg = $GLOBALS['vulcatrack_config']['db'];
+
+    if (VULCATRACK_RUNNING_TESTS) {
+        vulcatrack_assert_test_database_name($cfg['name'] ?? null);
+        if (!$withDatabase) {
+            throw new RuntimeException('Server-only database connections are forbidden during tests.');
+        }
+    }
 
     $dsn = 'mysql:host=' . $cfg['host'] . ';port=' . $cfg['port'] . ';charset=' . $cfg['charset'];
     if ($withDatabase) {
@@ -38,6 +65,10 @@ function vulcatrack_db($withDatabase = true)
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES   => false,
     ]);
+
+    if (VULCATRACK_RUNNING_TESTS) {
+        vulcatrack_assert_test_database_connection($pdo);
+    }
 
     // VulcaTrack runs its OWN database sessions in strict mode: an over-long
     // string or an out-of-range number is rejected with an error, never

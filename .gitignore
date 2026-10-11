@@ -3,6 +3,7 @@
 
 # Machine-specific / local configuration
 vulcatrack/config/config.php
+vulcatrack/config/config.test.php
 
 # Dependencies
 vendor/

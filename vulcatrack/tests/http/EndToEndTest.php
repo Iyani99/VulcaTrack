@@ -59,6 +59,7 @@ test('end-to-end: guards, actor separation, CSRF and clean output', function () 
         // 4. health.php reports the environment as healthy.
         $r = $server->request('/vulcatrack/health.php');
         assert_contains('All checks passed', $r['body']);
+        assert_contains('Database &quot;vulcatrack_test&quot; connects', $r['body'], 'HTTP child must select the test database');
 
         // 5. Login with a bad CSRF token -> not authenticated.
         $login = $server->request('/vulcatrack/login.php');

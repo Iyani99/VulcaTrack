@@ -90,8 +90,8 @@ test('admin accounts: access, list, re-auth, validation, CSRF, arrays, PRG, dupl
         assert_contains(e("{$tag} Alpha <b>Admin</b>") . ' <span class="tag tag--customer">You</span>', $html, 'the signed-in admin is marked, name escaped');
         assert_not_contains("{$tag} Alpha <b>Admin</b>", $html);
         assert_contains("{$tag} Bravo Admin</td>", $html);
-        assert_contains('<td class="acct-email">' . e($emailB) . '</td>', $html);
-        assert_contains('<td class="nowrap">Sep 2, 2026 · 9:10 AM</td>', $html, 'friendly created date');
+        assert_contains('<td class="acct-email" data-label="Email">' . e($emailB) . '</td>', $html);
+        assert_contains('<td class="nowrap" data-label="Created">Sep 2, 2026 · 9:10 AM</td>', $html, 'friendly created date');
         $tbody = substr($html, (int) strpos($html, "<tbody>")); // the sidebar also names the signed-in admin
         assert_true(strpos($tbody, "{$tag} Bravo Admin") < strpos($tbody, "{$tag} Alpha"), "newest first");
         foreach (['$2y$', 'password_hash', 'admin_id'] as $never) {

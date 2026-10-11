@@ -34,6 +34,9 @@ final class HttpServer
 
     public function start(): void
     {
+        if (getenv('VULCATRACK_TEST_MODE') !== '1') {
+            throw new \RuntimeException('HTTP tests require isolated test mode.');
+        }
         $repoRoot = dirname(VULCATRACK_APP_ROOT);
         $php = PHP_BINARY;
         // An argument array starts php.exe directly. A command string goes
@@ -43,6 +46,11 @@ final class HttpServer
             $php,
             '-d', 'display_errors=1',
             '-d', 'error_reporting=' . E_ALL,
+            // XAMPP's normal session directory may be unavailable to the
+            // test child. The harness already writes its cookie/log files to
+            // this writable temp directory; keep test sessions there too.
+            '-d', 'session.save_path=' . sys_get_temp_dir(),
+            '-d', 'upload_tmp_dir=' . sys_get_temp_dir(),
             '-S', '127.0.0.1:' . $this->port,
             '-t', $repoRoot,
         ];
@@ -50,7 +58,9 @@ final class HttpServer
         @unlink($this->logFile);
         // Inherit the parent environment and layer any extras on top (Windows
         // php.exe needs SystemRoot etc., so a partial env is not an option).
-        $env = $this->extraEnv === [] ? null : array_merge(getenv(), $this->extraEnv);
+        $env = array_merge(getenv(), $this->extraEnv);
+        // A test-specific extra environment must never turn isolation off.
+        $env['VULCATRACK_TEST_MODE'] = '1';
         // stdout/stderr go to a FILE, not a pipe: an undrained pipe buffer would
         // deadlock the single-threaded built-in server after a few dozen requests.
         $this->proc = proc_open(
@@ -73,6 +83,17 @@ final class HttpServer
             if (is_resource($conn)) {
                 fclose($conn);
                 @unlink($this->cookieJar);
+                try {
+                    $health = $this->request('/vulcatrack/health.php');
+                    if ($health['status'] !== 200
+                        || !str_contains($health['body'], 'All checks passed')
+                        || !str_contains($health['body'], 'Database &quot;vulcatrack_test&quot; connects')) {
+                        throw new \RuntimeException('HTTP test child did not confirm vulcatrack_test.');
+                    }
+                } catch (\Throwable $e) {
+                    $this->stop();
+                    throw $e;
+                }
                 return;
             }
             usleep(150_000);

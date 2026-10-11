@@ -21,6 +21,9 @@ if (PHP_SAPI !== 'cli') {
     exit("run.php is CLI-only.\n");
 }
 
+// All suites use the isolated test configuration. Set this before app bootstrap
+// and before any HTTP child server is launched.
+putenv('VULCATRACK_TEST_MODE=1');
 require __DIR__ . '/bootstrap.php';
 
 $suites = ['unit', 'integration', 'http'];
@@ -34,6 +37,12 @@ foreach (array_slice($argv, 1) as $arg) {
     }
 }
 $runSuites = $only !== null ? [$only] : $suites;
+
+// Refuse an unavailable or misdirected database before registering any test
+// that could write. Pure unit tests still need test config, but not MariaDB.
+if (in_array('integration', $runSuites, true) || in_array('http', $runSuites, true)) {
+    test_pdo();
+}
 
 $files = [];
 foreach ($runSuites as $suite) {

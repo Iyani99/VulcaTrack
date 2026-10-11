@@ -15,13 +15,35 @@ if (defined('VULCATRACK_BOOTSTRAPPED')) {
 define('VULCATRACK_BOOTSTRAPPED', true);
 define('VULCATRACK_ROOT', dirname(__DIR__));
 
-$configFile = VULCATRACK_ROOT . '/config/config.php';
+$testMode = getenv('VULCATRACK_TEST_MODE') === '1';
+define('VULCATRACK_RUNNING_TESTS', $testMode);
+
+// Test mode must select its own file explicitly. A missing file is an error;
+// there is never a fallback to the application's normal configuration.
+$testConfigOverride = getenv('VULCATRACK_TEST_CONFIG');
+$configFile = $testMode
+    ? ($testConfigOverride === false
+        ? VULCATRACK_ROOT . '/config/config.test.php'
+        : $testConfigOverride)
+    : VULCATRACK_ROOT . '/config/config.php';
 if (!is_file($configFile)) {
     http_response_code(500);
+    if ($testMode) {
+        $message = 'VulcaTrack tests: missing test configuration; no database was accessed.';
+        if (PHP_SAPI === 'cli') {
+            fwrite(STDERR, $message . "\n");
+        } else {
+            error_log($message);
+        }
+        exit(2);
+    }
     exit('VulcaTrack: missing config/config.php -- copy config/config.example.php to config/config.php.');
 }
 
 $config = require $configFile;
+if ($testMode && (!is_array($config) || ($config['db']['name'] ?? null) !== 'vulcatrack_test')) {
+    throw new RuntimeException('VulcaTrack tests require configured database vulcatrack_test; no database was accessed.');
+}
 $GLOBALS['vulcatrack_config'] = $config;
 
 date_default_timezone_set($config['app']['timezone'] ?? 'UTC');
