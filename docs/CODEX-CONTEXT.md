@@ -190,9 +190,10 @@ Read this file first, then inspect the relevant code, decisions, DBML, migration
 
 ## 23. Post-defense architecture and Batch 1 checkpoint
 
-**2026-10-12, approved target, not yet implemented:** Decisions 80–100 supersede the
-historical no-login Tireman and fixed eight-table limits. Customer, Admin, and
-Tireman are distinct authenticated actors. Admin provisions Tireman credentials;
+**2026-10-12, approved post-defense target:** Decisions 80–100 supersede the
+historical no-login Tireman and fixed eight-table limits. Inventory Foundation
+Batch 1 is implemented below; the other target domains remain future work.
+Customer, Admin, and Tireman are distinct authenticated actors. Admin provisions Tireman credentials;
 historical uncredentialed workers remain valid records. `is_active` controls login
 and participation, On Duty/Off Duty controls new-offer availability, and Busy is
 derived from work. Tireman authorization is restricted to their own operations.
@@ -223,9 +224,9 @@ Product restocks need atomic receipt records with optional free-text supplier;
 existing stock has unknown prior receipt history. Routine stock changes must use
 recorded movements, with auditable future corrections. Issued Product moves from
 shop to Tireman custody; use reduces held stock; return restores shop stock.
-Operational use is not a Sale. Properly justified new tables may hold restocks,
-assignment offers, and Tireman inventory movements; the current database remains
-eight tables until a safe migration is approved and implemented.
+Operational use is not a Sale. The real/demo database now has nine tables after
+the additive Inventory Restock migrations. Assignment offers and Tireman inventory
+movements remain future work.
 
 An Admin-visible Activity Log is approved for meaningful state changes by Admin,
 Tireman, Customer, or system actors. It is an oversight narrative, not a replacement
@@ -244,3 +245,20 @@ test mode in HTTP children. The accepted complete-suite report is **269 passed,
 0 failed, 4,674 assertions, 50 files**. The reported normal `vulcatrack` before/after
 fingerprint was unchanged across all eight tables and 112 rows. These are accepted
 Batch 1 verification results, not a fresh test run in this documentation turn.
+
+**Inventory Foundation Batch 1 implemented locally on 2026-10-12:** Product Restock
+increases shop stock and writes one Admin-attributed receipt atomically. Receipts
+retain quantity, optional free-text supplier and note, timestamp, and actual
+stock-before/stock-after snapshots. Existing Product stock remains opening balance;
+no historical receipts were fabricated. A Product must be active to Restock; an
+archived Product requires explicit reactivation. The Admin form adds a Product-bound,
+one-use session token beyond CSRF to prevent replay, while separate open forms stay
+valid. Existing Product stock is read-only in normal Item Edit; POS deductions remain
+separate and create no Restock receipt. Inventory defaults to active Products, filters
+apply automatically, and responsive row actions use desktop hover/focus icons and
+mobile labelled menus. The list scrolls with the page and healthy stock keeps a
+green status marker with a dark quantity. Both additive Restock migrations were
+applied to the real/demo database after backups; the confirmed manual receipt #1
+records item #7 moving 14 to 20 by +6. The accepted automated baseline is **272
+passed, 0 failed, 4,836 assertions across 52 files**, run against `vulcatrack_test`;
+the real/demo nine-table fingerprint was unchanged across that suite.

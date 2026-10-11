@@ -1,21 +1,21 @@
 # database/
 
 **Phase 2 — schema built.** `schema.sql` in this folder is the executable v1
-database schema (8 application tables). It is derived from, and must stay
+database schema (9 application tables after Inventory Foundation). It is derived from, and must stay
 consistent with, the design source of truth:
 
 - `C:\IPT102\docs\ERD\schema.dbml` — maintainable text schema (authority for structure)
 - `C:\IPT102\docs\VulcaTrack-Database-Notes_1.md` — field-by-field rationale
 - `C:\IPT102\docs\decisions\project-decisions.md` — authoritative decisions
 
-## Tables (8)
+## Tables (9)
 
-`customers`, `admins`, `tiremen`, `items`, `vehicles`, `sales`, `sale_items`,
-`service_requests`.
+`customers`, `admins`, `tiremen`, `items`, `inventory_restocks`, `vehicles`,
+`sales`, `sale_items`, `service_requests`.
 
-No payment table, no receipt table, no `shop_settings` table, no
-status-history / audit table, no location-history table, no separate
-Staff / Tireman login table — by explicit decision.
+No payment table, no customer receipt table, no `shop_settings` table, no
+status-history / audit table, no location-history table, and no Tireman
+login table yet. Later post-defense domains remain separate batches.
 
 A sale may be linked to at most one Rescue request through the nullable
 `sales.service_request_id` (Phase 7.3d-a) — a column, not a new table.
@@ -52,11 +52,15 @@ applied and how to roll it back.
 | `migrations/2026-09-28-sales-service-request.sql` | Phase 7.3d-a: adds nullable `sales.service_request_id` (UNIQUE, FK → `service_requests.request_id`, RESTRICT). Existing sales stay `NULL`. |
 | `migrations/2026-09-29-customers-avatar-filename.sql` | Phase 7.4b-e2 (Decision 77): adds nullable `customers.avatar_filename VARCHAR(64)` — the generated file name of a customer's private profile picture. Existing customers stay `NULL`. |
 | `migrations/2026-09-29-service-requests-feedback.sql` | Phase 7.4c (Decision 78): adds nullable `service_requests.feedback_rating` (TINYINT UNSIGNED, CHECK 1–5 `chk_service_requests_feedback_rating`), `feedback_comment` (VARCHAR(500)) and `feedback_submitted_at` (DATETIME). Existing requests stay `NULL` (no feedback). |
+| `migrations/2026-10-12-inventory-restocks.sql` | Inventory Foundation (Decision 87): adds Product receipt history with quantity, optional free-text supplier, recording Admin, and timestamp. Existing stock stays unchanged; no historical receipts are invented. |
+| `migrations/2026-10-12-restock-snapshots.sql` | Adds immutable stock-before/stock-after receipt snapshots and an optional 500-character note. Apply after the first restock migration while `inventory_restocks` is empty; existing Product stock is untouched. |
 
 ```
 C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-28-sales-service-request.sql
 C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-29-customers-avatar-filename.sql
 C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-29-service-requests-feedback.sql
+C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-10-12-inventory-restocks.sql
+C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-10-12-restock-snapshots.sql
 ```
 
 Running a migration a second time fails with a clear error (e.g. `Duplicate

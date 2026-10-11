@@ -85,7 +85,7 @@ test('admin inventory: guard, actor separation, filters, low-stock and escaping'
         $profile = $server->request('/vulcatrack/customer/profile.php');
         $server->request('/vulcatrack/logout.php', ['_csrf' => HttpServer::csrfToken($profile['body'])]);
 
-        // 3. Admin logs in and opens inventory (default: active only).
+        // 3. Admin logs in and opens inventory (default: active Products).
         $adminLogin = $server->request('/vulcatrack/admin/login.php');
         $server->request('/vulcatrack/admin/login.php', [
             '_csrf' => HttpServer::csrfToken($adminLogin['body']),
@@ -97,21 +97,23 @@ test('admin inventory: guard, actor separation, filters, low-stock and escaping'
         $assertCleanHtml($r['body'], 'admin/inventory.php');
         assert_contains("{$tag} Low Widget", $r['body']);
         assert_contains("{$tag} OK Widget", $r['body']);
-        assert_contains("{$tag} Labor", $r['body']);
+        assert_not_contains("{$tag} Labor", $r['body'], 'Products are the default type');
+        assert_contains('<option value="product" selected>', $r['body']);
         assert_not_contains("{$tag} Retired", $r['body'], 'the default view is active-only');
         assert_contains('<div class="table-scroll">', $r['body'], 'the wide table is wrapped for horizontal scroll on narrow screens');
 
-        // 4. Product / service distinction: the service row shows no stock number.
+        // 4. Product / service distinction: Services remain available explicitly.
         assert_contains('badge--product', $r['body']);
-        assert_contains('badge--service', $r['body']);
-        assert_contains('n/a', $r['body'], 'a service has no stock cell value');
-        assert_contains('<span class="stock stock--na">n/a</span>', $r['body'], 'a service gets the neutral n/a stock chip');
+        $allTypes = $server->request($base . '?type=all&q=' . $tag);
+        assert_contains('badge--service', $allTypes['body']);
+        assert_contains('<span class="stock stock--na">n/a</span>', $allTypes['body'], 'a service gets the neutral n/a stock chip');
 
         // 5. Low-stock flag (Phase 7.3b stock chips, same rule as before): the Low
         //    Widget (3 <= reorder 5) is flagged, the OK widget (50 > 5) is not.
         assert_contains('stock--low', $r['body']);
         assert_contains('<span class="stock stock--low">Low: 3</span>', $r['body'], 'the low product shows its stock on a low chip');
-        assert_contains('<span class="stock stock--ok">OK: 50</span>', $r['body'], 'a product above its reorder level is OK');
+        assert_contains('<span class="stock stock--ok"><span class="stock__text"><span class="stock__state">OK:</span> <span class="stock__amount">50</span></span></span>', $r['body'], 'healthy state and stock value remain separate');
+        assert_contains('class="tablepanel inventory-tablepanel"', $r['body'], 'only the Inventory table receives the vertical overflow rule');
         // Active / Inactive badges follow is_active: the default (active-only) view has no Inactive badge.
         assert_contains('badge--active', $r['body']);
         assert_not_contains('badge--inactive', $r['body'], 'the active-only view shows no Inactive badge');
@@ -122,6 +124,7 @@ test('admin inventory: guard, actor separation, filters, low-stock and escaping'
         // 6. type=service filter -> only the service; no low-stock treatment for services.
         $svc = $server->request($base . '?type=service&q=' . $tag);
         assert_contains("{$tag} Labor", $svc['body']);
+        assert_not_contains('restock.php?id=' . $ids['service'], $svc['body'], 'Services never offer Restock');
         assert_not_contains("{$tag} Low Widget", $svc['body']);
         assert_not_contains('stock--low', $svc['body'], 'services are never flagged low-stock');
         $assertCleanHtml($svc['body'], 'inventory?type=service');
@@ -138,7 +141,7 @@ test('admin inventory: guard, actor separation, filters, low-stock and escaping'
         assert_not_contains('badge--active', $inactive['body'], 'the inactive-only view shows no Active badge');
 
         // 8. text search narrows by name.
-        $q = $server->request($base . '?q=' . $tag . '%20Labor');
+        $q = $server->request($base . '?type=all&q=' . $tag . '%20Labor');
         assert_contains("{$tag} Labor", $q['body']);
         assert_not_contains("{$tag} OK Widget", $q['body']);
 
@@ -164,7 +167,12 @@ test('admin inventory: guard, actor separation, filters, low-stock and escaping'
 
         // 12. Display prices keep nonzero cents and omit .00 for whole pesos.
         assert_contains('&#8369;12.50', $r['body']);
-        assert_contains('&#8369;250', $r['body']);
+        assert_contains('&#8369;250', $svc['body']);
+        assert_contains('data-inventory-filters', $r['body']);
+        assert_contains('inventory-filters.js', $r['body']);
+        assert_contains('class="inventory-actions-mobile"', $r['body']);
+        assert_contains('aria-label="Restock product"', $r['body']);
+        assert_contains('data-tip="Edit item"', $r['body']);
 
         // 13. The server process logged no PHP warnings/notices/fatals.
         $stderr = $server->serverStderr();

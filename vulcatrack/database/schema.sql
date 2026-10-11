@@ -7,6 +7,7 @@
 --   (optional profile picture reference; see the customers table).
 -- Structural revision: Phase 7.4c (2026-09-29) — service_requests.feedback_*
 --   (optional customer feedback on a completed request; see service_requests).
+-- Structural revision: Inventory Foundation (2026-10-12) — inventory_restocks.
 --
 -- Source of truth : docs/ERD/schema.dbml               (structure)
 -- Rationale       : docs/VulcaTrack-Database-Notes_1.md (field-by-field)
@@ -16,10 +17,10 @@
 -- Character set    : utf8mb4 / utf8mb4_unicode_ci
 -- Storage engine   : InnoDB (required for foreign-key enforcement).
 --
--- This file builds the 8 application tables and nothing else. There is NO
--- payment table, NO receipt table, NO shop_settings table, NO status-history /
--- audit table, NO location-history / live-tracking table, and NO separate
--- Staff / Tireman login table — by explicit decision (see the decision record).
+-- This file builds the 9 application tables and nothing else. There is NO
+-- payment table, NO customer transaction receipt table, NO shop_settings table, NO status-history /
+-- audit table, NO location-history / live-tracking table, and no Tireman
+-- login table yet. Later post-defense domains are approved but not in this batch.
 --
 -- Use this file for a FRESH install:  mysql -u root vulcatrack < database/schema.sql
 --
@@ -43,11 +44,13 @@ USE `vulcatrack`;
 
 -- Drop in reverse dependency order so foreign keys never block the rebuild:
 -- sale_items -> sales -> service_requests (sales references service_requests
--- since Phase 7.3d-a) -> vehicles -> items / tiremen / admins -> customers.
+-- since Phase 7.3d-a) -> vehicles / inventory_restocks -> items / tiremen /
+-- admins -> customers.
 DROP TABLE IF EXISTS `sale_items`;
 DROP TABLE IF EXISTS `sales`;
 DROP TABLE IF EXISTS `service_requests`;
 DROP TABLE IF EXISTS `vehicles`;
+DROP TABLE IF EXISTS `inventory_restocks`;
 DROP TABLE IF EXISTS `items`;
 DROP TABLE IF EXISTS `tiremen`;
 DROP TABLE IF EXISTS `admins`;
@@ -130,6 +133,32 @@ CREATE TABLE `items` (
   `updated_at`     DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`item_id`),
   CONSTRAINT `chk_items_item_type` CHECK (`item_type` IN ('product','service'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Future receipts only. Existing items.stock_quantity is opening stock with
+-- unknown receipt history; no historical rows are generated.
+CREATE TABLE `inventory_restocks` (
+  `restock_id`    INT          NOT NULL AUTO_INCREMENT,
+  `item_id`       INT          NOT NULL,
+  `quantity`      INT          NOT NULL,
+  `stock_before`  INT          NOT NULL,
+  `stock_after`   INT          NOT NULL,
+  `supplier_name` VARCHAR(150)     NULL,
+  `note`          VARCHAR(500)     NULL,
+  `admin_id`      INT          NOT NULL,
+  `restocked_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`restock_id`),
+  KEY `ix_inventory_restocks_item_date` (`item_id`, `restocked_at`),
+  KEY `ix_inventory_restocks_admin` (`admin_id`),
+  CONSTRAINT `chk_inventory_restocks_quantity` CHECK (`quantity` > 0),
+  CONSTRAINT `chk_inventory_restocks_movement`
+    CHECK (`stock_before` >= 0 AND `stock_after` = `stock_before` + `quantity`),
+  CONSTRAINT `fk_inventory_restocks_item`
+    FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`)
+    ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_inventory_restocks_admin`
+    FOREIGN KEY (`admin_id`) REFERENCES `admins` (`admin_id`)
+    ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------

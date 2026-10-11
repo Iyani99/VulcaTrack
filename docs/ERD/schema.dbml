@@ -24,9 +24,11 @@
 // Structural change 2026-09-29 (Phase 7.4c, Decision 78, owner-approved):
 // service_requests gains nullable feedback_rating (1..5, CHECK) /
 // feedback_comment / feedback_submitted_at. Still exactly 8 tables.
-// v1 scope reminder — NOT modeled: online/gateway payment, payment-transaction
-// tables, GPS telemetry / route polylines, Tireman authentication, technician
-// scheduling / ratings / payroll, status-history / audit tables.
+// Inventory Foundation 2026-10-12: inventory_restocks records future Product
+// receipts. Existing stock has unknown receipt history and is not backfilled.
+// Current-model reminder — NOT YET modeled: online/gateway payment,
+// payment-transaction tables, GPS telemetry / route polylines, Tireman
+// authentication, scheduling / ratings / payroll, status-history / audit tables.
 // =============================================================================
 
 Project VulcaTrack {
@@ -104,6 +106,25 @@ Table items {
   is_active       tinyint(1)    [not null, default: 1, note: '0 = hidden from POS + active-inventory list; still shown on historical sale_items']
   created_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
   updated_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table inventory_restocks {
+  restock_id    int          [pk, increment]
+  item_id       int          [not null, ref: > items.item_id]
+  quantity      int          [not null, note: 'positive Product quantity received; CHECK quantity > 0']
+  stock_before  int          [not null, note: 'actual Product stock locked immediately before receipt']
+  stock_after   int          [not null, note: 'actual Product stock after receipt; CHECK stock_after = stock_before + quantity']
+  supplier_name varchar(150) [null, note: 'optional free-text supplier; no supplier entity']
+  note          varchar(500) [null, note: 'optional receipt description']
+  admin_id      int          [not null, ref: > admins.admin_id]
+  restocked_at  datetime     [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (item_id, restocked_at) [name: 'ix_inventory_restocks_item_date']
+    admin_id [name: 'ix_inventory_restocks_admin']
+  }
+
+  Note: 'Future receipts only. Receipt insert and items.stock_quantity increase commit atomically.'
 }
 
 // -----------------------------------------------------------------------------

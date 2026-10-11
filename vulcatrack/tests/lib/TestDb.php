@@ -3,9 +3,9 @@
  * VulcaTrack test harness -- database helpers.
  *
  * Integration tests that touch the database wrap their work in a transaction
- * that is always rolled back, so the test database (which holds no application
- * rows in v1) is left byte-for-byte unchanged. Repository code under test never
- * commits or issues DDL, so a plain BEGIN / ROLLBACK is sufficient isolation.
+ * that is always rolled back. Transaction-owning service tests clean their
+ * committed throwaway rows in finally blocks; the test database is separate
+ * from the real VulcaTrack database.
  *
  * HTTP tests run in a separate process and cannot share a transaction; they
  * track the ids they insert and delete them in FK-safe order in a shutdown
@@ -22,6 +22,7 @@ final class TestDb
         'sales',
         'service_requests',
         'vehicles',
+        'inventory_restocks',
         'items',
         'tiremen',
         'admins',

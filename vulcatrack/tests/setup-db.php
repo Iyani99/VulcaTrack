@@ -33,32 +33,32 @@ $statements = array_values(array_filter(
     static fn (string $sql): bool => $sql !== ''
 ));
 $normalise = static fn (string $sql): string => (string) preg_replace('/\s+/', ' ', $sql);
-if (count($statements) !== 18
+if (count($statements) !== 20
     || $normalise($statements[0]) !== 'CREATE DATABASE IF NOT EXISTS `vulcatrack` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
     || $normalise($statements[1]) !== 'USE `vulcatrack`') {
     throw new RuntimeException('Canonical schema preamble changed; refusing test reset.');
 }
 
-$drops = ['sale_items', 'sales', 'service_requests', 'vehicles', 'items', 'tiremen', 'admins', 'customers'];
-$creates = ['customers', 'admins', 'tiremen', 'items', 'vehicles', 'service_requests', 'sales', 'sale_items'];
+$drops = ['sale_items', 'sales', 'service_requests', 'vehicles', 'inventory_restocks', 'items', 'tiremen', 'admins', 'customers'];
+$creates = ['customers', 'admins', 'tiremen', 'items', 'inventory_restocks', 'vehicles', 'service_requests', 'sales', 'sale_items'];
 $ddl = array_slice($statements, 2);
 foreach ($ddl as $index => $sql) {
     if (preg_match('/\bvulcatrack\b|\b(?:CREATE|DROP|ALTER)\s+DATABASE\b|\bUSE\s+`?/i', $sql)) {
         throw new RuntimeException('Database selection or database-qualified DDL found; refusing test reset.');
     }
-    if ($index < 8) {
+    if ($index < count($drops)) {
         if (!preg_match('/^DROP TABLE IF EXISTS `([a-z_]+)`$/', $sql, $match)
             || $match[1] !== $drops[$index]) {
             throw new RuntimeException('Unexpected table DROP in canonical schema; refusing test reset.');
         }
     } elseif (!preg_match('/^CREATE TABLE `([a-z_]+)`\s*\(/', $sql, $match)
-        || $match[1] !== $creates[$index - 8]) {
+        || $match[1] !== $creates[$index - count($drops)]) {
         throw new RuntimeException('Unexpected table CREATE in canonical schema; refusing test reset.');
     }
 }
 
 if (($argv[1] ?? null) === '--check') {
-    echo "Safe target: vulcatrack_test; canonical schema: 8 drops, 8 creates. No database changed.\n";
+    echo "Safe target: vulcatrack_test; canonical schema: 9 drops, 9 creates. No database changed.\n";
     exit(0);
 }
 
@@ -82,4 +82,4 @@ foreach ($ddl as $sql) {
     vulcatrack_assert_test_database_connection($pdo);
     $pdo->exec($sql);
 }
-echo "Rebuilt vulcatrack_test from the canonical schema (8 tables).\n";
+echo "Rebuilt vulcatrack_test from the canonical schema (9 tables).\n";

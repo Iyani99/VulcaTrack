@@ -38,7 +38,7 @@ test('item edit integrity: sold-type lock, stale stock refusal, normal edits, gu
         return (int) $pdo->lastInsertId();
     };
     $sold   = $mk("{$tag} Sold <b>Valve</b>", 'product', '45.50', 10);
-    $unsold = $mk("{$tag} Unsold Cap", 'product', '10.00', 4);
+    $unsold = $mk("{$tag} Unsold Cap", 'product', '10.00', 0);
     // One recorded line makes $sold "have sales" (stock untouched by this seed).
     $pdo->prepare('INSERT INTO sales (customer_id, admin_id, sale_date, total_amount) VALUES (NULL,?,?,?)')
         ->execute([$adminId, '2001-09-01 10:00:00', '45.50']);
@@ -62,7 +62,7 @@ test('item edit integrity: sold-type lock, stale stock refusal, normal edits, gu
 
     $EDIT = '/vulcatrack/admin/item-edit.php?id=';
     $LOCK = 'Item type cannot be changed after the item has recorded sales.';
-    $STALE = 'This item changed (a sale may have been recorded). Reload the item and try again.';
+    $STALE = 'This item changed (a sale or restock may have been recorded). Reload the item and try again.';
 
     try {
         $server->start();
@@ -83,7 +83,8 @@ test('item edit integrity: sold-type lock, stale stock refusal, normal edits, gu
         assert_not_contains('<select id="item_type"', $page, 'no editable type selector');
         assert_contains('name="expected_type" value="product"', $page);
         assert_contains('name="expected_stock" value="10"', $page, 'the loaded stock travels with the form');
-        assert_not_contains('permanently clears its stock', $page, 'no switch-to-service warning on a locked item');
+        assert_not_contains('A Product can become a Service', $page, 'no switch-to-service warning on a locked item');
+        assert_not_contains('name="stock_quantity"', $page, 'existing stock is not an editable form field');
         assert_contains(e("{$tag} Sold <b>Valve</b>"), $page, 'the name is escaped');
         assert_not_contains('<b>Valve</b>', $page);
 
@@ -155,7 +156,7 @@ test('item edit integrity: sold-type lock, stale stock refusal, normal edits, gu
         // ================= unsold item can still change type =================
         $r = $post($unsold, [
             'item_name' => "{$tag} Unsold Cap", 'item_type' => 'service', 'category' => 'Labor', 'price' => '10.00',
-            'expected_type' => 'product', 'expected_stock' => '4',
+            'expected_type' => 'product', 'expected_stock' => '0',
         ]);
         assert_same(302, $r['status'], 'an unsold product can become a service');
         assert_same('service', $row($unsold)['item_type']);

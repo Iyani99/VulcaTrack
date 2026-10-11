@@ -9,8 +9,8 @@
  *
  * Phase 7.1: an item with recorded sales shows its type as fixed (and a posted
  * type change is refused); an edit carries the type + stock it was loaded with
- * and is refused if a sale has changed them since, so a stale form cannot
- * overwrite newer stock (ItemRepository::update()).
+ * and is refused if a sale or restock changed them since. Existing stock is
+ * read-only here; later receipts use the separate Restock workflow.
  */
 
 use VulcaTrack\Auth\Csrf;
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'item_type'      => (string) ($_POST['item_type'] ?? ''),
             'category'       => (string) ($_POST['category'] ?? ''),
             'price'          => (string) ($_POST['price'] ?? ''),
-            'stock_quantity' => (string) ($_POST['stock_quantity'] ?? ''),
+            'stock_quantity' => $editing ? $old['stock_quantity'] : (string) ($_POST['stock_quantity'] ?? ''),
             'reorder_level'  => (string) ($_POST['reorder_level'] ?? ''),
         ];
 
@@ -107,7 +107,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stock   = null;
         $reorder = null;
         if ($type === 'product') {
-            $stock   = $v->stock('stock_quantity', $_POST['stock_quantity'] ?? null, 'Stock quantity');
+            $stock   = $editing
+                ? ($item['item_type'] === 'product' ? (int) $item['stock_quantity'] : 0)
+                : $v->stock('stock_quantity', $_POST['stock_quantity'] ?? null, 'Stock quantity');
             $reorder = $v->optionalNonNegativeInt('reorder_level', $_POST['reorder_level'] ?? null, 'Reorder level');
         }
 
@@ -128,9 +130,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
                 $staleEdit = true;
-                $errors['form'] = 'This item changed (a sale may have been recorded). Reload the item and try again.';
+                $errors['form'] = 'This item changed (a sale or restock may have been recorded). Reload the item and try again.';
             } catch (\InvalidArgumentException $e) {
-                $errors['form'] = 'That item could not be saved. Please review the values and try again.';
+                $errors['form'] = $e->getMessage();
             } catch (\PDOException $e) {
                 $errors['form'] = 'A database error prevented saving. Please try again.';
             }
@@ -183,7 +185,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       </select>
       <?php if (!empty($errors['item_type'])): ?><small class="error"><?= e($errors['item_type']) ?></small><?php endif; ?>
       <?php if ($editing && $item['item_type'] === 'product'): ?>
-        <p class="muted">Switching this product to a Service permanently clears its stock quantity and reorder level.</p>
+        <p class="muted">A Product can become a Service only after its stock reaches zero. This clears its reorder level.</p>
       <?php endif; ?>
     <?php endif; ?>
 
@@ -201,10 +203,22 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php if (!empty($errors['price'])): ?><small class="error"><?= e($errors['price']) ?></small><?php endif; ?>
 
     <div id="stock-fields"<?= ($sold ? $item['item_type'] : $old['item_type']) === 'service' ? ' hidden' : '' ?>>
-      <label for="stock_quantity">Stock quantity <span class="muted">(products only)</span></label>
-      <input type="text" id="stock_quantity" name="stock_quantity" inputmode="numeric"
-             value="<?= e($old['stock_quantity']) ?>">
-      <?php if (!empty($errors['stock_quantity'])): ?><small class="error"><?= e($errors['stock_quantity']) ?></small><?php endif; ?>
+      <?php if ($editing): ?>
+        <label for="stock_quantity">Current stock</label>
+        <input type="text" id="stock_quantity" value="<?= $item['item_type'] === 'product' ? (int) $item['stock_quantity'] : '0' ?>" readonly>
+        <?php if ($item['item_type'] === 'product' && (int) $item['is_active'] === 1): ?>
+          <p class="muted">Stock changes through recorded sales and restocks. <a href="<?= e(vulcatrack_url('/admin/restock.php?id=' . $itemId)) ?>">Record a restock</a></p>
+        <?php elseif ($item['item_type'] === 'product'): ?>
+          <p class="muted">Reactivate this product before recording a restock.</p>
+        <?php else: ?>
+          <p class="muted">Save this item as a Product at zero stock, then record any received stock through Restock.</p>
+        <?php endif; ?>
+      <?php else: ?>
+        <label for="stock_quantity">Opening stock <span class="muted">(products only)</span></label>
+        <input type="text" id="stock_quantity" name="stock_quantity" inputmode="numeric"
+               value="<?= e($old['stock_quantity']) ?>">
+        <?php if (!empty($errors['stock_quantity'])): ?><small class="error"><?= e($errors['stock_quantity']) ?></small><?php endif; ?>
+      <?php endif; ?>
 
       <label for="reorder_level">Reorder level <span class="muted">(optional, products only)</span></label>
       <input type="text" id="reorder_level" name="reorder_level" inputmode="numeric"

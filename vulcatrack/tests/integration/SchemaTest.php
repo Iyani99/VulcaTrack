@@ -3,7 +3,7 @@
  * Integration tests -- the live database schema (Phase 2).
  *
  * Read-only (the only writes are constraint probes wrapped in rolled-back
- * transactions). Confirms the eight locked application tables exist with the
+ * transactions). Confirms the approved application tables exist with the
  * columns, nullability, unique keys and CHECK constraints the decision record
  * and schema.dbml require -- so Phase 5 starts from a known-good schema and any
  * accidental drift is caught immediately.
@@ -11,14 +11,35 @@
 
 namespace VulcaTrack\Tests;
 
-test('exactly the eight locked application tables exist', function () {
+test('the nine approved application tables exist', function () {
     $pdo = test_pdo();
     assert_not_null($pdo, 'database must be reachable for the schema tests');
 
     $tables = $pdo->query('SHOW TABLES')->fetchAll(\PDO::FETCH_COLUMN);
     sort($tables);
-    $expected = ['admins', 'customers', 'items', 'sale_items', 'sales', 'service_requests', 'tiremen', 'vehicles'];
-    assert_same($expected, $tables, 'the 8-table schema must match exactly -- no 9th table, none missing');
+    $expected = ['admins', 'customers', 'inventory_restocks', 'items', 'sale_items', 'sales', 'service_requests', 'tiremen', 'vehicles'];
+    assert_same($expected, $tables, 'the approved nine-table schema must match');
+});
+
+test('inventory_restocks has receipt fields, positive quantity, and restricted parent FKs', function () {
+    $pdo = test_pdo();
+    $cols = schema_columns($pdo, 'inventory_restocks');
+    assert_same(['restock_id', 'item_id', 'quantity', 'stock_before', 'stock_after', 'supplier_name', 'note', 'admin_id', 'restocked_at'], array_keys($cols));
+    foreach (['item_id', 'quantity', 'stock_before', 'stock_after', 'admin_id', 'restocked_at'] as $name) {
+        assert_same('NO', $cols[$name]['IS_NULLABLE']);
+    }
+    assert_same('YES', $cols['supplier_name']['IS_NULLABLE']);
+    assert_same('YES', $cols['note']['IS_NULLABLE']);
+    assert_contains('quantity', schema_check_clause($pdo, 'inventory_restocks', 'quantity'));
+    $movementCheck = schema_check_clause($pdo, 'inventory_restocks', 'movement');
+    assert_contains('stock_before', $movementCheck);
+    assert_contains('stock_after', $movementCheck);
+    $fk = $pdo->query(
+        "SELECT REFERENCED_TABLE_NAME FROM information_schema.KEY_COLUMN_USAGE
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory_restocks'
+           AND REFERENCED_TABLE_NAME IS NOT NULL ORDER BY REFERENCED_TABLE_NAME"
+    )->fetchAll(\PDO::FETCH_COLUMN);
+    assert_same(['admins', 'items'], $fk);
 });
 
 test('customers has the mandatory-contact-number shape and a unique email', function () {

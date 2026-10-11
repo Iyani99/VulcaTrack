@@ -1075,6 +1075,8 @@ historical meaning; the explicit refinements below govern future work.
     be archived only after both shop stock and Tireman-held stock reach zero; a
     Service has no physical-stock condition. Reactivation is allowed. Historical
     Sales stay visible. This prevents hiding sellable stock and stranded field stock.
+    An archived Product must be reactivated before it can be restocked; Restock
+    does not reactivate it automatically.
     **Refines** Decisions 27–29 and 36; **retains** Decisions 15–17 and 69.
 
 87. **Product restocks require receipt history.** Each future restock records the

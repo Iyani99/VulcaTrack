@@ -200,7 +200,7 @@ test('admin inventory mutations: guard, CSRF, create, edit, activate/deactivate'
         $assertCleanHtml($listed['body'], 'inventory list');
 
         // ============ EDIT FORM: the product->service stock-loss warning ============
-        $warn = 'permanently clears its stock quantity and reorder level';
+        $warn = 'A Product can become a Service only after its stock reaches zero.';
         $pf = $server->request($EDIT . '?id=' . $seedProduct);
         assert_contains($warn, $pf['body'], 'editing a product warns that switching to a service clears stock fields');
         $sf = $server->request($EDIT . '?id=' . $seedService);
@@ -222,17 +222,26 @@ test('admin inventory mutations: guard, CSRF, create, edit, activate/deactivate'
         $edited = $row($seedProduct);
         assert_same("{$tag} Seed Product EDITED", $edited['item_name']);
         assert_same('11.25', $edited['price']);
-        assert_same(9, (int) $edited['stock_quantity']);
+        assert_same(7, (int) $edited['stock_quantity'], 'forged stock replacement is ignored');
         assert_same('2001-02-03 04:05:06', $edited['created_at'], 'created_at is not touched on edit');
         assert_true($edited['updated_at'] > '2001-02-03 04:05:06', 'updated_at is refreshed on edit');
 
         // ============ EDIT: product -> service clears stock + reorder ============
         $r = $server->request($EDIT . '?id=' . $seedProduct, [
             '_csrf' => $token($EDIT . '?id=' . $seedProduct),
-            'expected_type' => 'product', 'expected_stock' => '9',
+            'expected_type' => 'product', 'expected_stock' => '7',
             'item_name' => "{$tag} Now A Service", 'item_type' => 'service',
             'category' => 'Labor', 'price' => '11.25',
             'stock_quantity' => '9', 'reorder_level' => '4',   // sent, must be dropped
+        ]);
+        assert_same(200, $r['status'], 'stocked Product cannot become a Service');
+        assert_same('product', $row($seedProduct)['item_type']);
+        $pdo->prepare('UPDATE items SET stock_quantity = 0 WHERE item_id = ?')->execute([$seedProduct]);
+        $r = $server->request($EDIT . '?id=' . $seedProduct, [
+            '_csrf' => $token($EDIT . '?id=' . $seedProduct),
+            'expected_type' => 'product', 'expected_stock' => '0',
+            'item_name' => "{$tag} Now A Service", 'item_type' => 'service',
+            'category' => 'Labor', 'price' => '11.25',
         ]);
         assert_same(302, $r['status']);
         $conv = $row($seedProduct);
@@ -240,31 +249,19 @@ test('admin inventory mutations: guard, CSRF, create, edit, activate/deactivate'
         assert_null($conv['stock_quantity'], 'product -> service nulls stock_quantity');
         assert_null($conv['reorder_level'], 'product -> service nulls reorder_level');
 
-        // ============ EDIT: service -> product WITHOUT stock is rejected ============
+        // ============ EDIT: service -> product starts at zero ============
         $r = $server->request($EDIT . '?id=' . $seedService, [
             '_csrf' => $token($EDIT . '?id=' . $seedService),
             'expected_type' => 'service', 'expected_stock' => '',
             'item_name' => "{$tag} Seed Service", 'item_type' => 'product',
             'category' => 'Labor', 'price' => '120.00', 'stock_quantity' => '',
         ]);
-        assert_same(200, $r['status'], 'missing stock re-renders the form');
-        assert_contains('Stock quantity must be', $r['body']);
-        assert_same('service', $row($seedService)['item_type'], 'the row stayed a service');
-        assert_null($row($seedService)['stock_quantity']);
-
-        // ============ EDIT: service -> product WITH valid stock succeeds ============
-        $r = $server->request($EDIT . '?id=' . $seedService, [
-            '_csrf' => $token($EDIT . '?id=' . $seedService),
-            'expected_type' => 'service', 'expected_stock' => '',
-            'item_name' => "{$tag} Seed Service", 'item_type' => 'product',
-            'category' => 'Labor', 'price' => '1234.5', 'stock_quantity' => '6', 'reorder_level' => '',
-        ]);
         assert_same(302, $r['status']);
         $conv2 = $row($seedService);
         assert_same('product', $conv2['item_type']);
-        assert_same(6, (int) $conv2['stock_quantity']);
+        assert_same(0, (int) $conv2['stock_quantity']);
         assert_null($conv2['reorder_level'], 'a blank reorder level stays NULL');
-        assert_same('1234.50', $conv2['price'], 'price stays centavo-exact ("1234.5" -> "1234.50")');
+        assert_same('120.00', $conv2['price']);
 
         // ============ ACTIVATE / DEACTIVATE: soft, POST, no hard delete ============
         $countBefore = $myItemCount();

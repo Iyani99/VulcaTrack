@@ -17,8 +17,7 @@ use VulcaTrack\Support\Money;
  *
  * Stock: products carry `stock_quantity` (>= 0) and an optional
  * `reorder_level`; services carry neither (both NULL) and never deduct stock
- * (Decision 16). create() / update() enforce that split regardless of the
- * arguments passed.
+ * (Decision 16). create() accepts opening stock; later increases use restocks.
  *
  * Removal is soft: setActive($id, false). Rows are never hard-deleted — an
  * inactive item stays visible on historical `sale_items` (Decisions 27-29).
@@ -212,14 +211,28 @@ class ItemRepository
         if ($itemType !== $current['item_type'] && $this->hasSales($itemId)) {
             throw new InvalidArgumentException('Item type cannot be changed after the item has recorded sales.');
         }
+        if ($current['item_type'] === 'product' && $itemType === 'product'
+            && $stock !== $current['stock_quantity']) {
+            throw new InvalidArgumentException('Existing Product stock cannot be changed in Item Edit.');
+        }
+        if ($current['item_type'] === 'product' && $itemType === 'service'
+            && $current['stock_quantity'] !== 0) {
+            throw new InvalidArgumentException('A Product with stock cannot become a Service.');
+        }
+        if ($current['item_type'] === 'service' && $itemType === 'product' && $stock !== 0) {
+            throw new InvalidArgumentException('A converted Product must start with zero stock.');
+        }
 
-        $sql = 'UPDATE items
+        $sql = "UPDATE items
                    SET item_name = :name, item_type = :type, category = :category,
                        price = :price, stock_quantity = :stock, reorder_level = :reorder,
                        updated_at = CURRENT_TIMESTAMP
                  WHERE item_id = :id
                    AND (item_type = :same_type
-                        OR NOT EXISTS (SELECT 1 FROM sale_items si WHERE si.item_id = :sold_id))';
+                        OR NOT EXISTS (SELECT 1 FROM sale_items si WHERE si.item_id = :sold_id))
+                   AND (item_type <> 'product' OR :type_for_stock <> 'product' OR stock_quantity = :stock_guard)
+                   AND (item_type <> 'product' OR :type_from_product <> 'service' OR stock_quantity = 0)
+                   AND (item_type <> 'service' OR :type_from_service <> 'product' OR :new_stock_from_service = 0)";
         $params = [
             ':name'      => $name,
             ':type'      => $itemType,
@@ -230,6 +243,11 @@ class ItemRepository
             ':id'        => $itemId,
             ':same_type' => $itemType,
             ':sold_id'   => $itemId,
+            ':stock_guard' => $stock,
+            ':type_for_stock' => $itemType,
+            ':type_from_product' => $itemType,
+            ':type_from_service' => $itemType,
+            ':new_stock_from_service' => $stock,
         ];
         if ($expected !== null) {
             $sql .= ' AND item_type = :expected_type AND stock_quantity <=> :expected_stock';
@@ -247,6 +265,8 @@ class ItemRepository
         $now = $this->findById($itemId);
 
         return $now !== null
+            && ($expected === null || ($now['item_type'] === $expected['item_type']
+                && $now['stock_quantity'] === $expected['stock_quantity']))
             && $now['item_name'] === $name
             && $now['item_type'] === $itemType
             && $now['category'] === $category
@@ -312,6 +332,9 @@ class ItemRepository
      */
     public function decrementStock(int $itemId, int $quantity): bool
     {
+        if ($quantity <= 0) {
+            return false;
+        }
         $stmt = $this->pdo->prepare(
             "UPDATE items
                 SET stock_quantity = stock_quantity - ?,
@@ -323,6 +346,22 @@ class ItemRepository
         );
         $stmt->execute([$quantity, $itemId, $quantity]);
 
+        return $stmt->rowCount() === 1;
+    }
+
+    /** Guarded increase, used only inside the RestockService transaction. */
+    public function incrementStock(int $itemId, int $quantity): bool
+    {
+        if ($quantity <= 0 || $quantity > 2147483647) {
+            return false;
+        }
+        $stmt = $this->pdo->prepare(
+            "UPDATE items SET stock_quantity = stock_quantity + ?, updated_at = CURRENT_TIMESTAMP
+              WHERE item_id = ? AND item_type = 'product' AND is_active = 1
+                AND stock_quantity IS NOT NULL AND stock_quantity >= 0
+                AND stock_quantity <= ?"
+        );
+        $stmt->execute([$quantity, $itemId, 2147483647 - $quantity]);
         return $stmt->rowCount() === 1;
     }
 

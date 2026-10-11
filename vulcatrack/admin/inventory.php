@@ -29,7 +29,7 @@ function inv_filters(array $src): array
     $q = mb_substr(trim((string) ($src['q'] ?? '')), 0, 150);
     if ($q !== '') { $f['q'] = $q; }
     $type = (string) ($src['type'] ?? '');
-    if (in_array($type, ['product', 'service'], true)) { $f['type'] = $type; }
+    if (in_array($type, ['product', 'all', 'service'], true)) { $f['type'] = $type; }
     $status = (string) ($src['status'] ?? '');
     if (in_array($status, ['inactive', 'all'], true)) { $f['status'] = $status; }
     if (($src['low_stock'] ?? '') === '1') { $f['low_stock'] = '1'; }
@@ -66,8 +66,8 @@ switch ((string) ($_GET['saved'] ?? '')) {
 // --- read + normalise the GET filters --------------------------------------
 $search = trim((string) ($_GET['q'] ?? ''));
 
-$typeParam = (string) ($_GET['type'] ?? '');
-$type = in_array($typeParam, ['product', 'service'], true) ? $typeParam : '';
+$typeParam = (string) ($_GET['type'] ?? 'product');
+$type = in_array($typeParam, ['product', 'service', 'all'], true) ? $typeParam : 'product';
 
 $statusParam = (string) ($_GET['status'] ?? 'active');
 $status = in_array($statusParam, ['active', 'inactive', 'all'], true) ? $statusParam : 'active';
@@ -76,7 +76,7 @@ $lowStockOnly = (($_GET['low_stock'] ?? '') === '1');
 
 $filters = [];
 if ($search !== '')      { $filters['search'] = $search; }
-if ($type !== '')        { $filters['type'] = $type; }
+if ($type !== 'all')     { $filters['type'] = $type; }
 if ($status === 'active')   { $filters['active'] = true; }
 if ($status === 'inactive') { $filters['active'] = false; }
 if ($lowStockOnly)       { $filters['low_stock_only'] = true; }
@@ -122,7 +122,44 @@ function inv_stock_chip(array $row, bool $isLow): array
     return (int) $row['is_active'] === 1 ? ['ok', 'OK: ' . $stock] : ['plain', (string) $stock];
 }
 
-$hasFilters = $search !== '' || $type !== '' || $status !== 'active' || $lowStockOnly;
+$hasFilters = $search !== '' || $type !== 'product' || $status !== 'active' || $lowStockOnly;
+
+/** Local inline icons follow the SVG stroke style already used in Admin navigation. */
+function inv_icon(string $name): string
+{
+    $paths = [
+        'edit' => '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L9 17l-4 1 1-4Z"/>',
+        'restock' => '<path d="M3 8.5 12 4l9 4.5v9L12 22l-9-4.5Z"/><path d="M3 8.5 12 13l9-4.5M12 13v9M16.5 3v5M14 5.5h5"/>',
+        'deactivate' => '<path d="M12 3v9"/><path d="M6.2 6.2a8 8 0 1 0 11.6 0"/>',
+        'activate' => '<circle cx="12" cy="12" r="9"/><path d="m7.5 12 3 3 6-6"/>',
+        'more' => '<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
+    ];
+    return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' . $paths[$name] . '</svg>';
+}
+
+/** Render the same authorized actions as compact desktop icons or labelled mobile links. */
+function inv_actions(array $row, bool $isProduct, array $back, bool $mobile): void
+{
+    $id = (int) $row['item_id'];
+    $active = (int) $row['is_active'] === 1;
+    $toggle = $active ? 'Deactivate' : 'Reactivate';
+    $label = $toggle . ' item';
+    ?>
+    <a class="inventory-action<?= $mobile ? ' inventory-action--labelled' : '' ?>" href="<?= e(vulcatrack_url('/admin/item-edit.php?id=' . $id)) ?>" aria-label="Edit item" data-tip="Edit item"><?= inv_icon('edit') ?><?= $mobile ? '<span>Edit</span>' : '' ?></a>
+    <?php if ($isProduct && $active): ?>
+      <a class="inventory-action<?= $mobile ? ' inventory-action--labelled' : '' ?>" href="<?= e(vulcatrack_url('/admin/restock.php?id=' . $id)) ?>" aria-label="Restock product" data-tip="Restock product"><?= inv_icon('restock') ?><?= $mobile ? '<span>Restock</span>' : '' ?></a>
+    <?php endif; ?>
+    <form method="post" action="<?= e(vulcatrack_url('/admin/inventory.php')) ?>">
+      <?= Csrf::field() ?>
+      <?php foreach ($back as $fName => $fValue): ?>
+        <input type="hidden" name="<?= e($fName) ?>" value="<?= e($fValue) ?>">
+      <?php endforeach; ?>
+      <input type="hidden" name="item_id" value="<?= $id ?>">
+      <input type="hidden" name="_action" value="<?= $active ? 'deactivate' : 'activate' ?>">
+      <button type="submit" class="inventory-action<?= $mobile ? ' inventory-action--labelled' : '' ?>" aria-label="<?= e($label) ?>" data-tip="<?= e($label) ?>"<?= $active ? ' onclick="return confirm(\'Deactivate this item? It is hidden from the POS and active inventory but stays on past sales.\');"' : '' ?>><?= inv_icon($active ? 'deactivate' : 'activate') ?><?= $mobile ? '<span>' . e($toggle) . '</span>' : '' ?></button>
+    </form>
+    <?php
+}
 
 $pageTitle = 'Inventory';
 $navActive = 'inventory';
@@ -140,15 +177,15 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <p class="<?= $flash[0] === 'error' ? 'error' : 'notice' ?>"><?= e($flash[1]) ?></p>
 <?php endif; ?>
 
-<form class="filterbar" method="get" action="<?= e(vulcatrack_url('/admin/inventory.php')) ?>">
+<form class="filterbar inventory-filterbar" method="get" action="<?= e(vulcatrack_url('/admin/inventory.php')) ?>" data-inventory-filters>
   <label>Search
     <input type="text" name="q" value="<?= e($search) ?>" maxlength="150" placeholder="name or category">
   </label>
   <label>Type
     <select name="type">
-      <option value=""<?= $type === '' ? ' selected' : '' ?>>All</option>
       <option value="product"<?= $type === 'product' ? ' selected' : '' ?>>Product</option>
       <option value="service"<?= $type === 'service' ? ' selected' : '' ?>>Service</option>
+      <option value="all"<?= $type === 'all' ? ' selected' : '' ?>>All</option>
     </select>
   </label>
   <label>Status
@@ -162,7 +199,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <input type="checkbox" name="low_stock" value="1"<?= $lowStockOnly ? ' checked' : '' ?>>
     Low stock only
   </label>
-  <button type="submit">Filter</button>
+  <button type="submit" class="filterbar__submit">Filter</button>
   <?php if ($hasFilters): ?>
     <a href="<?= e(vulcatrack_url('/admin/inventory.php')) ?>">Clear</a>
   <?php endif; ?>
@@ -175,13 +212,13 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   <p class="muted"><?= e($countText) ?></p>
   <p class="muted">No items to show.</p>
 <?php else: ?>
-  <div class="tablepanel">
+  <div class="tablepanel inventory-tablepanel">
   <div class="table-scroll">
   <table class="datatable mobile-records">
     <thead>
       <tr>
         <th>Name</th><th>Type</th><th>Category</th><th class="num">Price</th>
-        <th>Stock</th><th class="num">Reorder</th><th>State</th><th></th>
+        <th>Stock</th><th class="num">Reorder</th><th>State</th><th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -197,7 +234,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
         </td>
         <td data-label="Category"><?= $row['category'] !== null && $row['category'] !== '' ? e($row['category']) : '<span class="muted">—</span>' ?></td>
         <td class="num cell-money" data-label="Price">&#8369;<?= e(Money::formatDisplay((int) $row['price_centavos'])) ?></td>
-        <td data-label="Stock"><span class="stock stock--<?= $chip ?>"><?= e($chipLabel) ?></span></td>
+        <td data-label="Stock"><span class="stock stock--<?= $chip ?>"><?php if ($chip === 'ok'): ?><span class="stock__text"><span class="stock__state">OK:</span> <span class="stock__amount"><?= (int) $row['stock_quantity'] ?></span></span><?php else: ?><?= e($chipLabel) ?><?php endif; ?></span></td>
         <td class="num" data-label="Reorder">
           <?php if ($isProduct && $row['reorder_level'] !== null): ?>
             <?= (int) $row['reorder_level'] ?>
@@ -210,23 +247,12 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
             <?= (int) $row['is_active'] === 1 ? 'Active' : 'Inactive' ?>
           </span>
         </td>
-        <td class="rowactions" data-label="Actions" data-record-actions>
-          <a href="<?= e(vulcatrack_url('/admin/item-edit.php?id=' . (int) $row['item_id'])) ?>">Edit</a>
-          <form method="post" action="<?= e(vulcatrack_url('/admin/inventory.php')) ?>">
-            <?= Csrf::field() ?>
-            <?php foreach (inv_filters($_GET) as $fName => $fValue): ?>
-              <input type="hidden" name="<?= e($fName) ?>" value="<?= e($fValue) ?>">
-            <?php endforeach; ?>
-            <input type="hidden" name="item_id" value="<?= (int) $row['item_id'] ?>">
-            <?php if ((int) $row['is_active'] === 1): ?>
-              <input type="hidden" name="_action" value="deactivate">
-              <button type="submit" class="linklike"
-                      onclick="return confirm('Deactivate this item? It is hidden from the POS and active inventory but stays on past sales.');">Deactivate</button>
-            <?php else: ?>
-              <input type="hidden" name="_action" value="activate">
-              <button type="submit" class="linklike linklike--neutral">Activate</button>
-            <?php endif; ?>
-          </form>
+        <td class="rowactions inventory-rowactions" data-label="Actions" data-record-actions>
+          <div class="inventory-actions-desktop"><?php inv_actions($row, $isProduct, inv_filters($_GET), false); ?></div>
+          <details class="inventory-actions-mobile">
+            <summary aria-label="Actions for <?= e($row['item_name']) ?>"><?= inv_icon('more') ?><span>Actions</span></summary>
+            <div class="inventory-actions-menu"><?php inv_actions($row, $isProduct, inv_filters($_GET), true); ?></div>
+          </details>
         </td>
       </tr>
     <?php endforeach; ?>
@@ -237,4 +263,5 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
   </div>
 <?php endif; ?>
 
+<script src="<?= e(vulcatrack_url('/assets/js/inventory-filters.js')) ?>" defer></script>
 <?php require __DIR__ . '/../src/Views/partials/admin_bottom.php'; ?>

@@ -114,7 +114,8 @@ test('SaleRepository::listItemTotals sums frozen quantities and subtotals per it
 
         // Later catalog changes: new price, new name, deactivated.
         $items = new ItemRepository($pdo);
-        $items->update($ids['valve'], 'Report Valve (renamed)', 'product', null, 99999, 100, null);
+        $current = $items->findById($ids['valve']);
+        $items->update($ids['valve'], 'Report Valve (renamed)', 'product', null, 99999, $current['stock_quantity'], null);
         $items->setActive($ids['valve'], false);
         $pdo->prepare('UPDATE items SET price = ? WHERE item_id = ?')->execute(['175.00', $ids['patch']]);
 

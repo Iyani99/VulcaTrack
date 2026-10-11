@@ -987,8 +987,53 @@ body.admin .tabs.has-indicator .tab:is(.is-active, :hover) { border-bottom-color
 /* a table in a white panel, with an optional footer strip (count line) */
 body.admin .tablepanel { margin: 1rem 0 1.5rem; background: #fff; border: 1px solid var(--adm-line); }
 body.admin .tablepanel .table-scroll { margin: 0; }
+/* Inventory rows grow with the document; only sideways overflow stays in the table wrapper. */
+body.admin .inventory-tablepanel .table-scroll { overflow-y: hidden; }
 body.admin .tablepanel .datatable { border: 0; }
 body.admin .tablepanel__foot { margin: 0; padding: .65rem .9rem; border-top: 1px solid var(--adm-line); background: #fafafa; font-size: .85rem; color: var(--adm-muted); }
+body.admin .restock-card { max-width: 42rem; }
+body.admin .restock-card h2,
+body.admin .restock-history h2 { margin-top: 0; font-size: 1.15rem; }
+body.admin .restock-history { margin-top: 1.75rem; }
+body.admin .restock-history .tablepanel { margin-top: .75rem; }
+body.admin .restock-current { display: flex; justify-content: space-between; gap: .5rem 1rem; flex-wrap: wrap; padding: .65rem .8rem; border-left: 3px solid var(--adm-red-dark); background: var(--adm-zebra); }
+body.admin .restock-movement { white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
+body.admin .restock-note { max-width: 15rem; }
+body.admin .restock-note summary { cursor: pointer; color: var(--adm-red-dark); font-weight: 700; }
+body.admin .restock-note p { margin: .45rem 0 0; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
+body.admin .inventory-filterbar.is-enhanced .filterbar__submit { display: none; }
+body.admin .inventory-rowactions { width: 10rem; }
+body.admin .inventory-actions-desktop { display: flex; align-items: center; justify-content: flex-end; gap: .3rem; }
+body.admin .inventory-actions-desktop form, body.admin .inventory-actions-menu form { display: inline-flex; margin: 0; min-width: 0; }
+body.admin .inventory-action { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 2.4rem; height: 2.4rem; padding: 0; border: 1px solid transparent; border-radius: 0; background: transparent; color: var(--adm-ink); text-decoration: none; cursor: pointer; }
+body.admin .inventory-action svg, body.admin .inventory-actions-mobile summary svg { display: block; width: 1.15rem; height: 1.15rem; flex: none; }
+body.admin .inventory-action:is(:hover, :focus-visible) { border-color: var(--adm-line); background: #f1f1f1; color: var(--adm-red-dark); text-decoration: none; }
+body.admin .inventory-action:focus-visible, body.admin .inventory-actions-mobile summary:focus-visible { outline: 2px solid var(--adm-red-dark); outline-offset: 2px; }
+body.admin .inventory-actions-desktop .inventory-action::after { content: attr(data-tip); position: absolute; z-index: 5; top: 50%; right: calc(100% + .35rem); width: max-content; max-width: 9rem; padding: .38rem .5rem; background: var(--adm-side); color: #fff; font: 600 .72rem var(--adm-sans); white-space: normal; text-align: center; opacity: 0; visibility: hidden; pointer-events: none; transform: translate(.2rem, -50%); }
+body.admin .inventory-actions-desktop .inventory-action:is(:hover, :focus-visible)::after { opacity: 1; visibility: visible; transform: translate(0, -50%); }
+body.admin .inventory-actions-mobile { display: none; }
+@media (hover: hover) and (pointer: fine) and (min-width: 40.0625rem) {
+  body.admin .inventory-actions-desktop { opacity: 0; pointer-events: none; transform: translateY(.2rem); }
+  body.admin .datatable tr:is(:hover, :focus-within) .inventory-actions-desktop { opacity: 1; pointer-events: auto; transform: translateY(0); }
+}
+@media (max-width: 40rem) {
+  body.admin .datatable.mobile-records td.inventory-rowactions { display: block; grid-column: 1 / -1; width: 100%; padding: .3rem 0 .5rem; }
+  body.admin .inventory-actions-desktop { display: none; }
+  body.admin .inventory-actions-mobile { display: block; width: 100%; }
+  body.admin .inventory-actions-mobile summary { display: flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.75rem; padding: .4rem .65rem; border: 1px solid var(--adm-line); font-weight: 700; cursor: pointer; list-style: none; }
+  body.admin .inventory-actions-mobile summary::-webkit-details-marker { display: none; }
+  body.admin .inventory-actions-mobile[open] summary { border-color: var(--adm-ink); background: var(--adm-zebra); }
+  body.admin .inventory-actions-menu { display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; padding: .5rem 0 .1rem; }
+  body.admin .inventory-actions-menu form { width: 100%; }
+  body.admin .inventory-actions-menu .inventory-action { width: 100%; min-height: 2.75rem; height: auto; justify-content: flex-start; gap: .5rem; padding: .5rem .65rem; border-color: var(--adm-line); font-size: .85rem; font-weight: 700; }
+  body.admin .restock-note { max-width: 100%; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  body.admin .inventory-actions-desktop, body.admin .inventory-action, body.admin .inventory-actions-desktop .inventory-action::after { transition: opacity .18s ease, transform .18s ease, color .18s ease, background-color .18s ease, border-color .18s ease, visibility .18s ease; }
+  body.admin .inventory-action:is(:hover, :focus-visible) svg { transform: scale(1.05); transition: transform .18s ease; }
+  body.admin .inventory-actions-menu { animation: inventory-actions-open .18s ease both; }
+  @keyframes inventory-actions-open { from { opacity: 0; transform: translateY(-.2rem); } to { opacity: 1; transform: translateY(0); } }
+}
 body.admin .linklike--neutral { color: var(--adm-ink); } /* a non-destructive text action (Activate) — red stays for Deactivate / Reject / Remove */
 body.admin .datatable td.cell-strong { font-weight: 700; }
 body.admin .datatable td.cell-money { font-size: 1rem; font-weight: 800; }
@@ -1007,6 +1052,9 @@ body.admin .stock::before { content: ""; width: .5rem; height: .5rem; flex: none
 body.admin .stock--low   { --dot: var(--adm-red); background: #fdecec; color: var(--adm-red-dark); }
 body.admin .stock--out   { --dot: #777; }
 body.admin .stock--ok    { --dot: var(--adm-ink); }
+body.admin .inventory-tablepanel .stock--ok { --dot: #1c6b32; }
+body.admin .inventory-tablepanel .stock--ok .stock__state { color: #1c6b32; }
+body.admin .inventory-tablepanel .stock--ok .stock__amount { color: #222; }
 body.admin .stock--na,
 body.admin .stock--plain { background: none; color: #777; padding-left: 0; }
 body.admin .stock--na::before,

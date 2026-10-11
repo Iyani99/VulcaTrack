@@ -94,19 +94,20 @@ test('ItemRepository::update changes fields, bumps updated_at, and keeps the typ
         $pdo->prepare('UPDATE items SET updated_at = :t WHERE item_id = :id')
             ->execute([':t' => '2000-01-01 00:00:00', ':id' => $id]);
 
-        $repo->update($id, 'New Name', 'product', 'New Cat', Money::toCentavos('12.75'), 8, 2);
+        $repo->update($id, 'New Name', 'product', 'New Cat', Money::toCentavos('12.75'), 3, 2);
         $after = $repo->findById($id);
 
         assert_same('New Name', $after['item_name']);
         assert_same('New Cat', $after['category']);
         assert_same(1275, $after['price_centavos']);
-        assert_same(8, $after['stock_quantity']);
+        assert_same(3, $after['stock_quantity']);
         assert_same(2, $after['reorder_level']);
         assert_true($after['updated_at'] > '2000-01-01 00:00:00', 'updated_at is refreshed on update');
         assert_same($before['created_at'], $after['created_at'], 'created_at is untouched');
 
         // Convert the same product to a service — stock fields must clear.
-        $repo->update($id, 'New Name', 'service', 'New Cat', Money::toCentavos('12.75'), 8, 2);
+        $pdo->prepare('UPDATE items SET stock_quantity = 0 WHERE item_id = ?')->execute([$id]);
+        $repo->update($id, 'New Name', 'service', 'New Cat', Money::toCentavos('12.75'), 0, 2);
         $svc = $repo->findById($id);
         assert_null($svc['stock_quantity']);
         assert_null($svc['reorder_level']);

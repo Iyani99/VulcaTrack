@@ -35,20 +35,20 @@ test('ItemRepository::update lets an UNSOLD item switch between product and serv
     assert_not_null($pdo, 'the database must be reachable');
     TestDb::rollback($pdo, function () use ($pdo) {
         $repo = new ItemRepository($pdo);
-        $id = $repo->create('Unsold Thing', 'product', null, 1000, 5, 2);
+        $id = $repo->create('Unsold Thing', 'product', null, 1000, 0, 2);
         assert_false($repo->hasSales($id));
 
-        assert_true($repo->update($id, 'Unsold Thing', 'service', null, 1000, 5, 2,
-            ['item_type' => 'product', 'stock_quantity' => 5]), 'product -> service is allowed while unsold');
+        assert_true($repo->update($id, 'Unsold Thing', 'service', null, 1000, 0, 2,
+            ['item_type' => 'product', 'stock_quantity' => 0]), 'zero-stock product -> service is allowed while unsold');
         $row = $repo->findById($id);
         assert_same('service', $row['item_type']);
         assert_null($row['stock_quantity']);
 
-        assert_true($repo->update($id, 'Unsold Thing', 'product', null, 1000, 3, null,
-            ['item_type' => 'service', 'stock_quantity' => null]), 'service -> product is allowed with a stock value');
+        assert_true($repo->update($id, 'Unsold Thing', 'product', null, 1000, 0, null,
+            ['item_type' => 'service', 'stock_quantity' => null]), 'service -> product starts at zero');
         $row = $repo->findById($id);
         assert_same('product', $row['item_type']);
-        assert_same(3, $row['stock_quantity']);
+        assert_same(0, $row['stock_quantity']);
     });
 });
 
@@ -83,13 +83,13 @@ test('ItemRepository::update still saves other fields on a sold item', function 
         $id = $repo->create('Sold Tube', 'product', 'Parts', 25000, 10, null);
         integrity_sell($pdo, $id);
 
-        assert_true($repo->update($id, 'Sold Tube (renamed)', 'product', 'Tubes', Money::toCentavos('275.00'), 14, 4,
+        assert_true($repo->update($id, 'Sold Tube (renamed)', 'product', 'Tubes', Money::toCentavos('275.00'), 10, 4,
             ['item_type' => 'product', 'stock_quantity' => 10]));
         $row = $repo->findById($id);
         assert_same('Sold Tube (renamed)', $row['item_name']);
         assert_same('Tubes', $row['category']);
         assert_same(27500, $row['price_centavos']);
-        assert_same(14, $row['stock_quantity'], 'a deliberate stock correction is still possible');
+        assert_same(10, $row['stock_quantity'], 'metadata edit leaves stock unchanged');
         assert_same(4, $row['reorder_level']);
         assert_same('product', $row['item_type']);
     });
@@ -107,7 +107,8 @@ test('ItemRepository::update refuses a stale edit so a sale\'s newer stock is ke
         assert_same(8, $repo->findById($id)['stock_quantity']);
 
         // The stale form changes only the price but still carries stock 10.
-        assert_false($repo->update($id, 'Busy Valve', 'product', 'Parts', 5000, 10, null, $loaded), 'stale edit refused');
+        assert_throws(fn () => $repo->update($id, 'Busy Valve', 'product', 'Parts', 5000, 10, null, $loaded),
+            \InvalidArgumentException::class, 'cannot be changed', 'stale stock replacement refused');
         $row = $repo->findById($id);
         assert_same(8, $row['stock_quantity'], 'the sale\'s newer stock is not overwritten');
         assert_same(4550, $row['price_centavos'], 'nothing from the stale form was written');
