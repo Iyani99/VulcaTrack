@@ -1,20 +1,20 @@
 # database/
 
 **Phase 2 — schema built.** `schema.sql` in this folder is the executable v1
-database schema (10 application tables after Inventory Intelligence). It is derived from, and must stay
+database schema (11 application tables after manual stock adjustments). It is derived from, and must stay
 consistent with, the design source of truth:
 
 - `C:\IPT102\docs\ERD\schema.dbml` — maintainable text schema (authority for structure)
 - `C:\IPT102\docs\VulcaTrack-Database-Notes_1.md` — field-by-field rationale
 - `C:\IPT102\docs\decisions\project-decisions.md` — authoritative decisions
 
-## Tables (10)
+## Tables (11)
 
-`customers`, `admins`, `tiremen`, `items`, `inventory_restocks`, `vehicles`,
+`customers`, `admins`, `tiremen`, `items`, `inventory_restocks`, `inventory_adjustments`, `vehicles`,
 `sales`, `sale_items`, `service_requests`, `inventory_settings`.
 
 No payment table, no customer receipt table, no `shop_settings` table, no
-status-history / audit table, no location-history table, and no Tireman
+status-history / general Activity Log table, no location-history table, and no Tireman
 login table yet. Later post-defense domains remain separate batches.
 
 A sale may be linked to at most one Rescue request through the nullable
@@ -55,6 +55,8 @@ applied and how to roll it back.
 | `migrations/2026-10-12-inventory-restocks.sql` | Inventory Foundation (Decision 87): adds Product receipt history with quantity, optional free-text supplier, recording Admin, and timestamp. Existing stock stays unchanged; no historical receipts are invented. |
 | `migrations/2026-10-12-restock-snapshots.sql` | Adds immutable stock-before/stock-after receipt snapshots and an optional 500-character note. Apply after the first restock migration while `inventory_restocks` is empty; existing Product stock is untouched. |
 | `migrations/2026-10-12-inventory-settings.sql` | Adds one `inventory_settings` row with a 1–365 day slow-moving threshold, initially 60, and nullable last-updating Admin attribution. Apply after the Inventory Foundation migrations. This does not alter Product or Sales data. |
+| `migrations/2026-10-12-product-slow-moving-override.sql` | Adds the nullable, Product-only 1–365 day override; NULL uses the existing shop default. Apply once after Inventory Intelligence. |
+| `migrations/2026-10-12-inventory-adjustments.sql` | Adds append-only manual Product stock corrections with direction, reason, note, before/after stock, Admin, and time. Apply once; no historical backfill. |
 
 ```
 C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-28-sales-service-request.sql

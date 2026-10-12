@@ -976,6 +976,7 @@ body.admin .tab {
 }
 body.admin .tab:hover { color: var(--adm-ink); border-bottom-color: #bbb; }
 body.admin .tab.is-active { color: var(--adm-red-dark); border-bottom-color: var(--adm-red); font-weight: 700; }
+body.admin .tab:focus-visible { outline: 2px solid var(--adm-red-dark); outline-offset: -2px; }
 body.admin .tabs__indicator {
   position: absolute; top: 0; left: 0; width: 0; height: 2px; opacity: 0;
   background: var(--adm-red); pointer-events: none;
@@ -1002,10 +1003,20 @@ body.admin .restock-note { max-width: 15rem; }
 body.admin .restock-note summary { cursor: pointer; color: var(--adm-red-dark); font-weight: 700; }
 body.admin .restock-note p { margin: .45rem 0 0; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
 body.admin .inventory-filterbar.is-enhanced .filterbar__submit { display: none; }
-body.admin .inventory-rowactions { width: 10rem; }
+body.admin .inventory-rowactions { width: 11.6rem; }
+body.admin .inventory-page-actions { display: flex; flex: 0 1 auto; flex-wrap: wrap; align-items: center; gap: .6rem; }
+body.admin .inventory-page-actions .btnlink { white-space: nowrap; }
+body.admin .inventory-settings-card { max-width: 36rem; margin-inline: auto; }
+body.admin .inventory-settings-card h2 { margin: 0 0 .75rem; }
+body.admin .inventory-settings-card form { margin-top: 1.2rem; }
+body.admin .inventory-settings-control { display: flex; align-items: center; gap: .6rem; }
+body.admin .inventory-settings-control input { width: 6rem; margin: .45rem 0 0; }
+body.admin .inventory-settings-control span { margin-top: .45rem; }
+body.admin .inventory-settings-range { margin: .4rem 0 1rem; font-size: .82rem; }
+body.admin .inventory-settings-updated { margin: 1rem 0 0; font-size: .8rem; }
 body.admin .inventory-actions-desktop { display: flex; align-items: center; justify-content: flex-end; gap: .3rem; }
-body.admin .inventory-actions-desktop form, body.admin .inventory-actions-menu form { display: inline-flex; margin: 0; min-width: 0; }
-body.admin .inventory-action { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 2.4rem; height: 2.4rem; padding: 0; border: 1px solid transparent; border-radius: 0; background: transparent; color: var(--adm-ink); text-decoration: none; cursor: pointer; }
+body.admin .inventory-actions-desktop form, body.admin .inventory-actions-menu form { display: inline-flex; align-items: center; justify-content: center; margin: 0; padding: 0; min-width: 0; line-height: 1; }
+body.admin .inventory-action { position: relative; display: inline-flex; flex: none; align-items: center; justify-content: center; width: 2.4rem; min-width: 2.4rem; height: 2.4rem; min-height: 2.4rem; margin: 0; padding: 0; border: 1px solid transparent; border-radius: 0; background: transparent; color: var(--adm-ink); line-height: 1; vertical-align: middle; text-decoration: none; cursor: pointer; }
 body.admin .inventory-action svg, body.admin .inventory-actions-mobile summary svg { display: block; width: 1.15rem; height: 1.15rem; flex: none; }
 body.admin .inventory-action:is(:hover, :focus-visible) { border-color: var(--adm-line); background: #f1f1f1; color: var(--adm-red-dark); text-decoration: none; }
 body.admin .inventory-action:focus-visible, body.admin .inventory-actions-mobile summary:focus-visible { outline: 2px solid var(--adm-red-dark); outline-offset: 2px; }
@@ -1025,7 +1036,7 @@ body.admin .inventory-actions-mobile { display: none; }
   body.admin .inventory-actions-mobile[open] summary { border-color: var(--adm-ink); background: var(--adm-zebra); }
   body.admin .inventory-actions-menu { display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; padding: .5rem 0 .1rem; }
   body.admin .inventory-actions-menu form { width: 100%; }
-  body.admin .inventory-actions-menu .inventory-action { width: 100%; min-height: 2.75rem; height: auto; justify-content: flex-start; gap: .5rem; padding: .5rem .65rem; border-color: var(--adm-line); font-size: .85rem; font-weight: 700; }
+  body.admin .inventory-actions-menu .inventory-action { width: 100%; min-width: 0; min-height: 2.75rem; height: auto; justify-content: flex-start; gap: .5rem; padding: .5rem .65rem; border-color: var(--adm-line); font-size: .85rem; font-weight: 700; line-height: 1.3; }
   body.admin .restock-note { max-width: 100%; }
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -1113,35 +1124,21 @@ body.admin .acct-form button[type="submit"] { width: 100%; min-height: 2.75rem; 
 body.admin .acct-grid .table-scroll > .datatable { min-width: 30rem; }
 body.admin .acct-grid td.acct-email { white-space: nowrap; }
 
-/* Reports */
-body.admin .rpt-intelligence { margin: 2rem 0 1.5rem; padding-top: 1.35rem; border-top: 2px solid var(--adm-ink); scroll-margin-top: 1rem; }
-body.admin .rpt-intelligence__intro { margin-bottom: 1rem; }
-body.admin .rpt-intelligence__eyebrow { margin: 0 0 .3rem; color: var(--adm-red-dark); font-family: var(--adm-mono); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-body.admin .rpt-intelligence__intro h2 { margin: 0; font-size: 1.5rem; }
-body.admin .rpt-intelligence__intro p:last-child { margin: .4rem 0 0; max-width: 70rem; color: #555; font-size: .88rem; line-height: 1.5; }
-body.admin .rpt-intelligence__grid { grid-template-columns: minmax(0, 1.5fr) minmax(min(18rem, 100%), 1fr); }
-body.admin .rpt-intelligence__panelhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .4rem 1rem; }
-body.admin .rpt-intelligence__panelhead a { font-size: .78rem; font-weight: 800; }
-body.admin .rpt-intelligence__count { display: inline-flex; justify-content: center; min-width: 1.5rem; padding: .05rem .35rem; border: 1px solid var(--adm-red); color: var(--adm-red-dark); font-family: var(--adm-mono); font-size: .72rem; vertical-align: middle; }
-body.admin .rpt-intelligence__form { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem .65rem; padding: .1rem 1.1rem 1rem; }
-body.admin .rpt-intelligence__form label { flex: 0 0 100%; margin: 0; font-size: .8rem; font-weight: 700; }
-body.admin .rpt-intelligence__form input { width: 6rem; min-height: 2.75rem; margin: 0; }
-body.admin .rpt-intelligence__form button { min-height: 2.75rem; margin: 0; padding: .55rem .9rem; }
-body.admin .rpt-intelligence__slow > .table-scroll > .datatable { min-width: 48rem; }
-body.admin .rpt-intelligence__slow .datatable td:last-child { max-width: 17rem; }
-@media (max-width: 48rem) {
-  body.admin .rpt-intelligence__grid { grid-template-columns: minmax(0, 1fr); }
-}
+/* Current Inventory Insights */
+body.admin .inventory-insights__grid { grid-template-columns: minmax(0, 1fr); }
+body.admin .inventory-insights__panelhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .4rem 1rem; }
+body.admin .inventory-insights__panelhead a { font-size: .78rem; font-weight: 800; }
+body.admin .inventory-insights__count { display: inline-flex; justify-content: center; min-width: 1.5rem; padding: .05rem .35rem; border: 1px solid var(--adm-red); color: var(--adm-red-dark); font-family: var(--adm-mono); font-size: .72rem; vertical-align: middle; }
+body.admin .inventory-insights__slow { margin-bottom: 1.5rem; }
+body.admin .inventory-insights__slow > .table-scroll > .datatable { min-width: 48rem; }
+body.admin .inventory-insights__slow .datatable td:last-child { max-width: 17rem; }
 @media (max-width: 40rem) {
-  body.admin .rpt-intelligence__panelhead { align-items: center; }
-  body.admin .rpt-intelligence__panelhead a { display: inline-flex; align-items: center; min-height: 2.75rem; }
-  body.admin .rpt-intelligence__slow > .table-scroll > .datatable { min-width: 0; }
-  body.admin .rpt-intelligence__slow .datatable td:last-child { max-width: none; }
+  body.admin .inventory-insights__panelhead { align-items: center; }
+  body.admin .inventory-insights__panelhead a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+  body.admin .inventory-insights__slow > .table-scroll > .datatable { min-width: 0; }
+  body.admin .inventory-insights__slow .datatable td:last-child { max-width: none; }
 }
-@media (max-width: 24rem) {
-  body.admin .rpt-intelligence__form input,
-  body.admin .rpt-intelligence__form button { width: 100%; }
-}
+/* Reports */
 body.admin .report-range { margin: 0 0 .25rem; }
 body.admin .card--stat { padding: 1.3rem 1.4rem 1.2rem; }
 body.admin .card--stat .card__label { margin: 0 0 .7rem; font-size: .78rem; }
@@ -1209,8 +1206,8 @@ body.admin .rpt-src__row--rescue .rpt-src__meter span { background: var(--adm-re
   @keyframes dash-trend-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
   body.admin.report-motion-ready .dash-trend__line { stroke-dasharray: 1; animation: dash-trend-draw 760ms var(--motion-ease) 100ms both; animation-play-state: paused; }
   body.admin.report-motion-ready .dash-trend.is-revealed .dash-trend__line { animation-play-state: running; }
-  body.admin.report-motion-ready .rpt-line { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 700ms var(--motion-ease); }
-  body.admin.report-motion-ready .rpt-chart.is-revealed .rpt-line { stroke-dashoffset: 0; }
+  body.admin.report-motion-ready .rpt-line { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  body.admin.report-motion-ready .rpt-chart.is-revealed .rpt-line { stroke-dashoffset: 0; transition: stroke-dashoffset 700ms var(--motion-ease); }
   @keyframes rpt-meter-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
   body.admin.report-motion-ready .rpt-src__meter span { transform-origin: left center; animation: rpt-meter-grow 720ms var(--motion-ease) both; animation-play-state: paused; }
   body.admin.report-motion-ready .rpt-source.is-revealed .rpt-src__meter span { animation-play-state: running; }

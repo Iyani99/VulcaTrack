@@ -223,10 +223,10 @@ Inventory Intelligence checkpoint below. Product archive normally requires
 zero shop and Tireman-held stock.
 Product restocks need atomic receipt records with optional free-text supplier;
 existing stock has unknown prior receipt history. Routine stock changes must use
-recorded movements, with auditable future corrections. Issued Product moves from
+recorded movements, with audited manual corrections. Issued Product moves from
 shop to Tireman custody; use reduces held stock; return restores shop stock.
-Operational use is not a Sale. The real/demo database now has ten tables after
-the additive Inventory Restock and Inventory Intelligence migrations. Assignment
+Operational use is not a Sale. The real/demo database now has eleven tables after
+the additive Inventory Restock, Inventory Intelligence, and refinement migrations. Assignment
 offers and Tireman inventory movements remain future work.
 
 An Admin-visible Activity Log is approved for meaningful state changes by Admin,
@@ -264,9 +264,10 @@ records item #7 moving 14 to 20 by +6. The accepted automated baseline is **272
 passed, 0 failed, 4,836 assertions across 52 files**, run against `vulcatrack_test`;
 the real/demo nine-table fingerprint was unchanged across that suite.
 
-**Inventory Intelligence implemented and locally migrated on 2026-10-12:**
-Reports has a separate current-inventory section independent of its Sales-period
-filters. Low stock reuses each active Product's optional `reorder_level`, including
+**Inventory Intelligence initially implemented and locally migrated on 2026-10-12:**
+Its initial current-inventory section was in Reports, independent of Sales-period
+filters; the Inventory refinement below moved it to Inventory Insights. Low stock
+reuses each active Product's optional `reorder_level`, including
 equality and zero stock. Slow-moving means an active Product with current shop
 stock above zero has no recorded Sale in the configured period. The default is
 60 days, adjustable from 1–365 days by any current Admin; an unchanged submission
@@ -281,3 +282,28 @@ The local real/demo migration added only this table and its initial row after a
 verified backup; the nine original tables' DDL and data matched that backup during
 manual acceptance. The accepted full automated baseline is **277 passed, 0 failed,
 4,934 assertions across 54 files**, run against `vulcatrack_test`.
+
+**Inventory refinement implemented locally on 2026-10-12:** The Inventory
+workspace has Items (the default Product/Service list), Insights (current Low
+Stock and Slow-moving Products), and Settings (the shop default slow-moving
+threshold). Product Edit owns an optional 1-365 day override; NULL uses the shop
+default, and Services cannot override. Inventory Insights shows current shop
+stock, each Product's effective threshold and Default/Item override label, last
+recorded Sale, and latest recorded Restock context. Missing Restock history is
+described only as unrecorded since tracking began. Reports no longer contains
+current Inventory Intelligence or an inventory setting form; its Sales-period
+controls remain for historical analysis.
+
+Adjust Stock is an audited Admin correction workflow for active or archived
+Products; an archived correction does not reactivate the Product. Product row
+locking and one transaction keep the stock change and attributed
+`inventory_adjustments` row atomic. A one-use submission token guards replay.
+Routine Restocks, POS Sale deductions, and Adjust Stock remain distinct records
+and actions. The two additive refinement migrations were applied to real/demo
+once after a verified backup; the database now has eleven tables. The Reports
+Sales line-chart entrance draws on fresh load and period change at fixed chart
+height; reduced motion shows the final line immediately. Final local verification:
+**281 passed, 0 failed, 5,134 assertions across 56 files**, against
+`vulcatrack_test`; the real/demo data fingerprint matched before and after the
+automated tests. Product Edit also remains usable with clear guidance if the
+required Inventory Settings row needs restoration.

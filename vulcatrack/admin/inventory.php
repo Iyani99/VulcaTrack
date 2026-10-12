@@ -130,6 +130,7 @@ function inv_icon(string $name): string
     $paths = [
         'edit' => '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L9 17l-4 1 1-4Z"/>',
         'restock' => '<path d="M3 8.5 12 4l9 4.5v9L12 22l-9-4.5Z"/><path d="M3 8.5 12 13l9-4.5M12 13v9M16.5 3v5M14 5.5h5"/>',
+        'adjust' => '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="2" fill="currentColor" stroke="none"/>',
         'deactivate' => '<path d="M12 3v9"/><path d="M6.2 6.2a8 8 0 1 0 11.6 0"/>',
         'activate' => '<circle cx="12" cy="12" r="9"/><path d="m7.5 12 3 3 6-6"/>',
         'more' => '<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
@@ -148,6 +149,9 @@ function inv_actions(array $row, bool $isProduct, array $back, bool $mobile): vo
     <a class="inventory-action<?= $mobile ? ' inventory-action--labelled' : '' ?>" href="<?= e(vulcatrack_url('/admin/item-edit.php?id=' . $id)) ?>" aria-label="Edit item" data-tip="Edit item"><?= inv_icon('edit') ?><?= $mobile ? '<span>Edit</span>' : '' ?></a>
     <?php if ($isProduct && $active): ?>
       <a class="inventory-action<?= $mobile ? ' inventory-action--labelled' : '' ?>" href="<?= e(vulcatrack_url('/admin/restock.php?id=' . $id)) ?>" aria-label="Restock product" data-tip="Restock product"><?= inv_icon('restock') ?><?= $mobile ? '<span>Restock</span>' : '' ?></a>
+    <?php endif; ?>
+    <?php if ($isProduct): ?>
+      <a class="inventory-action<?= $mobile ? ' inventory-action--labelled' : '' ?>" href="<?= e(vulcatrack_url('/admin/adjust-stock.php?id=' . $id)) ?>" aria-label="Adjust product stock" data-tip="Adjust stock"><?= inv_icon('adjust') ?><?= $mobile ? '<span>Adjust stock</span>' : '' ?></a>
     <?php endif; ?>
     <form method="post" action="<?= e(vulcatrack_url('/admin/inventory.php')) ?>">
       <?= Csrf::field() ?>
@@ -170,8 +174,11 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <h1>Inventory</h1>
     <p class="pagehead__meta">Products and services in one list.</p>
   </div>
-  <a class="btnlink btnlink--new-sale" href="<?= e(vulcatrack_url('/admin/item-edit.php')) ?>">Add item</a>
+  <div class="inventory-page-actions">
+    <a class="btnlink btnlink--new-sale" href="<?= e(vulcatrack_url('/admin/item-edit.php')) ?>">Add item</a>
+  </div>
 </div>
+<?php $inventoryActive = 'items'; require __DIR__ . '/../src/Views/partials/inventory_nav.php'; ?>
 
 <?php if ($flash !== null): ?>
   <p class="<?= $flash[0] === 'error' ? 'error' : 'notice' ?>"><?= e($flash[1]) ?></p>

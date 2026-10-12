@@ -15,6 +15,7 @@
 
 use VulcaTrack\Auth\Csrf;
 use VulcaTrack\Repository\ItemRepository;
+use VulcaTrack\Repository\InventorySettingsRepository;
 use VulcaTrack\Support\Money;
 use VulcaTrack\Support\Validator;
 
@@ -23,6 +24,12 @@ require __DIR__ . '/../includes/auth.php';
 
 $admin = require_admin();
 $repo  = new ItemRepository(vulcatrack_db());
+$shopDefaultDays = null;
+try {
+    $shopDefaultDays = (new InventorySettingsRepository(vulcatrack_db()))->current()['slow_moving_days'];
+} catch (\PDOException | \RuntimeException $e) {
+    // Product edits remain available while the required settings row is restored.
+}
 
 $itemId  = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $editing = $itemId > 0;
@@ -64,6 +71,7 @@ $old = [
     'price'          => isset($item['price']) ? (string) $item['price'] : '',
     'stock_quantity' => isset($item['stock_quantity']) && $item['stock_quantity'] !== null ? (string) $item['stock_quantity'] : '',
     'reorder_level'  => isset($item['reorder_level']) && $item['reorder_level'] !== null ? (string) $item['reorder_level'] : '',
+    'slow_moving_days_override' => isset($item['slow_moving_days_override']) ? (string) $item['slow_moving_days_override'] : '',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -77,6 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'price'          => (string) ($_POST['price'] ?? ''),
             'stock_quantity' => $editing ? $old['stock_quantity'] : (string) ($_POST['stock_quantity'] ?? ''),
             'reorder_level'  => (string) ($_POST['reorder_level'] ?? ''),
+            'slow_moving_days_override' => is_string($_POST['slow_moving_days_override'] ?? null)
+                ? $_POST['slow_moving_days_override'] : '',
         ];
 
         $expected = null;
@@ -106,11 +116,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // validated nor stored (the repository forces NULL / NULL regardless).
         $stock   = null;
         $reorder = null;
+        $overrideDays = null;
         if ($type === 'product') {
             $stock   = $editing
                 ? ($item['item_type'] === 'product' ? (int) $item['stock_quantity'] : 0)
                 : $v->stock('stock_quantity', $_POST['stock_quantity'] ?? null, 'Stock quantity');
             $reorder = $v->optionalNonNegativeInt('reorder_level', $_POST['reorder_level'] ?? null, 'Reorder level');
+            $overrideInput = $_POST['slow_moving_days_override'] ?? '';
+            if (!is_string($overrideInput)) {
+                $v->add('slow_moving_days_override', 'Slow-moving threshold must be a whole number from 1 to 365 days or blank.');
+            } elseif (trim($overrideInput) !== '') {
+                $trimmed = trim($overrideInput);
+                if (preg_match('/^[0-9]{1,3}$/D', $trimmed) !== 1 || (int) $trimmed < 1 || (int) $trimmed > 365) {
+                    $v->add('slow_moving_days_override', 'Slow-moving threshold must be a whole number from 1 to 365 days or blank.');
+                } else {
+                    $overrideDays = (int) $trimmed;
+                }
+            }
         }
 
         if ($v->passes()) {
@@ -118,10 +140,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($editing) {
                     // Missing / malformed expected state is treated as stale: never write blind.
                     $saved = $expected !== null
-                        && $repo->update($itemId, $name, $type, $category, $priceCentavos, $stock, $reorder, $expected);
+                        && $repo->update($itemId, $name, $type, $category, $priceCentavos, $stock, $reorder, $expected, $overrideDays);
                     $done = 'updated';
                 } else {
-                    $repo->create($name, $type, $category, $priceCentavos, $stock, $reorder);
+                    $repo->create($name, $type, $category, $priceCentavos, $stock, $reorder, $overrideDays);
                     $saved = true;
                     $done  = 'created';
                 }
@@ -207,9 +229,9 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
         <label for="stock_quantity">Current stock</label>
         <input type="text" id="stock_quantity" value="<?= $item['item_type'] === 'product' ? (int) $item['stock_quantity'] : '0' ?>" readonly>
         <?php if ($item['item_type'] === 'product' && (int) $item['is_active'] === 1): ?>
-          <p class="muted">Stock changes through recorded sales and restocks. <a href="<?= e(vulcatrack_url('/admin/restock.php?id=' . $itemId)) ?>">Record a restock</a></p>
+          <p class="muted">Stock changes through Sales, Restocks, and audited corrections. <a href="<?= e(vulcatrack_url('/admin/restock.php?id=' . $itemId)) ?>">Record a restock</a> or <a href="<?= e(vulcatrack_url('/admin/adjust-stock.php?id=' . $itemId)) ?>">Adjust stock</a>.</p>
         <?php elseif ($item['item_type'] === 'product'): ?>
-          <p class="muted">Reactivate this product before recording a restock.</p>
+          <p class="muted">Reactivate this product before recording a restock. <a href="<?= e(vulcatrack_url('/admin/adjust-stock.php?id=' . $itemId)) ?>">Adjust stock</a> remains available for an audited correction.</p>
         <?php else: ?>
           <p class="muted">Save this item as a Product at zero stock, then record any received stock through Restock.</p>
         <?php endif; ?>
@@ -224,6 +246,14 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <input type="text" id="reorder_level" name="reorder_level" inputmode="numeric"
              value="<?= e($old['reorder_level']) ?>">
       <?php if (!empty($errors['reorder_level'])): ?><small class="error"><?= e($errors['reorder_level']) ?></small><?php endif; ?>
+
+      <label for="slow_moving_days_override">Slow-moving threshold override <span class="muted">(optional, Products only)</span></label>
+      <input type="text" id="slow_moving_days_override" name="slow_moving_days_override" inputmode="numeric"
+             value="<?= e($old['slow_moving_days_override']) ?>" aria-describedby="slow-moving-help">
+      <small id="slow-moving-help" class="muted">Enter 1–365 days. <?= $shopDefaultDays === null
+          ? 'Shop default is unavailable; restore Inventory Settings before relying on a blank override.'
+          : 'Leave blank to use the shop default of ' . (int) $shopDefaultDays . ' days.' ?></small>
+      <?php if (!empty($errors['slow_moving_days_override'])): ?><small class="error"><?= e($errors['slow_moving_days_override']) ?></small><?php endif; ?>
     </div>
 
     <button type="submit"><?= $editing ? 'Save changes' : 'Add item' ?></button>

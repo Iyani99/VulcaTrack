@@ -28,9 +28,11 @@
 // receipts. Existing stock has unknown receipt history and is not backfilled.
 // Inventory Intelligence 2026-10-12: inventory_settings stores one adjustable
 // 1..365 day Sales-inactivity threshold, initially 60 days.
+// Product threshold overrides and manual stock adjustments 2026-10-12:
+// Product overrides are optional; adjustments are future-only audited corrections.
 // Current-model reminder — NOT YET modeled: online/gateway payment,
 // payment-transaction tables, GPS telemetry / route polylines, Tireman
-// authentication, scheduling / ratings / payroll, status-history / audit tables.
+// authentication, scheduling / ratings / payroll, status-history / general Activity Log tables.
 // =============================================================================
 
 Project VulcaTrack {
@@ -68,11 +70,11 @@ Table admins {
 
 Table inventory_settings {
   setting_id           tinyint  [pk, note: 'single row, always 1 (CHECK)']
-  slow_moving_days     smallint [not null, default: 60, note: 'CHECK 1..365 days']
+  slow_moving_days     smallint [not null, default: 60, note: 'shop default, CHECK 1..365 days; Products may override']
   updated_by_admin_id  int      [null, ref: > admins.admin_id, note: 'last Admin who changed the threshold; NULL for initial seed']
   updated_at           datetime [not null, default: `CURRENT_TIMESTAMP`]
 
-  Note: 'One management setting row seeded at 60 days; no generalized settings framework.'
+  Note: 'One shop default row seeded at 60 days; no generalized settings framework.'
 }
 
 Table tiremen {
@@ -114,6 +116,7 @@ Table items {
   price           decimal(10,2) [not null, note: 'current unit price']
   stock_quantity  int           [null, note: 'products only; NULL / ignored for services']
   reorder_level   int           [null, note: 'low-stock threshold; products only']
+  slow_moving_days_override smallint [null, note: 'Product only, 1-365 days; NULL uses inventory_settings shop default']
   is_active       tinyint(1)    [not null, default: 1, note: '0 = hidden from POS + active-inventory list; still shown on historical sale_items']
   created_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
   updated_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
@@ -136,6 +139,26 @@ Table inventory_restocks {
   }
 
   Note: 'Future receipts only. Receipt insert and items.stock_quantity increase commit atomically.'
+}
+
+Table inventory_adjustments {
+  adjustment_id int [pk, increment]
+  item_id int [not null, ref: > items.item_id]
+  direction varchar(8) [not null, note: 'increase or decrease']
+  quantity int [not null, note: 'positive quantity']
+  reason varchar(20) [not null, note: 'lost, damaged, count_correction, other']
+  note varchar(500) [null, note: 'required for other']
+  stock_before int [not null]
+  stock_after int [not null, note: 'nonnegative; equals before plus signed quantity']
+  admin_id int [not null, ref: > admins.admin_id]
+  adjusted_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (item_id, adjusted_at) [name: 'ix_inventory_adjustments_item_date']
+    admin_id [name: 'ix_inventory_adjustments_admin']
+  }
+
+  Note: 'Manual corrections only. Product row lock, stock update, and history insert are atomic. No historical backfill.'
 }
 
 // -----------------------------------------------------------------------------
@@ -200,4 +223,6 @@ Table service_requests {
 //   service_requests 1 : 0..1 sales         (sales.service_request_id nullable + UNIQUE)
 //   sales     1 : 1..N sale_items
 //   items     1 : 0..N sale_items
+//   items     1 : 0..N inventory_adjustments
+//   admins    1 : 0..N inventory_adjustments
 // -----------------------------------------------------------------------------

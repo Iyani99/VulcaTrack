@@ -31,7 +31,7 @@ use VulcaTrack\Support\Money;
 class ItemRepository
 {
     private const COLUMNS =
-        'item_id, item_name, item_type, category, price, stock_quantity, reorder_level, is_active, created_at, updated_at';
+        'item_id, item_name, item_type, category, price, stock_quantity, reorder_level, slow_moving_days_override, is_active, created_at, updated_at';
 
     public function __construct(private PDO $pdo)
     {
@@ -114,18 +114,21 @@ class ItemRepository
     }
 
     /**
-     * Current active, stocked Products without a Sale at/after the cutoff.
+     * Current active, stocked Products without a Sale in their effective window.
      * Never-sold Products receive a record-creation observation grace.
      * Restocks are context only and never reset Sales inactivity.
      *
-     * @return array<int,array{item_id:int,item_name:string,stock_quantity:int,created_at:string,last_sale_at:?string,last_restock_at:?string}>
+     * @return array<int,array{item_id:int,item_name:string,stock_quantity:int,created_at:string,last_sale_at:?string,last_restock_at:?string,effective_days:int,slow_moving_days_override:?int}>
      */
-    public function slowMovingProducts(string $cutoff): array
+    public function slowMovingProducts(string $asOf): array
     {
         $stmt = $this->pdo->prepare(
             "SELECT i.item_id, i.item_name, i.stock_quantity, i.created_at,
+                    i.slow_moving_days_override,
+                    COALESCE(i.slow_moving_days_override, cfg.slow_moving_days) AS effective_days,
                     sold.last_sale_at, received.last_restock_at
                FROM items i
+               JOIN inventory_settings cfg ON cfg.setting_id = 1
                LEFT JOIN (
                  SELECT si.item_id, MAX(s.sale_date) AS last_sale_at
                    FROM sale_items si JOIN sales s ON s.sale_id = si.sale_id
@@ -137,17 +140,22 @@ class ItemRepository
                ) received ON received.item_id = i.item_id
               WHERE i.item_type = 'product' AND i.is_active = 1
                 AND i.stock_quantity > 0
-                AND (sold.last_sale_at < :sold_cutoff
-                     OR (sold.last_sale_at IS NULL AND i.created_at <= :created_cutoff))
+                AND (sold.last_sale_at < DATE_SUB(CAST(:sold_as_of AS DATETIME),
+                      INTERVAL COALESCE(i.slow_moving_days_override, cfg.slow_moving_days) DAY)
+                     OR (sold.last_sale_at IS NULL AND i.created_at <= DATE_SUB(CAST(:created_as_of AS DATETIME),
+                      INTERVAL COALESCE(i.slow_moving_days_override, cfg.slow_moving_days) DAY)))
               ORDER BY sold.last_sale_at IS NULL DESC,
                        COALESCE(sold.last_sale_at, i.created_at) ASC,
                        i.item_name ASC, i.item_id ASC"
         );
-        $stmt->execute([':sold_cutoff' => $cutoff, ':created_cutoff' => $cutoff]);
+        $stmt->execute([':sold_as_of' => $asOf, ':created_as_of' => $asOf]);
         $rows = $stmt->fetchAll();
         foreach ($rows as &$row) {
             $row['item_id'] = (int) $row['item_id'];
             $row['stock_quantity'] = (int) $row['stock_quantity'];
+            $row['effective_days'] = (int) $row['effective_days'];
+            $row['slow_moving_days_override'] = $row['slow_moving_days_override'] === null
+                ? null : (int) $row['slow_moving_days_override'];
         }
         unset($row);
         return $rows;
@@ -182,13 +190,15 @@ class ItemRepository
         ?string $category,
         int $priceCentavos,
         ?int $stockQuantity,
-        ?int $reorderLevel
+        ?int $reorderLevel,
+        ?int $slowMovingDaysOverride = null
     ): int {
         [$stock, $reorder] = $this->normaliseStockFields($itemType, $stockQuantity, $reorderLevel);
+        $override = $this->normaliseSlowMovingOverride($itemType, $slowMovingDaysOverride);
 
         $stmt = $this->pdo->prepare(
-            'INSERT INTO items (item_name, item_type, category, price, stock_quantity, reorder_level)
-             VALUES (:name, :type, :category, :price, :stock, :reorder)'
+            'INSERT INTO items (item_name, item_type, category, price, stock_quantity, reorder_level, slow_moving_days_override)
+             VALUES (:name, :type, :category, :price, :stock, :reorder, :override_days)'
         );
         $stmt->execute([
             ':name'     => $name,
@@ -197,6 +207,7 @@ class ItemRepository
             ':price'    => Money::format($this->assertNonNegativePrice($priceCentavos)),
             ':stock'    => $stock,
             ':reorder'  => $reorder,
+            ':override_days' => $override,
         ]);
 
         return (int) $this->pdo->lastInsertId();
@@ -238,9 +249,11 @@ class ItemRepository
         int $priceCentavos,
         ?int $stockQuantity,
         ?int $reorderLevel,
-        ?array $expected = null
+        ?array $expected = null,
+        ?int $slowMovingDaysOverride = null
     ): bool {
         [$stock, $reorder] = $this->normaliseStockFields($itemType, $stockQuantity, $reorderLevel);
+        $override = $this->normaliseSlowMovingOverride($itemType, $slowMovingDaysOverride);
         $category = $this->nullIfBlank($category);
         $price    = Money::format($this->assertNonNegativePrice($priceCentavos));
 
@@ -266,6 +279,7 @@ class ItemRepository
         $sql = "UPDATE items
                    SET item_name = :name, item_type = :type, category = :category,
                        price = :price, stock_quantity = :stock, reorder_level = :reorder,
+                       slow_moving_days_override = :override_days,
                        updated_at = CURRENT_TIMESTAMP
                  WHERE item_id = :id
                    AND (item_type = :same_type
@@ -280,6 +294,7 @@ class ItemRepository
             ':price'     => $price,
             ':stock'     => $stock,
             ':reorder'   => $reorder,
+            ':override_days' => $override,
             ':id'        => $itemId,
             ':same_type' => $itemType,
             ':sold_id'   => $itemId,
@@ -312,7 +327,8 @@ class ItemRepository
             && $now['category'] === $category
             && $now['price_centavos'] === $priceCentavos
             && $now['stock_quantity'] === $stock
-            && $now['reorder_level'] === $reorder;
+            && $now['reorder_level'] === $reorder
+            && $now['slow_moving_days_override'] === $override;
     }
 
     /** True once the item appears on at least one recorded sale line. */
@@ -405,6 +421,20 @@ class ItemRepository
         return $stmt->rowCount() === 1;
     }
 
+    /** Apply an audited correction after the caller locks the Product row. */
+    public function setAdjustedStock(int $itemId, int $before, int $after): bool
+    {
+        if ($before < 0 || $after < 0 || $after > 2147483647 || $before === $after) {
+            return false;
+        }
+        $stmt = $this->pdo->prepare(
+            "UPDATE items SET stock_quantity = :after, updated_at = CURRENT_TIMESTAMP
+              WHERE item_id = :id AND item_type = 'product' AND stock_quantity = :before"
+        );
+        $stmt->execute([':after' => $after, ':id' => $itemId, ':before' => $before]);
+        return $stmt->rowCount() === 1;
+    }
+
     // --- internals ----------------------------------------------------------
 
     /**
@@ -429,6 +459,17 @@ class ItemRepository
             return [$stock, $reorder];
         }
         throw new InvalidArgumentException("Unknown item_type: {$itemType}");
+    }
+
+    private function normaliseSlowMovingOverride(string $itemType, ?int $days): ?int
+    {
+        if ($days === null) {
+            return null;
+        }
+        if ($itemType !== 'product' || $days < 1 || $days > 365) {
+            throw new InvalidArgumentException('A Product slow-moving override must be 1–365 days.');
+        }
+        return $days;
     }
 
     private function assertNonNegativePrice(int $priceCentavos): int
@@ -464,6 +505,8 @@ class ItemRepository
         $row['price_centavos'] = Money::toCentavos((string) $row['price']);
         $row['stock_quantity'] = $row['stock_quantity'] === null ? null : (int) $row['stock_quantity'];
         $row['reorder_level']  = $row['reorder_level'] === null ? null : (int) $row['reorder_level'];
+        $row['slow_moving_days_override'] = $row['slow_moving_days_override'] === null
+            ? null : (int) $row['slow_moving_days_override'];
         $row['is_active']      = (int) $row['is_active'];
 
         return $row;

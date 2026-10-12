@@ -11,14 +11,39 @@
 
 namespace VulcaTrack\Tests;
 
-test('the ten approved application tables exist', function () {
+test('the eleven approved application tables exist', function () {
     $pdo = test_pdo();
     assert_not_null($pdo, 'database must be reachable for the schema tests');
 
     $tables = $pdo->query('SHOW TABLES')->fetchAll(\PDO::FETCH_COLUMN);
     sort($tables);
-    $expected = ['admins', 'customers', 'inventory_restocks', 'inventory_settings', 'items', 'sale_items', 'sales', 'service_requests', 'tiremen', 'vehicles'];
-    assert_same($expected, $tables, 'the approved ten-table schema must match');
+    $expected = ['admins', 'customers', 'inventory_adjustments', 'inventory_restocks', 'inventory_settings', 'items', 'sale_items', 'sales', 'service_requests', 'tiremen', 'vehicles'];
+    assert_same($expected, $tables, 'the approved eleven-table schema must match');
+});
+
+test('Product override and adjustment history have constrained, attributed schema', function () {
+    $pdo = test_pdo();
+    $itemCols = schema_columns($pdo, 'items');
+    assert_same('YES', $itemCols['slow_moving_days_override']['IS_NULLABLE']);
+    assert_contains('slow_moving_days_override', schema_check_clause($pdo, 'items', 'slow_moving_override'));
+    $cols = schema_columns($pdo, 'inventory_adjustments');
+    assert_same([
+        'adjustment_id', 'item_id', 'direction', 'quantity', 'reason', 'note',
+        'stock_before', 'stock_after', 'admin_id', 'adjusted_at',
+    ], array_keys($cols));
+    foreach (['item_id', 'direction', 'quantity', 'reason', 'stock_before', 'stock_after', 'admin_id', 'adjusted_at'] as $name) {
+        assert_same('NO', $cols[$name]['IS_NULLABLE']);
+    }
+    assert_same('YES', $cols['note']['IS_NULLABLE']);
+    foreach (['direction', 'quantity', 'reason', 'note', 'movement'] as $check) {
+        assert_true(schema_check_clause($pdo, 'inventory_adjustments', $check) !== '');
+    }
+    $fk = $pdo->query(
+        "SELECT REFERENCED_TABLE_NAME FROM information_schema.KEY_COLUMN_USAGE
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory_adjustments'
+           AND REFERENCED_TABLE_NAME IS NOT NULL ORDER BY REFERENCED_TABLE_NAME"
+    )->fetchAll(\PDO::FETCH_COLUMN);
+    assert_same(['admins', 'items'], $fk);
 });
 
 test('inventory_settings has one seeded threshold and constrained Admin attribution', function () {

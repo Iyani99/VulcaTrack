@@ -23,6 +23,7 @@ final class TestDb
         'service_requests',
         'vehicles',
         'inventory_restocks',
+        'inventory_adjustments',
         'items',
         'tiremen',
         'inventory_settings',

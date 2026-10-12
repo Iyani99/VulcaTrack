@@ -203,8 +203,12 @@ test('admin inventory mutations: guard, CSRF, create, edit, activate/deactivate'
         $warn = 'A Product can become a Service only after its stock reaches zero.';
         $pf = $server->request($EDIT . '?id=' . $seedProduct);
         assert_contains($warn, $pf['body'], 'editing a product warns that switching to a service clears stock fields');
+        assert_contains('name="slow_moving_days_override"', $pf['body']);
+        assert_not_contains('name="slow_moving_days"', $pf['body'], 'Product Edit only owns the per-Product override');
+        assert_contains('shop default of 60 days', $pf['body']);
         $sf = $server->request($EDIT . '?id=' . $seedService);
         assert_not_contains($warn, $sf['body'], 'the warning is irrelevant when the item is already a service');
+        assert_contains('id="stock-fields" hidden', $sf['body'], 'Service threshold control is hidden');
         $cf = $server->request($EDIT);
         assert_not_contains($warn, $cf['body'], 'the warning does not appear on the create form');
 
@@ -225,6 +229,23 @@ test('admin inventory mutations: guard, CSRF, create, edit, activate/deactivate'
         assert_same(7, (int) $edited['stock_quantity'], 'forged stock replacement is ignored');
         assert_same('2001-02-03 04:05:06', $edited['created_at'], 'created_at is not touched on edit');
         assert_true($edited['updated_at'] > '2001-02-03 04:05:06', 'updated_at is refreshed on edit');
+
+        // A bad Product override cannot alter the item; a valid one persists.
+        $overrideForm = [
+            '_csrf' => $token($EDIT . '?id=' . $seedProduct),
+            'expected_type' => 'product', 'expected_stock' => '7',
+            'item_name' => "{$tag} Seed Product EDITED", 'item_type' => 'product',
+            'category' => 'Parts', 'price' => '11.25', 'reorder_level' => '4',
+        ];
+        foreach (['0', '366', '1.5'] as $badOverride) {
+            $r = $server->request($EDIT . '?id=' . $seedProduct, $overrideForm + ['slow_moving_days_override' => $badOverride]);
+            assert_same(200, $r['status']);
+            assert_contains('whole number from 1 to 365', $r['body']);
+            assert_null($row($seedProduct)['slow_moving_days_override']);
+        }
+        $r = $server->request($EDIT . '?id=' . $seedProduct, $overrideForm + ['slow_moving_days_override' => '30']);
+        assert_same(302, $r['status']);
+        assert_same(30, (int) $row($seedProduct)['slow_moving_days_override']);
 
         // ============ EDIT: product -> service clears stock + reorder ============
         $r = $server->request($EDIT . '?id=' . $seedProduct, [

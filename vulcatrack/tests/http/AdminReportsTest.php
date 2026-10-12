@@ -120,6 +120,9 @@ test('sales reports: guarded, consistent period totals, chart, source and item b
         assert_contains('aria-label="July 1, 2001: ₱586.50 in sales from 2 transactions. View details."', $july);
         assert_contains('aria-label="July 3, 2001: ₱0 in sales from 0 transactions. View details."', $july);
         assert_contains('<path class="rpt-line"', $july, 'the report draws the current line chart');
+        assert_contains('pathLength="1"', $july, 'the established draw animation uses a normalized path length');
+        assert_contains('class="panel rpt-chart"', $july, 'the chart retains its reveal target');
+        assert_contains('/assets/js/report-motion.js?v=', $july, 'the established reveal script loads');
         assert_contains('<td>2001-07-02</td> <td class="num">1</td> <td class="num">&#8369;45.50</td>', $f);
         assert_contains('<td>2001-07-01</td> <td class="num">2</td> <td class="num">&#8369;586.50</td>', $f);
         assert_contains('<td>' . e($valveName) . '</td>', $f, 'stored item name is escaped');
