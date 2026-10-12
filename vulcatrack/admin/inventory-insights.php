@@ -45,7 +45,6 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 <div class="panelgrid inventory-insights__grid">
   <section class="panel" aria-labelledby="inventory-low-h">
     <header class="panel__head inventory-insights__panelhead"><h2 id="inventory-low-h">Low stock <span class="inventory-insights__count"><?= count($lowStock) ?></span></h2><a href="<?= e(vulcatrack_url('/admin/inventory.php?low_stock=1')) ?>">View low-stock items</a></header>
-    <p class="panel__note muted">Active Products at or below their own reorder level, including zero stock.</p>
     <?php if (!$lowStock): ?>
       <p class="panel__note muted">No low-stock Products.</p>
     <?php else: ?>
@@ -62,8 +61,7 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
 <section class="panel inventory-insights__slow" aria-labelledby="inventory-slow-h">
   <header class="panel__head"><h2 id="inventory-slow-h">Slow-moving Products<?= $settings !== null ? ' · ' . count($slowMoving) : '' ?></h2></header>
   <?php if ($settings !== null): ?>
-    <p class="panel__note muted">Shop default: <strong><?= (int) $settings['slow_moving_days'] ?> days</strong>. Products may use their own threshold in Product Edit; each row shows the effective value.</p>
-    <p class="panel__note">Products shown have no recorded Sales within their effective threshold. This is a Sales-performance signal, not Product age or deterioration. Previous stockout periods are not measured.</p>
+    <p class="panel__note">Flagged by recorded Sales inactivity within each Product’s effective threshold.</p>
     <?php if (!$slowMoving): ?>
       <p class="panel__note muted">No slow-moving Products at their effective thresholds.</p>
     <?php else: ?>
@@ -80,7 +78,6 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
         <?php endforeach; ?></tbody>
       </table></div>
     <?php endif; ?>
-    <p class="panel__note muted">Suggested action: review demand, display, promotion, or price for flagged Products.</p>
   <?php else: ?>
     <p class="panel__note muted">Slow-moving results are unavailable.</p>
   <?php endif; ?>

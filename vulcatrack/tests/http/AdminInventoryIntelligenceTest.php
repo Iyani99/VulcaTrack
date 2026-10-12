@@ -76,13 +76,19 @@ test('Inventory Insights owns current stock attention while Reports remains read
         assert_contains('href="' . $insightsUrl . '" aria-current="page">Insights</a>', $insights['body']);
         assert_contains('href="' . $inventoryUrl . '"', $insights['body']);
         assert_contains('href="' . $settingsUrl . '"', $insights['body']);
+        assert_contains('Current stock and recorded Sales inactivity as of ', $insights['body']);
+        assert_contains(' Asia/Manila.', $insights['body']);
         assert_contains('No slow-moving Products at their effective thresholds.', $insights['body'], '30-day-old never-sold Product is too new for 60-day grace');
         assert_contains('Low stock', $insights['body']);
+        assert_contains('View low-stock items', $insights['body']);
+        assert_not_contains('Active Products at or below their own reorder level, including zero stock.', $insights['body']);
         assert_contains('data-label="Shop stock"', $insights['body']);
         assert_contains('datatable mobile-records', $insights['body']);
         assert_contains('&lt;script&gt;alert(1)&lt;/script&gt;', $insights['body']);
         assert_not_contains('<script>alert(1)</script>', $insights['body']);
-        assert_contains('Shop default: <strong>60 days</strong>', $insights['body']);
+        assert_not_contains('Shop default: <strong>', $insights['body']);
+        assert_contains('Flagged by recorded Sales inactivity within each Product’s effective threshold.', $insights['body']);
+        assert_not_contains('Suggested action: review demand, display, promotion, or price for flagged Products.', $insights['body']);
         assert_same(405, $server->request($insightsUrl, ['_action' => 'update_slow_moving_days'])['status']);
 
         $invalidCsrf = $server->request($settingsUrl, ['_action' => 'update_slow_moving_days', '_csrf' => 'bad', 'slow_moving_days' => '20']);
@@ -100,11 +106,11 @@ test('Inventory Insights owns current stock attention while Reports remains read
         assert_contains('inventory-settings.php?saved=saved', (string) $changed['location']);
         assert_contains('Default slow-moving threshold updated.', $server->request($changed['location'])['body']);
         $at20 = $server->request($insightsUrl)['body'];
-        assert_contains('Shop default: <strong>20 days</strong>', $at20);
-        assert_contains('Products shown have no recorded Sales within their effective threshold.', $at20);
+        assert_not_contains('Shop default: <strong>', $at20);
+        assert_contains('Flagged by recorded Sales inactivity within each Product’s effective threshold.', $at20);
         assert_contains('Never sold', $at20);
         assert_contains('No recorded restock since tracking began', $at20);
-        assert_contains('Suggested action: review demand, display, promotion, or price', $at20);
+        assert_not_contains('Suggested action: review demand, display, promotion, or price for flagged Products.', $at20);
         assert_not_contains('Range: <strong>Jul 2001:', $at20);
         assert_contains('data-label="Threshold"', $at20);
         assert_contains('20 days', $at20);
