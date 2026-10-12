@@ -307,3 +307,22 @@ height; reduced motion shows the final line immediately. Final local verificatio
 `vulcatrack_test`; the real/demo data fingerprint matched before and after the
 automated tests. Product Edit also remains usable with clear guidance if the
 required Inventory Settings row needs restoration.
+
+**Sales History operational finder verified locally on 2026-10-13:** Admin
+`sales.php` defaults to Today in the Asia/Manila calendar. Direct period
+controls are Today, Yesterday, 7 Days (today plus six preceding days), 30 Days
+(today plus 29 preceding days), Exact Day, and Custom From/To. Source filters
+are All Sources, In-shop (`sales.service_request_id IS NULL`), and Rescue-linked
+(`service_request_id IS NOT NULL`). Sort choices are Newest, Oldest, Highest
+Total, and Lowest Total, with stable tie ordering. The compact summary covers
+the full filtered result using stored Sale totals, transaction count, and the
+In-shop/Rescue-linked split for All Sources. Results use 25-row pages, retain
+filters in pagination, and clamp out-of-range pages. Existing Reports From/To
+drill-down links, including one-sided ranges, remain supported. Transaction
+Summary remains the detail and print source of truth; Reports remains the
+analytical screen. The accepted desktop and 390/320 px browser review covered
+the compact filters, automatic navigation, browser Back, responsive records,
+and reduced motion. Final focused Sales History, Reports, and Rescue tests
+passed; the complete `vulcatrack_test` suite passed **284 tests, 0 failures,
+5,145 assertions across 57 files**. The real/demo data fingerprint matched
+before and after the suite.

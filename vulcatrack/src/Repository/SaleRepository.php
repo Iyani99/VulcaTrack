@@ -282,6 +282,76 @@ class SaleRepository
         return $rows;
     }
 
+    /** @return array{count:int,total_centavos:int,in_shop_count:int,rescue_count:int} */
+    public function summarizeHistory(?string $from, ?string $to, string $source): array
+    {
+        [$where, $params] = $this->historyWhere($from, $to, $source);
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*) AS sale_count, COALESCE(SUM(s.total_amount), 0) AS total,
+                    COALESCE(SUM(s.service_request_id IS NULL), 0) AS in_shop_count,
+                    COALESCE(SUM(s.service_request_id IS NOT NULL), 0) AS rescue_count
+             FROM sales s' . $where
+        );
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return [
+            'count' => (int) $row['sale_count'],
+            'total_centavos' => Money::toCentavos((string) $row['total']),
+            'in_shop_count' => (int) $row['in_shop_count'],
+            'rescue_count' => (int) $row['rescue_count'],
+        ];
+    }
+
+    /** @return array<int,array<string,mixed>> */
+    public function listHistoryPage(?string $from, ?string $to, string $source, string $sort, int $limit, int $offset): array
+    {
+        [$where, $params] = $this->historyWhere($from, $to, $source);
+        $orders = [
+            'newest' => 's.sale_date DESC, s.sale_id DESC',
+            'oldest' => 's.sale_date ASC, s.sale_id ASC',
+            'highest' => 's.total_amount DESC, s.sale_date DESC, s.sale_id DESC',
+            'lowest' => 's.total_amount ASC, s.sale_date DESC, s.sale_id DESC',
+        ];
+        if (!isset($orders[$sort]) || $limit < 1 || $limit > 100 || $offset < 0) {
+            throw new InvalidArgumentException('Invalid Sales History pagination or sort.');
+        }
+        $sql = 'SELECT s.sale_id, s.customer_id, s.service_request_id, s.admin_id, s.sale_date, s.total_amount,
+                       a.full_name AS admin_name, c.full_name AS customer_name
+                FROM sales s JOIN admins a ON a.admin_id = s.admin_id
+                LEFT JOIN customers c ON c.customer_id = s.customer_id'
+            . $where . ' ORDER BY ' . $orders[$sort] . ' LIMIT ? OFFSET ?';
+        $stmt = $this->pdo->prepare($sql);
+        foreach ($params as $index => $value) {
+            $stmt->bindValue($index + 1, $value, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(count($params) + 1, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(count($params) + 2, $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll();
+        foreach ($rows as &$row) {
+            $row['total_amount_centavos'] = Money::toCentavos((string) $row['total_amount']);
+        }
+        unset($row);
+        return $rows;
+    }
+
+    /** @return array{0:string,1:array<int,string>} */
+    private function historyWhere(?string $from, ?string $to, string $source): array
+    {
+        if (!in_array($source, ['all', 'in_shop', 'rescue'], true)) {
+            throw new InvalidArgumentException('Invalid Sales History source.');
+        }
+        if ($from !== null && $to !== null && $from > $to) {
+            throw new InvalidArgumentException('From date cannot follow To date.');
+        }
+        [$where, $params] = $this->saleDateRange($from, $to);
+        if ($source !== 'all') {
+            $where .= ($where === '' ? ' WHERE ' : ' AND ')
+                . 's.service_request_id IS ' . ($source === 'rescue' ? 'NOT ' : '') . 'NULL';
+        }
+        return [$where, $params];
+    }
+
     /*
      * Sales Reports (Decision 49) — aggregate reads over the recorded sales,
      * with the same optional From / To days as listForHistory(). Money is summed

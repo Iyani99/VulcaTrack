@@ -362,7 +362,7 @@ test('admin Rescue sale: entry point, start_rescue checks, clean-cart rule, cust
         $inshopWalk = (int) $pdo->lastInsertId();
         $q("INSERT INTO sales (customer_id, admin_id, sale_date, total_amount) VALUES (?, ?, '2001-01-03 09:30:00', '20.00')", [$s['custA'], $s['admin']]);
         $inshopReg = (int) $pdo->lastInsertId();
-        $hist = $server->request('/vulcatrack/admin/sales.php')['body'];
+        $hist = $server->request('/vulcatrack/admin/sales.php?from=2001-01-03')['body'];
         assert_contains('<th>Customer</th><th>Source</th>', $hist, 'Source column');
         $rowOf = fn (int $id) => preg_match('/<tr>\s*<td data-label="Sale" data-record-primary><span class="mobile-record-prefix" aria-hidden="true">#<\/span>' . $id . '<\/td>.*?<\/tr>/s', $hist, $m) ? $m[0] : '';
         $w = $rowOf($inshopWalk);

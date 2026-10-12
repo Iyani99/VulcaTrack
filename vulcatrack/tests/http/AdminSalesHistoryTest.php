@@ -1,179 +1,192 @@
 <?php
-/**
- * End-to-end HTTP tests for the admin Sales History page (admin/sales.php).
- *
- * Covers: admin guard + actor separation, the newest-first list (sale no.,
- * date/time, cashier, customer or Walk-in, stored total, link to the existing
- * Transaction Summary), output escaping, the From / To filter (From only, To
- * only, a range, one exact day), malformed filter values being ignored, the
- * From-after-To message, the filtered empty state + Clear link, the active nav
- * entry, and clean output + server log.
- *
- * Sales are inserted directly with fixed 2001 dates so the results do not
- * depend on live development sales or today's date; every row seeded here is
- * deleted afterwards in FK-safe order.
- */
+/** End-to-end checks for the operational Sales History screen. */
 
 namespace VulcaTrack\Tests;
 
 use VulcaTrack\Auth\Password;
 
-test('sales history: guards, newest-first list, walk-in/customer, escaping, date filters, empty states', function () {
+test('Sales History: guarded filters, summary, paging, old Reports links and empty states', function () {
     $pdo = test_pdo();
-    assert_not_null($pdo, 'the database must be reachable for the HTTP tests');
-
     $tag = 'SH' . substr(bin2hex(random_bytes(4)), 0, 8);
     $password = 'history-password-123';
-
     $custEmail = TestDb::email('sh-cust');
     $pdo->prepare('INSERT INTO customers (full_name, email, contact_number, password_hash) VALUES (?,?,?,?)')
-        ->execute(["{$tag} <b>Ana</b> & Co", $custEmail, '09170002222', Password::hash($password)]);
+        ->execute(["{$tag} <b>Ana</b>", $custEmail, '09170002222', Password::hash($password)]);
     $custId = (int) $pdo->lastInsertId();
-
     $adminEmail = TestDb::email('sh-admin');
     $pdo->prepare('INSERT INTO admins (full_name, email, password_hash) VALUES (?,?,?)')
         ->execute(["{$tag} Cashier <i>Jo</i>", $adminEmail, Password::hash($password)]);
     $adminId = (int) $pdo->lastInsertId();
-
-    $sale = function (?int $customerId, string $date, string $total) use ($pdo, $adminId): int {
-        $pdo->prepare('INSERT INTO sales (customer_id, admin_id, sale_date, total_amount) VALUES (?,?,?,?)')
-            ->execute([$customerId, $adminId, $date, $total]);
-        return (int) $pdo->lastInsertId();
-    };
-    $early   = $sale($custId, '2001-03-15 10:00:00', '286.50');
-    $walkIn  = $sale(null,    '2001-05-20 08:30:00', '1234.05');
-    $late    = $sale(null,    '2001-06-10 23:59:59', '300.00');
-    $nextDay = $sale($custId, '2001-06-11 00:00:00', '45.00');
+    $pdo->prepare("INSERT INTO vehicles (customer_id, plate_number) VALUES (?, 'SH-1')")->execute([$custId]);
+    $vehicleId = (int) $pdo->lastInsertId();
+    $pdo->prepare("INSERT INTO service_requests (customer_id, vehicle_id, problem_description, status) VALUES (?, ?, 'flat', 'accepted')")
+        ->execute([$custId, $vehicleId]);
+    $rescueId = (int) $pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO items (item_name, item_type, price, stock_quantity, is_active) VALUES (?,?,?,?,0)')
+        ->execute([$tag . ' Archived', 'product', '999.00', 0]);
+    $itemId = (int) $pdo->lastInsertId();
+    $ids = [];
+    for ($i = 0; $i < 27; $i++) {
+        $rescue = $i === 26;
+        $pdo->prepare('INSERT INTO sales (customer_id, service_request_id, admin_id, sale_date, total_amount) VALUES (?,?,?,?,?)')
+            ->execute([$rescue ? $custId : null, $rescue ? $rescueId : null, $adminId,
+                $i === 0 ? '2001-06-10 00:00:00' : '2001-06-10 23:59:59', $rescue ? '5.00' : '1.00']);
+        $ids[] = (int) $pdo->lastInsertId();
+    }
+    $pdo->prepare('INSERT INTO sale_items (sale_id, item_id, quantity, unit_price, subtotal) VALUES (?,?,?,?,?)')
+        ->execute([$ids[0], $itemId, 1, '1.00', '1.00']);
+    $pdo->prepare("UPDATE service_requests SET status = 'completed' WHERE request_id = ?")->execute([$rescueId]);
+    $pdo->prepare('INSERT INTO sales (customer_id, admin_id, sale_date, total_amount) VALUES (NULL,?,?,?)')
+        ->execute([$adminId, '2001-06-11 00:00:00', '2.00']);
+    $nextDay = (int) $pdo->lastInsertId();
+    $today = new \DateTimeImmutable('now', new \DateTimeZone('Asia/Manila'));
+    $quickIds = [];
+    foreach ([0, 1, 6, 29, 30] as $daysAgo) {
+        $date = $today->modify("-{$daysAgo} days")->format('Y-m-d') . ' 12:00:00';
+        $pdo->prepare('INSERT INTO sales (customer_id, admin_id, sale_date, total_amount) VALUES (NULL,?,?,?)')
+            ->execute([$adminId, $date, '1.00']);
+        $quickIds[$daysAgo] = (int) $pdo->lastInsertId();
+    }
 
     $server = new HttpServer(8691);
-    $cleanup = function () use ($pdo, $custId, $adminId): void {
-        $pdo->prepare('DELETE FROM sales WHERE admin_id = ?')->execute([$adminId]);
-        $pdo->prepare('DELETE FROM customers WHERE customer_id = ?')->execute([$custId]);
-        $pdo->prepare('DELETE FROM admins WHERE admin_id = ?')->execute([$adminId]);
-    };
-
-    $assertClean = function (string $html, string $where): void {
-        foreach (['Warning:', 'Notice:', 'Deprecated:', 'Fatal error', 'Parse error', 'Stack trace:', 'Undefined ', 'PDOException', 'SQLSTATE'] as $bad) {
-            assert_not_contains($bad, $html, "PHP/DB error text on {$where}: {$bad}");
-        }
-    };
-    // Each seeded sale is identified by its View link to the Transaction Summary.
-    $link = fn (int $id): string => '/vulcatrack/admin/transaction-summary.php?id=' . $id . '"';
-    $shows = function (string $html, array $in, array $out, string $where) use ($link): void {
-        foreach ($in as $id) {
-            assert_contains($link($id), $html, "{$where}: sale {$id} should be listed");
-        }
-        foreach ($out as $id) {
-            assert_not_contains($link($id), $html, "{$where}: sale {$id} should not be listed");
-        }
-    };
-
-    $URL = '/vulcatrack/admin/sales.php';
-
+    $url = '/vulcatrack/admin/sales.php';
+    $link = static fn (int $id): string => '/vulcatrack/admin/transaction-summary.php?id=' . $id . '"';
     try {
         $server->start();
-
-        // ================= guards / actor separation =================
-        $r = $server->request($URL);
-        assert_same(302, $r['status'], 'unauthenticated visitors are redirected');
-        assert_contains('/admin/login.php', (string) $r['location']);
-
+        assert_same(302, $server->request($url)['status'], 'guest cannot read Sales History');
         $login = $server->request('/vulcatrack/login.php');
-        $server->request('/vulcatrack/login.php', ['_csrf' => HttpServer::csrfToken($login['body']), 'email' => $custEmail, 'password' => $password]);
-        $r = $server->request($URL);
-        assert_same(302, $r['status'], 'a signed-in customer cannot open Sales History');
-        assert_contains('/admin/login.php', (string) $r['location']);
+        $server->request('/vulcatrack/login.php', ['_csrf' => HttpServer::csrfToken($login['body']),
+            'email' => $custEmail, 'password' => $password]);
+        assert_same(302, $server->request($url)['status'], 'customer cannot read Sales History');
         $profile = $server->request('/vulcatrack/customer/profile.php');
         $server->request('/vulcatrack/logout.php', ['_csrf' => HttpServer::csrfToken($profile['body'])]);
+        $login = $server->request('/vulcatrack/admin/login.php');
+        $server->request('/vulcatrack/admin/login.php', ['_csrf' => HttpServer::csrfToken($login['body']),
+            'email' => $adminEmail, 'password' => $password]);
 
-        $al = $server->request('/vulcatrack/admin/login.php');
-        $server->request('/vulcatrack/admin/login.php', ['_csrf' => HttpServer::csrfToken($al['body']), 'email' => $adminEmail, 'password' => $password]);
-
-        // ================= default: all sales, newest first =================
-        $r = $server->request($URL);
-        assert_same(200, $r['status']);
-        $html = $r['body'];
-        $assertClean($html, 'sales history');
-        assert_contains('<h1>Sales History</h1>', $html);
-        assert_contains('href="/vulcatrack/admin/sales.php" class="is-active" aria-current="page"', $html, 'the Sales History nav entry is active');
-        $shows($html, [$early, $walkIn, $late, $nextDay], [], 'unfiltered');
-        assert_true(strpos($html, $link($nextDay)) < strpos($html, $link($late))
-            && strpos($html, $link($late)) < strpos($html, $link($walkIn))
-            && strpos($html, $link($walkIn)) < strpos($html, $link($early)), 'rows are newest first');
-        assert_not_contains('>Clear</a>', $html, 'no Clear link without a filter');
-        assert_contains('type="date" name="from" value=""', $html);
-        assert_contains('type="date" name="to" value=""', $html);
-
-        // row contents: sale no., date/time, cashier, customer / walk-in, stored total
-        assert_contains('<td data-label="Sale" data-record-primary><span class="mobile-record-prefix" aria-hidden="true">#</span>' . $early . '</td>', $html, 'sale number');
-        assert_contains('2001-03-15 10:00:00', $html, 'recorded sale date/time');
-        // in its table cell: the signed-in admin (this cashier) is also named in the sidebar
-        assert_contains('<td data-label="Cashier">' . e("{$tag} Cashier <i>Jo</i>") . '</td>', $html, 'cashier name, escaped');
-        // Phase 7.3b: a registered customer is a stronger neutral tag, walk-in a quiet one.
-        assert_contains('<td data-label="Customer"><span class="tag tag--customer">' . e("{$tag} <b>Ana</b> & Co") . '</span></td>', $html, 'linked customer name, escaped, on a customer tag');
-        assert_not_contains('<i>Jo</i>', $html);
-        assert_not_contains('<b>Ana</b>', $html);
-        assert_contains('<td data-label="Customer"><span class="tag tag--walkin">Walk-in</span></td>', $html, 'a sale without a customer shows Walk-in');
-        assert_not_contains('tag--customer">Walk-in', $html, 'Walk-in is never shown as a registered customer');
-        assert_contains('&#8369;286.50', $html, 'stored total');
-        assert_contains('&#8369;1,234.05', $html, 'stored total retains cents and groups thousands');
-
-        // ================= From only =================
-        $html = $server->request($URL . '?from=2001-05-20')['body'];
-        $assertClean($html, 'from only');
-        $shows($html, [$walkIn, $late, $nextDay], [$early], 'from only');
-        assert_contains('type="date" name="from" value="2001-05-20"', $html, 'the From value is kept in the form');
-        assert_contains('>Clear</a>', $html, 'a Clear link while filtered');
-        assert_contains('href="/vulcatrack/admin/sales.php">Clear</a>', $html, 'Clear returns to the unfiltered page');
-
-        // ================= To only =================
-        $html = $server->request($URL . '?to=2001-05-20')['body'];
-        $shows($html, [$early, $walkIn], [$late, $nextDay], 'to only');
-
-        // ================= range + one exact day =================
-        $html = $server->request($URL . '?from=2001-04-01&to=2001-06-10')['body'];
-        $shows($html, [$walkIn, $late], [$early, $nextDay], 'range');
-        assert_contains('2 sales.', $html, 'count line');
-
-        $html = $server->request($URL . '?from=2001-06-10&to=2001-06-10')['body'];
-        $shows($html, [$late], [$early, $walkIn, $nextDay], 'From = To (23:59:59 in, next-day 00:00:00 out)');
-        assert_contains('1 sale.', $html, 'singular count line');
-
-        // ================= malformed values are ignored =================
-        foreach (['?from=2001-02-31', '?to=abc', '?from[]=2001-05-20', "?from=2001-05-20'%20OR%201=1", '?from=2001-05-20%0A', '?to=0000-00-00'] as $qs) {
-            $r = $server->request($URL . $qs);
-            assert_same(200, $r['status'], "'{$qs}' still loads");
-            $assertClean($r['body'], "sales history {$qs}");
-            $shows($r['body'], [$early, $walkIn, $late, $nextDay], [], "'{$qs}' is treated as no filter");
-            assert_not_contains('>Clear</a>', $r['body'], "'{$qs}' is not an active filter");
+        $default = $server->request($url);
+        assert_same(200, $default['status']);
+        assert_contains('>Today</strong>', $default['body'], 'Today is the visible normal default');
+        assert_contains($today->format('F j, Y'), $default['body'], 'active range is readable');
+        assert_not_contains('<select name="period">', $default['body'], 'period choices are direct controls');
+        foreach (['Today', 'Yesterday', '7 Days', '30 Days', 'Exact Day', 'Custom'] as $label) {
+            assert_contains('>' . $label . '</a>', $default['body'], $label . ' has a period control');
         }
+        assert_contains('data-sales-period="today" class="is-active" aria-current="true"', $default['body']);
+        assert_contains('href="/vulcatrack/admin/sales.php?period=yesterday"', $default['body']);
+        assert_contains('href="/vulcatrack/admin/sales.php?period=7d"', $default['body']);
+        assert_contains('href="/vulcatrack/admin/sales.php?period=30d"', $default['body']);
+        assert_contains('sales-history__dates--exact', $default['body'], 'Exact Day form is available');
+        assert_contains('sales-history__dates--custom', $default['body'], 'Custom form is available');
+        assert_not_contains('>Apply</button>', $default['body'], 'generic Apply button is gone');
+        assert_contains('Show day</button>', $default['body'], 'no-JS Exact Day fallback');
+        assert_contains('Show range</button>', $default['body'], 'no-JS Custom fallback');
+        assert_contains($link($quickIds[0]), $default['body'], 'Today includes current Manila day');
+        assert_not_contains($link($quickIds[1]), $default['body'], 'Today excludes Yesterday');
+        assert_not_contains($link($ids[0]), $default['body'], 'historical sales are not in Today');
+        assert_not_contains('Reset to Today', $default['body'], 'reset is redundant in the normal default');
+        $yesterday = $server->request($url . '?period=yesterday')['body'];
+        assert_contains('>Yesterday</strong>', $yesterday);
+        assert_contains($today->modify('-1 day')->format('F j, Y'), $yesterday);
+        assert_contains($link($quickIds[1]), $yesterday);
+        assert_not_contains($link($quickIds[0]), $yesterday);
+        $seven = $server->request($url . '?period=7d')['body'];
+        assert_contains($today->modify('-6 days')->format('F j, Y') . ' to ' . $today->format('F j, Y'), $seven);
+        assert_contains($link($quickIds[6]), $seven, '7 Days includes the sixth previous day');
+        assert_not_contains($link($quickIds[29]), $seven);
+        $thirty = $server->request($url . '?period=30d')['body'];
+        assert_contains($today->modify('-29 days')->format('F j, Y') . ' to ' . $today->format('F j, Y'), $thirty);
+        assert_contains($link($quickIds[29]), $thirty, '30 Days includes the 29th previous day');
+        assert_not_contains($link($quickIds[30]), $thirty, '30 Days excludes the 30th previous day');
+        $pdo->prepare('DELETE FROM sales WHERE sale_id = ?')->execute([$quickIds[0]]);
+        assert_contains('No sales today.', $server->request($url)['body']);
 
-        // ================= From after To =================
-        $r = $server->request($URL . '?from=2001-06-10&to=2001-03-01');
-        assert_same(200, $r['status']);
-        $assertClean($r['body'], 'from after to');
-        assert_contains('The From date cannot be later than the To date.', $r['body']);
-        assert_not_contains('<table', $r['body'], 'no list for an impossible range');
-        assert_not_contains('No sales in this date range.', $r['body'], 'not presented as an ordinary empty result');
-        assert_contains('>Clear</a>', $r['body']);
+        $exact = $server->request($url . '?from=2001-06-10&to=2001-06-10')['body'];
+        assert_contains('data-label="Sale"', $exact, 'mobile labelled record fields');
+        assert_contains('data-label="Date / time"', $exact);
+        assert_contains('data-label="Source"', $exact);
+        assert_contains('data-label="Customer"', $exact);
+        assert_contains('data-label="Total"', $exact);
+        assert_contains('>Exact Day</strong>', $exact, 'Reports same-day link is inferred');
+        assert_contains('June 10, 2001', $exact, 'Reports day is human-readable');
+        assert_contains('data-sales-period="exact" class="is-active" aria-current="true"', $exact);
+        assert_contains('27 transactions', $exact, 'summary covers all pages');
+        assert_contains('Total Sales: <strong>&#8369;31</strong>', $exact, 'stored total covers all pages');
+        assert_contains('26 In-shop &middot; 1 Rescue-linked', $exact);
+        assert_contains('Reset to Today', $exact);
+        assert_contains('Showing 1–25 of 27 transactions', $exact);
+        assert_contains($link($ids[26]), $exact);
+        assert_not_contains($link($ids[0]), $exact, 'oldest sale is on page 2');
+        assert_not_contains($link($nextDay), $exact, 'next-day midnight is excluded');
+        assert_contains('page=2', $exact, 'pagination retains a page link');
+        assert_contains('period=exact', $exact, 'pagination retains inferred period');
+        assert_contains('day=2001-06-10', $exact, 'pagination retains date');
+        assert_contains(e("{$tag} Cashier <i>Jo</i>"), $exact);
+        assert_not_contains('<i>Jo</i>', $exact, 'cashier HTML escaped');
+        assert_contains('Rescue #' . $rescueId, $exact);
+        assert_true(strpos($exact, $link($ids[26])) < strpos($exact, $link($ids[25])),
+            'same-timestamp sales are ordered by id');
 
-        // ================= filtered empty state =================
-        $r = $server->request($URL . '?from=2001-01-01&to=2001-01-31');
-        assert_same(200, $r['status']);
-        assert_contains('No sales in this date range.', $r['body']);
-        assert_not_contains('<table', $r['body']);
-        assert_contains('>Clear</a>', $r['body']);
+        $second = $server->request($url . '?period=exact&day=2001-06-10&page=2')['body'];
+        assert_contains('Showing 26–27 of 27 transactions', $second);
+        assert_contains($link($ids[0]), $second);
+        assert_not_contains($link($ids[26]), $second);
+        $clamped = $server->request($url . '?period=exact&day=2001-06-10&page=999')['body'];
+        assert_contains('Page 2 of 2', $clamped);
+        assert_contains($link($ids[0]), $clamped);
 
-        // ================= read-only: no forms that change anything =================
-        $html = $server->request($URL)['body'];
-        assert_not_contains('method="post" action="/vulcatrack/admin/sales.php"', $html, 'Sales History has no mutation forms');
+        $rescue = $server->request($url . '?period=exact&day=2001-06-10&source=rescue&sort=highest')['body'];
+        assert_contains('1 transaction', $rescue);
+        assert_not_contains('1 transactions', $rescue);
+        assert_contains('Total Sales: <strong>&#8369;5</strong>', $rescue);
+        assert_contains('name="source" value="rescue"', $rescue, 'date controls preserve source');
+        assert_contains('name="sort" value="highest"', $rescue, 'date controls preserve sort');
+        assert_contains($link($ids[26]), $rescue);
+        assert_not_contains($link($ids[25]), $rescue);
+        $inshop = $server->request($url . '?period=exact&day=2001-06-10&source=in_shop')['body'];
+        assert_contains('26 transactions', $inshop);
+        assert_not_contains($link($ids[26]), $inshop);
+        assert_contains($link($ids[25]), $inshop);
+        assert_contains('source=in_shop', $inshop, 'source survives pagination');
 
-        $log = $server->serverStderr();
-        foreach (['PHP Warning', 'PHP Notice', 'PHP Deprecated', 'PHP Fatal'] as $bad) {
-            assert_not_contains($bad, $log, "server log contains: {$bad}");
+        $custom = $server->request($url . '?from=2001-06-10&to=2001-06-11')['body'];
+        assert_contains('>Custom</strong>', $custom, 'Reports multi-day link is inferred');
+        assert_contains('June 10, 2001 to June 11, 2001', $custom);
+        assert_contains('data-sales-period="custom" class="is-active" aria-current="true"', $custom);
+        assert_contains('28 transactions', $custom);
+        assert_contains($link($nextDay), $custom);
+        assert_contains('value="2001-06-10"', $custom, 'incoming bounds are editable');
+        $fromOnly = $server->request($url . '?from=2001-06-11')['body'];
+        assert_contains($link($nextDay), $fromOnly);
+        assert_not_contains($link($ids[26]), $fromOnly);
+        $toOnly = $server->request($url . '?to=2001-06-10')['body'];
+        assert_not_contains($link($nextDay), $toOnly);
+        assert_contains('27 transactions', $toOnly);
+
+        foreach (['?from=2001-02-31', '?from[]=2001-06-10', '?sort=sale_id', '?source=other',
+            '?page=0', '?period=all', '?from=2001-06-11&to=2001-06-10'] as $invalid) {
+            $body = $server->request($url . $invalid)['body'];
+            assert_contains('role="alert"', $body, $invalid . ' shows an error');
+            assert_not_contains('<table', $body, $invalid . ' never broadens results');
         }
+        $empty = $server->request($url . '?period=exact&day=2099-01-01')['body'];
+        assert_contains('0 transactions', $empty);
+        assert_contains('Total Sales: <strong>&#8369;0</strong>', $empty);
+        assert_contains('No sales in the selected range.', $empty);
+        $noSource = $server->request($url . '?period=exact&day=2001-06-11&source=rescue')['body'];
+        assert_contains('No matches for the selected source.', $noSource);
+        $summary = $server->request('/vulcatrack/admin/transaction-summary.php?id=' . $ids[0])['body'];
+        assert_contains('1.00', $summary, 'archived Item line retains frozen price');
+        assert_contains('Sales History</a>', $summary, 'normal browser back and existing link remain');
+        assert_not_contains('PHP Warning', $server->serverStderr());
     } finally {
         $server->stop();
-        $cleanup();
+        $pdo->prepare('DELETE FROM sale_items WHERE sale_id = ?')->execute([$ids[0]]);
+        $pdo->prepare('DELETE FROM sales WHERE admin_id = ?')->execute([$adminId]);
+        $pdo->prepare('DELETE FROM items WHERE item_id = ?')->execute([$itemId]);
+        $pdo->prepare('DELETE FROM service_requests WHERE request_id = ?')->execute([$rescueId]);
+        $pdo->prepare('DELETE FROM vehicles WHERE vehicle_id = ?')->execute([$vehicleId]);
+        $pdo->prepare('DELETE FROM customers WHERE customer_id = ?')->execute([$custId]);
+        $pdo->prepare('DELETE FROM admins WHERE admin_id = ?')->execute([$adminId]);
     }
 });

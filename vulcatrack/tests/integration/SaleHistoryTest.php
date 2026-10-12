@@ -116,3 +116,46 @@ test('SaleRepository::isValidDay and listForHistory reject anything but a real Y
         assert_throws(fn () => $repo->listForHistory(null, $value), \InvalidArgumentException::class, null, 'malformed to date');
     }
 });
+
+test('Sales History query uses stored totals, linked source, stable sorting and bounded pages', function () {
+    $pdo = test_pdo();
+    TestDb::rollback($pdo, function () use ($pdo) {
+        $adminId = (new AdminRepository($pdo))->create('History Paged', TestDb::email('hp'), Password::hash('password123'));
+        $customerId = (new CustomerRepository($pdo))->create('History Customer', TestDb::email('hc'), '0917', Password::hash('password123'));
+        $pdo->prepare("INSERT INTO vehicles (customer_id, plate_number) VALUES (?, 'SH-1')")->execute([$customerId]);
+        $vehicleId = (int) $pdo->lastInsertId();
+        $pdo->prepare("INSERT INTO service_requests (customer_id, vehicle_id, problem_description, status) VALUES (?, ?, 'flat', 'accepted')")
+            ->execute([$customerId, $vehicleId]);
+        $rescueId = (int) $pdo->lastInsertId();
+        $repo = new SaleRepository($pdo);
+        $early = $repo->createSale($adminId, null, '2001-06-10 00:00:00', 100);
+        $tieA = $repo->createSale($adminId, null, '2001-06-10 23:59:59', 500);
+        $tieB = $repo->createSale($adminId, $customerId, '2001-06-10 23:59:59', 500, $rescueId);
+        $next = $repo->createSale($adminId, null, '2001-06-11 00:00:00', 200);
+        $pdo->prepare("UPDATE service_requests SET status = 'completed' WHERE request_id = ?")->execute([$rescueId]);
+
+        $summary = $repo->summarizeHistory('2001-06-10', '2001-06-10', 'all');
+        assert_same(3, $summary['count']);
+        assert_same(1100, $summary['total_centavos']);
+        assert_same(2, $summary['in_shop_count']);
+        assert_same(1, $summary['rescue_count']);
+        assert_same([$tieB, $tieA, $early],
+            history_ids($repo->listHistoryPage('2001-06-10', '2001-06-10', 'all', 'newest', 25, 0), $adminId));
+        assert_same([$early, $tieA, $tieB],
+            history_ids($repo->listHistoryPage('2001-06-10', '2001-06-10', 'all', 'oldest', 25, 0), $adminId));
+        assert_same([$tieB, $tieA, $early],
+            history_ids($repo->listHistoryPage('2001-06-10', '2001-06-10', 'all', 'highest', 25, 0), $adminId));
+        assert_same([$early, $tieB, $tieA],
+            history_ids($repo->listHistoryPage('2001-06-10', '2001-06-10', 'all', 'lowest', 25, 0), $adminId));
+        assert_same([$tieB], history_ids($repo->listHistoryPage('2001-06-10', '2001-06-10', 'rescue', 'newest', 25, 0), $adminId),
+            'Rescue classification is the stored link after status changed');
+        assert_same([$tieA, $early], history_ids($repo->listHistoryPage('2001-06-10', '2001-06-10', 'in_shop', 'newest', 25, 0), $adminId));
+        assert_same(1, $repo->summarizeHistory('2001-06-11', '2001-06-11', 'all')['count']);
+        assert_same([$next], history_ids($repo->listHistoryPage('2001-06-11', '2001-06-11', 'all', 'newest', 25, 0), $adminId));
+        assert_same(0, $repo->summarizeHistory('2001-06-12', '2001-06-12', 'all')['count']);
+        assert_same([], $repo->listHistoryPage('2001-06-10', '2001-06-10', 'all', 'newest', 2, 3));
+        assert_same([$early], history_ids($repo->listHistoryPage('2001-06-10', '2001-06-10', 'all', 'newest', 2, 2), $adminId));
+        assert_throws(fn () => $repo->listHistoryPage(null, null, 'all', 's.sale_id', 25, 0), \InvalidArgumentException::class);
+        assert_throws(fn () => $repo->summarizeHistory(null, null, 'fake'), \InvalidArgumentException::class);
+    });
+});

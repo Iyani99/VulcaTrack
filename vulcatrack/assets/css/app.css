@@ -992,6 +992,59 @@ body.admin .tablepanel .table-scroll { margin: 0; }
 body.admin .inventory-tablepanel .table-scroll { overflow-y: hidden; }
 body.admin .tablepanel .datatable { border: 0; }
 body.admin .tablepanel__foot { margin: 0; padding: .65rem .9rem; border-top: 1px solid var(--adm-line); background: #fafafa; font-size: .85rem; color: var(--adm-muted); }
+body.admin .sales-history { border: 1px solid var(--adm-line); background: #fff; padding: .9rem 1rem; }
+body.admin .sales-history__period { display: flex; flex-wrap: wrap; gap: .2rem .7rem; align-items: baseline; margin: 0 0 .7rem; }
+body.admin .sales-history__period strong { color: var(--adm-red-dark); font-size: 1.15rem; }
+body.admin .sales-history__period span { color: var(--adm-muted); }
+body.admin .sales-history__quick { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: .8rem; }
+body.admin .sales-history__quick a,
+body.admin .sales-history__pagination a { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .5rem .85rem; border: 1px solid var(--adm-line); color: var(--adm-ink); text-decoration: none; font-weight: 700; transition: color var(--motion-control) var(--motion-ease), border-color var(--motion-control) var(--motion-ease), background-color var(--motion-control) var(--motion-ease); }
+body.admin .sales-history__quick a:hover,
+body.admin .sales-history__pagination a:hover { border-color: var(--adm-red); background: #fff3f3; color: var(--adm-red-dark); }
+body.admin .sales-history__quick a:active,
+body.admin .sales-history__pagination a:active { background: #eadada; }
+body.admin .sales-history__quick a.is-active,
+body.admin .sales-history__quick a.is-active:is(:hover, :active) { border-color: var(--adm-red-dark); background: var(--adm-red-dark); color: #fff; }
+body.admin .sales-history__quick a:focus-visible,
+body.admin .sales-history__pagination a:focus-visible { outline: 2px solid var(--adm-red-dark); outline-offset: 2px; }
+body.admin .sales-history__dates { display: none; gap: .6rem; align-items: end; margin: 0 0 .8rem; padding: .7rem .8rem; border-left: 2px solid var(--adm-red-dark); background: #fafafa; }
+body.admin .sales-history[data-open="exact"] .sales-history__dates--exact,
+body.admin .sales-history[data-open="custom"] .sales-history__dates--custom { display: flex; flex-wrap: wrap; }
+body.admin .sales-history__dates label,
+body.admin .sales-history__filters label { display: grid; gap: .25rem; min-width: 0; color: var(--adm-muted); font-size: .8rem; font-weight: 700; }
+body.admin .sales-history__dates input { width: 12.5rem; max-width: 100%; margin: 0; }
+body.admin .sales-history__filters { display: flex; flex-wrap: wrap; align-items: end; gap: .6rem .85rem; padding-top: .7rem; border-top: 1px solid var(--adm-line); }
+body.admin .sales-history__filters select { width: 12rem; max-width: 100%; margin: 0; color: var(--adm-ink); }
+body.admin .sales-history :is(input[type="date"], select) { transition: border-color var(--motion-control) var(--motion-ease), box-shadow var(--motion-control) var(--motion-ease); }
+body.admin .sales-history :is(input[type="date"], select):focus-visible { outline: 2px solid var(--adm-red-dark); outline-offset: 2px; }
+body.admin .sales-history__fallback-submit { width: auto; min-height: 2.75rem; margin: 0; padding-inline: 1rem; }
+body.admin .sales-history.is-enhanced .sales-history__fallback-submit { display: none; }
+body.admin .sales-history__reset { display: inline-block; margin-top: .6rem; color: var(--adm-red-dark); font-size: .8rem; font-weight: 700; text-decoration-color: transparent; transition: color var(--motion-control) var(--motion-ease), text-decoration-color var(--motion-control) var(--motion-ease); }
+body.admin .sales-history__reset:is(:hover, :focus-visible) { color: var(--adm-ink); text-decoration-color: currentColor; }
+body.admin .sales-history__table .rowactions a { transition: color var(--motion-control) var(--motion-ease), background-color var(--motion-control) var(--motion-ease), border-color var(--motion-control) var(--motion-ease); }
+body.admin .sales-history__table .rowactions a:is(:hover, :focus-visible) { color: var(--adm-red-dark); }
+@media (prefers-reduced-motion: no-preference) {
+  body.admin .sales-history.is-enhanced .sales-history__dates { animation: sales-history-reveal 160ms var(--motion-ease) both; }
+  @keyframes sales-history-reveal { from { opacity: .6; } to { opacity: 1; } }
+}
+body.admin .sales-history__summary { display: flex; flex-wrap: wrap; gap: .35rem 1.5rem; align-items: baseline; margin: 1rem 0; padding: .9rem 1rem; border-left: 3px solid var(--adm-red-dark); background: #f7f7f7; }
+body.admin .sales-history__summary p { margin: 0; }
+body.admin .sales-history__summary strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+body.admin .sales-history__summary .sales-history__total { font-weight: 700; }
+body.admin .sales-history__summary .sales-history__split { color: var(--adm-muted); font-size: .85rem; }
+body.admin .sales-history__page-context { margin: 1rem 0 .5rem; color: var(--adm-muted); font-size: .85rem; }
+body.admin .sales-history__table { margin-top: 0; }
+body.admin .sales-history__empty { padding: 1.2rem; border: 1px solid var(--adm-line); background: #fff; color: var(--adm-muted); }
+body.admin .sales-history__pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; margin: 1rem 0 1.5rem; }
+body.admin .sales-history__pagination span { color: var(--adm-muted); font-size: .85rem; }
+@media (max-width: 40rem) {
+  body.admin .sales-history__quick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.admin .sales-history__dates label { width: 100%; }
+  body.admin .sales-history__dates input { width: 100%; }
+  body.admin .sales-history__filters label { flex: 1 1 9rem; }
+  body.admin .sales-history__filters select { width: 100%; }
+  body.admin .sales-history__table .table-scroll { overflow-x: visible; }
+}
 body.admin .restock-card { max-width: 42rem; }
 body.admin .restock-card h2,
 body.admin .restock-history h2 { margin-top: 0; font-size: 1.15rem; }
