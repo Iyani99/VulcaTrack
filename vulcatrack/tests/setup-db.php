@@ -33,15 +33,15 @@ $statements = array_values(array_filter(
     static fn (string $sql): bool => $sql !== ''
 ));
 $normalise = static fn (string $sql): string => (string) preg_replace('/\s+/', ' ', $sql);
-if (count($statements) !== 20
+if (count($statements) !== 23
     || $normalise($statements[0]) !== 'CREATE DATABASE IF NOT EXISTS `vulcatrack` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
     || $normalise($statements[1]) !== 'USE `vulcatrack`') {
     throw new RuntimeException('Canonical schema preamble changed; refusing test reset.');
 }
 
-$drops = ['sale_items', 'sales', 'service_requests', 'vehicles', 'inventory_restocks', 'items', 'tiremen', 'admins', 'customers'];
-$creates = ['customers', 'admins', 'tiremen', 'items', 'inventory_restocks', 'vehicles', 'service_requests', 'sales', 'sale_items'];
-$ddl = array_slice($statements, 2);
+$drops = ['sale_items', 'sales', 'service_requests', 'vehicles', 'inventory_restocks', 'items', 'tiremen', 'inventory_settings', 'admins', 'customers'];
+$creates = ['customers', 'admins', 'inventory_settings', 'tiremen', 'items', 'inventory_restocks', 'vehicles', 'service_requests', 'sales', 'sale_items'];
+$ddl = array_slice($statements, 2, count($drops) + count($creates));
 foreach ($ddl as $index => $sql) {
     if (preg_match('/\bvulcatrack\b|\b(?:CREATE|DROP|ALTER)\s+DATABASE\b|\bUSE\s+`?/i', $sql)) {
         throw new RuntimeException('Database selection or database-qualified DDL found; refusing test reset.');
@@ -56,9 +56,13 @@ foreach ($ddl as $index => $sql) {
         throw new RuntimeException('Unexpected table CREATE in canonical schema; refusing test reset.');
     }
 }
+$seed = $statements[count($statements) - 1];
+if ($normalise($seed) !== 'INSERT INTO `inventory_settings` (`setting_id`, `slow_moving_days`) VALUES (1, 60)') {
+    throw new RuntimeException('Unexpected inventory setting seed; refusing test reset.');
+}
 
 if (($argv[1] ?? null) === '--check') {
-    echo "Safe target: vulcatrack_test; canonical schema: 9 drops, 9 creates. No database changed.\n";
+    echo "Safe target: vulcatrack_test; canonical schema: 10 drops, 10 creates, 1 settings seed. No database changed.\n";
     exit(0);
 }
 
@@ -82,4 +86,6 @@ foreach ($ddl as $sql) {
     vulcatrack_assert_test_database_connection($pdo);
     $pdo->exec($sql);
 }
-echo "Rebuilt vulcatrack_test from the canonical schema (9 tables).\n";
+vulcatrack_assert_test_database_connection($pdo);
+$pdo->exec($seed);
+echo "Rebuilt vulcatrack_test from the canonical schema (10 tables).\n";

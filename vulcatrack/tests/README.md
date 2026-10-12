@@ -44,13 +44,13 @@ created or changed by this harness.
 | Path | What it covers |
 |---|---|
 | `run.php` | Test runner. Discovers `*/*Test.php`, runs each `test()` case in isolation, promotes PHP warnings/notices to failures, tallies assertions. |
-| `setup-db.php` | Explicitly builds/resets only `vulcatrack_test` from validated canonical schema DDL. `--check` is read-only. |
+| `setup-db.php` | Explicitly builds/resets only `vulcatrack_test` from validated canonical schema DDL and its single Inventory settings seed. `--check` is read-only. |
 | `bootstrap.php` | Loads the assertion lib + the application bootstrap. |
 | `lib/Assert.php` | `test()` registry and `assert_*()` helpers. |
 | `lib/TestDb.php` | `TestDb::rollback()` — run DB work in a transaction that is always rolled back — plus a unique-email helper. |
 | `lib/HttpClient.php` | Manages a real `php -S` process (repo root as docroot) and makes cookie-aware requests with libcurl. |
 | `unit/` | Pure class logic — `Validator`, `Money` (integer centavos), `Geo` (frozen ETA), `OtgStatus` (4 locked statuses + allowed transitions / final states), `Csrf`, `Password`, `PosCart` (session cart rules), the geocoder layer, the admin Rescue empty-state partial. No DB. |
-| `integration/` | `bootstrap` + autoloader, the live 9-table schema + CHECK constraints, `Auth` actor/idle-timeout logic, repositories, atomic `SaleService` checkout and `RestockService` receipts, Sales History and Reports reads, Tireman and Rescue rules, and strict DB sessions. Transaction-owning service tests clean up committed throwaway rows in `finally`. |
+| `integration/` | `bootstrap` + autoloader, the isolated 10-table schema + CHECK constraints, `Auth` actor/idle-timeout logic, repositories, atomic `SaleService` checkout and `RestockService` receipts, Sales History and Reports reads, Inventory Intelligence, Tireman and Rescue rules, and strict DB sessions. Transaction-owning service tests clean up committed throwaway rows in `finally`. |
 | `http/` | End-to-end via `php -S`: auth guards, customer/admin actor separation, CSRF enforcement, every Phase 4 page reachable under the right session, geocoding, host-relative (LAN) URLs, the admin shell, Inventory browse + mutations, the POS (cart, customer link, cash checks, checkout), the Transaction Summary, Tiremen management, the admin Rescue list / detail and its actions (accept / reassign / reject / complete, CSRF, stale requests refused, the customer's status view), Sales History and Sales Reports (admin-only, date filters, empty and error states), and no PHP warnings in any response or in the server log. Seeds throwaway rows and deletes them afterwards. |
 
 ## Conventions for new tests

@@ -11,14 +11,49 @@
 
 namespace VulcaTrack\Tests;
 
-test('the nine approved application tables exist', function () {
+test('the ten approved application tables exist', function () {
     $pdo = test_pdo();
     assert_not_null($pdo, 'database must be reachable for the schema tests');
 
     $tables = $pdo->query('SHOW TABLES')->fetchAll(\PDO::FETCH_COLUMN);
     sort($tables);
-    $expected = ['admins', 'customers', 'inventory_restocks', 'items', 'sale_items', 'sales', 'service_requests', 'tiremen', 'vehicles'];
-    assert_same($expected, $tables, 'the approved nine-table schema must match');
+    $expected = ['admins', 'customers', 'inventory_restocks', 'inventory_settings', 'items', 'sale_items', 'sales', 'service_requests', 'tiremen', 'vehicles'];
+    assert_same($expected, $tables, 'the approved ten-table schema must match');
+});
+
+test('inventory_settings has one seeded threshold and constrained Admin attribution', function () {
+    $pdo = test_pdo();
+    $cols = schema_columns($pdo, 'inventory_settings');
+    assert_same(['setting_id', 'slow_moving_days', 'updated_by_admin_id', 'updated_at'], array_keys($cols));
+    assert_same('NO', $cols['slow_moving_days']['IS_NULLABLE']);
+    assert_same('YES', $cols['updated_by_admin_id']['IS_NULLABLE']);
+    assert_contains('slow_moving_days', schema_check_clause($pdo, 'inventory_settings', 'days'));
+    assert_contains('setting_id', schema_check_clause($pdo, 'inventory_settings', 'setting_id'));
+    $rows = $pdo->query('SELECT setting_id, slow_moving_days, updated_by_admin_id FROM inventory_settings')->fetchAll();
+    assert_count(1, $rows);
+    assert_same(1, (int) $rows[0]['setting_id']);
+    assert_same(60, (int) $rows[0]['slow_moving_days']);
+    assert_null($rows[0]['updated_by_admin_id']);
+    $fk = $pdo->query(
+        "SELECT k.REFERENCED_TABLE_NAME, r.DELETE_RULE, r.UPDATE_RULE
+           FROM information_schema.KEY_COLUMN_USAGE k
+           JOIN information_schema.REFERENTIAL_CONSTRAINTS r
+             ON r.CONSTRAINT_SCHEMA = k.CONSTRAINT_SCHEMA AND r.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+            AND r.TABLE_NAME = k.TABLE_NAME
+          WHERE k.TABLE_SCHEMA = DATABASE() AND k.TABLE_NAME = 'inventory_settings'
+            AND k.COLUMN_NAME = 'updated_by_admin_id'"
+    )->fetch();
+    assert_same('admins', $fk['REFERENCED_TABLE_NAME']);
+    assert_same('RESTRICT', $fk['DELETE_RULE']);
+    assert_same('RESTRICT', $fk['UPDATE_RULE']);
+    TestDb::rollback($pdo, function () use ($pdo) {
+        foreach ([0, 366] as $invalid) {
+            assert_throws(fn () => $pdo->prepare('UPDATE inventory_settings SET slow_moving_days = ? WHERE setting_id = 1')
+                ->execute([$invalid]), \PDOException::class);
+        }
+        assert_throws(fn () => $pdo->exec('INSERT INTO inventory_settings (setting_id, slow_moving_days) VALUES (2, 60)'), \PDOException::class);
+        assert_throws(fn () => $pdo->exec('UPDATE inventory_settings SET updated_by_admin_id = 2147483647 WHERE setting_id = 1'), \PDOException::class);
+    });
 });
 
 test('inventory_restocks has receipt fields, positive quantity, and restricted parent FKs', function () {

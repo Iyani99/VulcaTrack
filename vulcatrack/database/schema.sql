@@ -8,6 +8,7 @@
 -- Structural revision: Phase 7.4c (2026-09-29) — service_requests.feedback_*
 --   (optional customer feedback on a completed request; see service_requests).
 -- Structural revision: Inventory Foundation (2026-10-12) — inventory_restocks.
+-- Structural revision: Inventory Intelligence (2026-10-12) — inventory_settings.
 --
 -- Source of truth : docs/ERD/schema.dbml               (structure)
 -- Rationale       : docs/VulcaTrack-Database-Notes_1.md (field-by-field)
@@ -17,7 +18,7 @@
 -- Character set    : utf8mb4 / utf8mb4_unicode_ci
 -- Storage engine   : InnoDB (required for foreign-key enforcement).
 --
--- This file builds the 9 application tables and nothing else. There is NO
+-- This file builds the 10 application tables and nothing else. There is NO
 -- payment table, NO customer transaction receipt table, NO shop_settings table, NO status-history /
 -- audit table, NO location-history / live-tracking table, and no Tireman
 -- login table yet. Later post-defense domains are approved but not in this batch.
@@ -45,7 +46,7 @@ USE `vulcatrack`;
 -- Drop in reverse dependency order so foreign keys never block the rebuild:
 -- sale_items -> sales -> service_requests (sales references service_requests
 -- since Phase 7.3d-a) -> vehicles / inventory_restocks -> items / tiremen /
--- admins -> customers.
+-- inventory_settings -> admins -> customers.
 DROP TABLE IF EXISTS `sale_items`;
 DROP TABLE IF EXISTS `sales`;
 DROP TABLE IF EXISTS `service_requests`;
@@ -53,6 +54,7 @@ DROP TABLE IF EXISTS `vehicles`;
 DROP TABLE IF EXISTS `inventory_restocks`;
 DROP TABLE IF EXISTS `items`;
 DROP TABLE IF EXISTS `tiremen`;
+DROP TABLE IF EXISTS `inventory_settings`;
 DROP TABLE IF EXISTS `admins`;
 DROP TABLE IF EXISTS `customers`;
 
@@ -93,6 +95,21 @@ CREATE TABLE `admins` (
   `updated_at`    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`admin_id`),
   UNIQUE KEY `uq_admins_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- One management setting, seeded for a fresh installation. This is
+-- configuration, not historical Product or Sales data.
+CREATE TABLE `inventory_settings` (
+  `setting_id`           TINYINT UNSIGNED NOT NULL,
+  `slow_moving_days`     SMALLINT UNSIGNED NOT NULL DEFAULT 60,
+  `updated_by_admin_id` INT                   NULL,
+  `updated_at`          DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`setting_id`),
+  CONSTRAINT `chk_inventory_settings_single_row` CHECK (`setting_id` = 1),
+  CONSTRAINT `chk_inventory_settings_days` CHECK (`slow_moving_days` BETWEEN 1 AND 365),
+  CONSTRAINT `fk_inventory_settings_admin`
+    FOREIGN KEY (`updated_by_admin_id`) REFERENCES `admins` (`admin_id`)
+    ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
@@ -320,8 +337,9 @@ CREATE TABLE `sale_items` (
     ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+INSERT INTO `inventory_settings` (`setting_id`, `slow_moving_days`) VALUES (1, 60);
+
 -- =============================================================================
--- End of schema. 8 application tables:
---   customers, admins, tiremen, items, vehicles, sales, sale_items,
---   service_requests
+-- End of schema. 10 application tables, including inventory_restocks and
+-- inventory_settings.
 -- =============================================================================

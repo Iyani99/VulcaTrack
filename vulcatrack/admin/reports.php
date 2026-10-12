@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin — Sales Reports (Phase 6, Decision 49). READ-ONLY.
+ * Admin — Sales Reports and current Inventory Intelligence.
  *
  * All summaries, tables and visualizations use one validated inclusive sales
  * date interval. Daily charts fill zero days; the rolling 365-day option uses
@@ -14,7 +14,10 @@
  */
 
 use VulcaTrack\Repository\SaleRepository;
+use VulcaTrack\Repository\ItemRepository;
+use VulcaTrack\Repository\InventorySettingsRepository;
 use VulcaTrack\Repository\ServiceRequestRepository;
+use VulcaTrack\Auth\Csrf;
 use VulcaTrack\Support\Money;
 use VulcaTrack\Support\ReportChart;
 use VulcaTrack\Support\ReportPeriod;
@@ -58,8 +61,45 @@ function reports_period_url(array $period, ?string $focus = null): string
 }
 
 $today = date('Y-m-d');
-$sales = new SaleRepository(vulcatrack_db());
+$pdo = vulcatrack_db();
+$sales = new SaleRepository($pdo);
 $period = ReportPeriod::resolve($_GET['period'] ?? null, $_GET['month'] ?? null, $today, '30d', true);
+$asOf = new DateTimeImmutable('now', new DateTimeZone('Asia/Manila'));
+$inventoryRepo = new ItemRepository($pdo);
+$settingsRepo = new InventorySettingsRepository($pdo);
+$settingError = null;
+$settings = null;
+$slowMoving = [];
+$lowStock = $inventoryRepo->lowStockProducts();
+$thresholdInput = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $thresholdInput = is_string($_POST['slow_moving_days'] ?? null) ? trim($_POST['slow_moving_days']) : '';
+    if (!Csrf::check($_POST['_csrf'] ?? null)) {
+        $settingError = 'Your session expired. Please try again.';
+    } elseif (($_POST['_action'] ?? '') !== 'update_slow_moving_days'
+        || preg_match('/^[0-9]{1,3}$/D', $thresholdInput) !== 1
+        || (int) $thresholdInput < 1 || (int) $thresholdInput > 365) {
+        $settingError = 'Enter a slow-moving threshold from 1 to 365 days.';
+    } else {
+        try {
+            $changed = $settingsRepo->updateSlowMovingDays((int) $thresholdInput, (int) $admin['id']);
+            header('Location: ' . reports_period_url($period) . '&inventory=' . ($changed ? 'saved' : 'unchanged') . '#inventory-intelligence');
+            exit;
+        } catch (\PDOException | \RuntimeException $e) {
+            $settingError = 'Inventory settings could not be saved. Please try again.';
+        }
+    }
+}
+try {
+    // Read the threshold once. The same value drives the cutoff, list and copy.
+    $settings = $settingsRepo->current();
+    $cutoff = $asOf->sub(new DateInterval('P' . $settings['slow_moving_days'] . 'D'));
+    $slowMoving = $inventoryRepo->slowMovingProducts($cutoff->format('Y-m-d H:i:s'));
+} catch (\PDOException | \RuntimeException $e) {
+    $settings = null;
+    $slowMoving = [];
+    $settingError = $settingError ?? 'Inventory Intelligence is unavailable until its settings are restored.';
+}
 $monthOptions = ReportPeriod::monthOptions($sales->listSaleMonths(), $today, $period['month']);
 $from = $period['from'];
 $to = $period['to'];
@@ -333,4 +373,75 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
     <?php endif; ?>
   </section>
   </div>
+  <section class="rpt-intelligence" id="inventory-intelligence" aria-labelledby="rpt-intelligence-h">
+    <div class="rpt-intelligence__intro">
+      <div>
+        <p class="rpt-intelligence__eyebrow">Current inventory</p>
+        <h2 id="rpt-intelligence-h">Inventory Intelligence</h2>
+        <p>Live shop stock and recorded Sales inactivity as of <?= e($asOf->format('M j, Y g:i A')) ?> Asia/Manila. Sales period controls above do not change this section.</p>
+      </div>
+    </div>
+    <?php if (($_GET['inventory'] ?? '') === 'saved'): ?><p class="notice" role="status">Slow-moving threshold updated.</p><?php endif; ?>
+    <?php if (($_GET['inventory'] ?? '') === 'unchanged'): ?><p class="notice" role="status">Slow-moving threshold was already set to that value.</p><?php endif; ?>
+    <?php if ($settingError !== null): ?><p class="error" role="alert"><?= e($settingError) ?></p><?php endif; ?>
+
+    <div class="panelgrid rpt-intelligence__grid">
+      <section class="panel" aria-labelledby="rpt-low-h">
+        <header class="panel__head rpt-intelligence__panelhead"><h3 id="rpt-low-h">Low stock <span class="rpt-intelligence__count"><?= count($lowStock) ?></span></h3><a href="<?= e(vulcatrack_url('/admin/inventory.php?low_stock=1')) ?>">Open Inventory &rarr;</a></header>
+        <p class="panel__note muted">Active Products at or below their own reorder level, including zero stock.</p>
+        <?php if (!$lowStock): ?>
+          <p class="panel__note muted">No low-stock Products.</p>
+        <?php else: ?>
+          <div class="table-scroll"><table class="datatable mobile-records">
+            <thead><tr><th>Product</th><th class="num">Shop stock</th><th class="num">Reorder level</th></tr></thead>
+            <tbody><?php foreach ($lowStock as $product): ?>
+              <tr><td data-label="Product" data-record-primary><a href="<?= e(vulcatrack_url('/admin/item-edit.php?id=' . (int) $product['item_id'])) ?>"><?= e($product['item_name']) ?></a></td><td class="num" data-label="Shop stock"><?= (int) $product['stock_quantity'] ?></td><td class="num" data-label="Reorder level"><?= (int) $product['reorder_level'] ?></td></tr>
+            <?php endforeach; ?></tbody>
+          </table></div>
+        <?php endif; ?>
+      </section>
+      <section class="panel rpt-intelligence__settings" aria-labelledby="rpt-threshold-h">
+        <header class="panel__head"><h3 id="rpt-threshold-h">Slow-moving threshold</h3></header>
+        <?php if ($settings !== null): ?>
+          <p class="panel__note">Currently <strong><?= $settings['slow_moving_days'] ?> days</strong>. All current Admins may change this advisory period.</p>
+          <form class="rpt-intelligence__form" method="post" action="<?= e(reports_period_url($period) . '#inventory-intelligence') ?>" novalidate>
+            <?= Csrf::field() ?>
+            <input type="hidden" name="_action" value="update_slow_moving_days">
+            <label for="slow_moving_days">Days <span class="muted">(1–365)</span></label>
+            <input id="slow_moving_days" name="slow_moving_days" type="number" min="1" max="365" step="1" inputmode="numeric" required value="<?= e($settingError !== null && $thresholdInput !== '' ? $thresholdInput : (string) $settings['slow_moving_days']) ?>"<?= $settingError !== null ? ' aria-invalid="true"' : '' ?>>
+            <button type="submit">Update threshold</button>
+          </form>
+          <?php if ($settings['updated_by_admin_name'] !== null): ?><p class="panel__foot muted">Last changed by <?= e($settings['updated_by_admin_name']) ?> · <?= e((new DateTimeImmutable($settings['updated_at']))->format('M j, Y g:i A')) ?></p><?php endif; ?>
+        <?php else: ?>
+          <p class="panel__note muted">Threshold unavailable. Restore the single settings row before using slow-moving results.</p>
+        <?php endif; ?>
+      </section>
+    </div>
+
+    <section class="panel rpt-intelligence__slow" aria-labelledby="rpt-slow-h">
+      <header class="panel__head"><h3 id="rpt-slow-h">Slow-moving Products<?= $settings !== null ? ' · ' . count($slowMoving) : '' ?></h3></header>
+      <?php if ($settings !== null): ?>
+        <p class="panel__note">No recorded sales in the configured <strong><?= $settings['slow_moving_days'] ?>-day period</strong>. This is a Sales-performance signal, not Product age or deterioration. Previous stockouts are not measured.</p>
+        <?php if (!$slowMoving): ?>
+          <p class="panel__note muted">No slow-moving Products at the current threshold.</p>
+        <?php else: ?>
+          <div class="table-scroll"><table class="datatable mobile-records">
+            <thead><tr><th>Product</th><th class="num">Shop stock</th><th>Last recorded Sale</th><th>Latest recorded Restock</th><th>Advisory</th></tr></thead>
+            <tbody><?php foreach ($slowMoving as $product): ?>
+              <tr>
+                <td data-label="Product" data-record-primary><a href="<?= e(vulcatrack_url('/admin/item-edit.php?id=' . $product['item_id'])) ?>"><?= e($product['item_name']) ?></a></td>
+                <td class="num" data-label="Shop stock"><?= $product['stock_quantity'] ?></td>
+                <td data-label="Last recorded Sale"><?= $product['last_sale_at'] === null ? 'Never sold' : e((new DateTimeImmutable($product['last_sale_at']))->format('M j, Y g:i A')) ?></td>
+                <td data-label="Latest recorded Restock"><?= $product['last_restock_at'] === null ? 'No recorded restock history' : e((new DateTimeImmutable($product['last_restock_at']))->format('M j, Y g:i A')) ?></td>
+                <td data-label="Advisory">Review demand, display, promotion, or price.</td>
+              </tr>
+            <?php endforeach; ?></tbody>
+          </table></div>
+        <?php endif; ?>
+        <p class="panel__foot muted">Never-sold Products enter this list after their item record has existed for <?= $settings['slow_moving_days'] ?> days. Recorded Restock history began with Inventory Foundation; absence of a receipt does not establish past availability.</p>
+      <?php else: ?>
+        <p class="panel__note muted">Slow-moving results are unavailable.</p>
+      <?php endif; ?>
+    </section>
+  </section>
 <?php require __DIR__ . '/../src/Views/partials/admin_bottom.php'; ?>

@@ -1,17 +1,17 @@
 # database/
 
 **Phase 2 — schema built.** `schema.sql` in this folder is the executable v1
-database schema (9 application tables after Inventory Foundation). It is derived from, and must stay
+database schema (10 application tables after Inventory Intelligence). It is derived from, and must stay
 consistent with, the design source of truth:
 
 - `C:\IPT102\docs\ERD\schema.dbml` — maintainable text schema (authority for structure)
 - `C:\IPT102\docs\VulcaTrack-Database-Notes_1.md` — field-by-field rationale
 - `C:\IPT102\docs\decisions\project-decisions.md` — authoritative decisions
 
-## Tables (9)
+## Tables (10)
 
 `customers`, `admins`, `tiremen`, `items`, `inventory_restocks`, `vehicles`,
-`sales`, `sale_items`, `service_requests`.
+`sales`, `sale_items`, `service_requests`, `inventory_settings`.
 
 No payment table, no customer receipt table, no `shop_settings` table, no
 status-history / audit table, no location-history table, and no Tireman
@@ -54,6 +54,7 @@ applied and how to roll it back.
 | `migrations/2026-09-29-service-requests-feedback.sql` | Phase 7.4c (Decision 78): adds nullable `service_requests.feedback_rating` (TINYINT UNSIGNED, CHECK 1–5 `chk_service_requests_feedback_rating`), `feedback_comment` (VARCHAR(500)) and `feedback_submitted_at` (DATETIME). Existing requests stay `NULL` (no feedback). |
 | `migrations/2026-10-12-inventory-restocks.sql` | Inventory Foundation (Decision 87): adds Product receipt history with quantity, optional free-text supplier, recording Admin, and timestamp. Existing stock stays unchanged; no historical receipts are invented. |
 | `migrations/2026-10-12-restock-snapshots.sql` | Adds immutable stock-before/stock-after receipt snapshots and an optional 500-character note. Apply after the first restock migration while `inventory_restocks` is empty; existing Product stock is untouched. |
+| `migrations/2026-10-12-inventory-settings.sql` | Adds one `inventory_settings` row with a 1–365 day slow-moving threshold, initially 60, and nullable last-updating Admin attribution. Apply after the Inventory Foundation migrations. This does not alter Product or Sales data. |
 
 ```
 C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-28-sales-service-request.sql
@@ -61,7 +62,13 @@ C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-29-cus
 C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-29-service-requests-feedback.sql
 C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-10-12-inventory-restocks.sql
 C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-10-12-restock-snapshots.sql
+C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-10-12-inventory-settings.sql
 ```
+
+The Inventory Intelligence migration was applied to the local real/demo database
+on 2026-10-12 after a verified backup. Do not reapply it there. For another
+database, inspect its current schema and back it up before applying this one-off
+migration. Do not rerun `schema.sql` against an existing database.
 
 Running a migration a second time fails with a clear error (e.g. `Duplicate
 column name`) and changes nothing.

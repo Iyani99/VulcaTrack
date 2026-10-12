@@ -26,6 +26,8 @@
 // feedback_comment / feedback_submitted_at. Still exactly 8 tables.
 // Inventory Foundation 2026-10-12: inventory_restocks records future Product
 // receipts. Existing stock has unknown receipt history and is not backfilled.
+// Inventory Intelligence 2026-10-12: inventory_settings stores one adjustable
+// 1..365 day Sales-inactivity threshold, initially 60 days.
 // Current-model reminder — NOT YET modeled: online/gateway payment,
 // payment-transaction tables, GPS telemetry / route polylines, Tireman
 // authentication, scheduling / ratings / payroll, status-history / audit tables.
@@ -62,6 +64,15 @@ Table admins {
   updated_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
 
   Note: 'Internally provisioned only (seeded row or protected internal page). No public admin sign-up.'
+}
+
+Table inventory_settings {
+  setting_id           tinyint  [pk, note: 'single row, always 1 (CHECK)']
+  slow_moving_days     smallint [not null, default: 60, note: 'CHECK 1..365 days']
+  updated_by_admin_id  int      [null, ref: > admins.admin_id, note: 'last Admin who changed the threshold; NULL for initial seed']
+  updated_at           datetime [not null, default: `CURRENT_TIMESTAMP`]
+
+  Note: 'One management setting row seeded at 60 days; no generalized settings framework.'
 }
 
 Table tiremen {

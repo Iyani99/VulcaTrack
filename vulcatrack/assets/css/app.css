@@ -1114,6 +1114,34 @@ body.admin .acct-grid .table-scroll > .datatable { min-width: 30rem; }
 body.admin .acct-grid td.acct-email { white-space: nowrap; }
 
 /* Reports */
+body.admin .rpt-intelligence { margin: 2rem 0 1.5rem; padding-top: 1.35rem; border-top: 2px solid var(--adm-ink); scroll-margin-top: 1rem; }
+body.admin .rpt-intelligence__intro { margin-bottom: 1rem; }
+body.admin .rpt-intelligence__eyebrow { margin: 0 0 .3rem; color: var(--adm-red-dark); font-family: var(--adm-mono); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+body.admin .rpt-intelligence__intro h2 { margin: 0; font-size: 1.5rem; }
+body.admin .rpt-intelligence__intro p:last-child { margin: .4rem 0 0; max-width: 70rem; color: #555; font-size: .88rem; line-height: 1.5; }
+body.admin .rpt-intelligence__grid { grid-template-columns: minmax(0, 1.5fr) minmax(min(18rem, 100%), 1fr); }
+body.admin .rpt-intelligence__panelhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .4rem 1rem; }
+body.admin .rpt-intelligence__panelhead a { font-size: .78rem; font-weight: 800; }
+body.admin .rpt-intelligence__count { display: inline-flex; justify-content: center; min-width: 1.5rem; padding: .05rem .35rem; border: 1px solid var(--adm-red); color: var(--adm-red-dark); font-family: var(--adm-mono); font-size: .72rem; vertical-align: middle; }
+body.admin .rpt-intelligence__form { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem .65rem; padding: .1rem 1.1rem 1rem; }
+body.admin .rpt-intelligence__form label { flex: 0 0 100%; margin: 0; font-size: .8rem; font-weight: 700; }
+body.admin .rpt-intelligence__form input { width: 6rem; min-height: 2.75rem; margin: 0; }
+body.admin .rpt-intelligence__form button { min-height: 2.75rem; margin: 0; padding: .55rem .9rem; }
+body.admin .rpt-intelligence__slow > .table-scroll > .datatable { min-width: 48rem; }
+body.admin .rpt-intelligence__slow .datatable td:last-child { max-width: 17rem; }
+@media (max-width: 48rem) {
+  body.admin .rpt-intelligence__grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 40rem) {
+  body.admin .rpt-intelligence__panelhead { align-items: center; }
+  body.admin .rpt-intelligence__panelhead a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+  body.admin .rpt-intelligence__slow > .table-scroll > .datatable { min-width: 0; }
+  body.admin .rpt-intelligence__slow .datatable td:last-child { max-width: none; }
+}
+@media (max-width: 24rem) {
+  body.admin .rpt-intelligence__form input,
+  body.admin .rpt-intelligence__form button { width: 100%; }
+}
 body.admin .report-range { margin: 0 0 .25rem; }
 body.admin .card--stat { padding: 1.3rem 1.4rem 1.2rem; }
 body.admin .card--stat .card__label { margin: 0 0 .7rem; font-size: .78rem; }

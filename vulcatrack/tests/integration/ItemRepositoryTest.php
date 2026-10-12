@@ -194,6 +194,7 @@ test('ItemRepository::lowStockProducts flags only active products at or below re
 
         $low      = $repo->create("{$tag} Low", 'product', null, 100, 2, 5);   // 2 <= 5  -> low
         $atLevel  = $repo->create("{$tag} At", 'product', null, 100, 5, 5);    // 5 <= 5  -> low
+        $out      = $repo->create("{$tag} Out", 'product', null, 100, 0, 5);   // 0 <= 5  -> low
         $ok       = $repo->create("{$tag} OK", 'product', null, 100, 20, 5);   // 20 > 5  -> not
         $noThresh = $repo->create("{$tag} NoThresh", 'product', null, 100, 0, null); // no reorder_level -> not
         $svc      = $repo->create("{$tag} Svc", 'service', null, 100, null, null);   // service -> not
@@ -206,7 +207,7 @@ test('ItemRepository::lowStockProducts flags only active products at or below re
         ));
         $ids = array_map(fn ($r) => (int) $r['item_id'], $flagged);
         sort($ids);
-        $expected = [$low, $atLevel];
+        $expected = [$low, $atLevel, $out];
         sort($expected);
         assert_same($expected, $ids);
     });

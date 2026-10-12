@@ -192,7 +192,8 @@ Read this file first, then inspect the relevant code, decisions, DBML, migration
 
 **2026-10-12, approved post-defense target:** Decisions 80–100 supersede the
 historical no-login Tireman and fixed eight-table limits. Inventory Foundation
-Batch 1 is implemented below; the other target domains remain future work.
+Batch 1 and Inventory Intelligence are implemented below; the other target
+domains remain future work.
 Customer, Admin, and Tireman are distinct authenticated actors. Admin provisions Tireman credentials;
 historical uncredentialed workers remain valid records. `is_active` controls login
 and participation, On Duty/Off Duty controls new-offer availability, and Busy is
@@ -217,16 +218,16 @@ XAMPP is not verified as 24/7 production hosting.
 For Inventory, `items.is_active` means offered versus archived; slow-moving stock
 stays active and is an advisory based on no recorded Sale line for that Product
 in a management-adjustable period (initial default 60 days), not physical unit age
-or deterioration. The threshold's persistence/UI design is deferred. Product archive
-normally requires
+or deterioration. The threshold's persistence/UI design is implemented in the
+Inventory Intelligence checkpoint below. Product archive normally requires
 zero shop and Tireman-held stock.
 Product restocks need atomic receipt records with optional free-text supplier;
 existing stock has unknown prior receipt history. Routine stock changes must use
 recorded movements, with auditable future corrections. Issued Product moves from
 shop to Tireman custody; use reduces held stock; return restores shop stock.
-Operational use is not a Sale. The real/demo database now has nine tables after
-the additive Inventory Restock migrations. Assignment offers and Tireman inventory
-movements remain future work.
+Operational use is not a Sale. The real/demo database now has ten tables after
+the additive Inventory Restock and Inventory Intelligence migrations. Assignment
+offers and Tireman inventory movements remain future work.
 
 An Admin-visible Activity Log is approved for meaningful state changes by Admin,
 Tireman, Customer, or system actors. It is an oversight narrative, not a replacement
@@ -262,3 +263,21 @@ applied to the real/demo database after backups; the confirmed manual receipt #1
 records item #7 moving 14 to 20 by +6. The accepted automated baseline is **272
 passed, 0 failed, 4,836 assertions across 52 files**, run against `vulcatrack_test`;
 the real/demo nine-table fingerprint was unchanged across that suite.
+
+**Inventory Intelligence implemented and locally migrated on 2026-10-12:**
+Reports has a separate current-inventory section independent of its Sales-period
+filters. Low stock reuses each active Product's optional `reorder_level`, including
+equality and zero stock. Slow-moving means an active Product with current shop
+stock above zero has no recorded Sale in the configured period. The default is
+60 days, adjustable from 1–365 days by any current Admin; an unchanged submission
+does not change attribution or timestamp. Never-sold Products use `items.created_at`
+only as a record-age grace proxy. Recent Restock does not reset the Sales clock,
+and historical stockout periods cannot be reconstructed from available data.
+Archived and current-zero-stock Products are excluded. Restock timestamps are
+recorded context, and missing receipts do not prove a Product was never restocked.
+The dedicated single-row `inventory_settings` table persists this setting and
+last-changing Admin; a missing or invalid row makes slow-moving results unavailable.
+The local real/demo migration added only this table and its initial row after a
+verified backup; the nine original tables' DDL and data matched that backup during
+manual acceptance. The accepted full automated baseline is **277 passed, 0 failed,
+4,934 assertions across 54 files**, run against `vulcatrack_test`.

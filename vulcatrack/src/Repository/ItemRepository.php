@@ -114,6 +114,46 @@ class ItemRepository
     }
 
     /**
+     * Current active, stocked Products without a Sale at/after the cutoff.
+     * Never-sold Products receive a record-creation observation grace.
+     * Restocks are context only and never reset Sales inactivity.
+     *
+     * @return array<int,array{item_id:int,item_name:string,stock_quantity:int,created_at:string,last_sale_at:?string,last_restock_at:?string}>
+     */
+    public function slowMovingProducts(string $cutoff): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT i.item_id, i.item_name, i.stock_quantity, i.created_at,
+                    sold.last_sale_at, received.last_restock_at
+               FROM items i
+               LEFT JOIN (
+                 SELECT si.item_id, MAX(s.sale_date) AS last_sale_at
+                   FROM sale_items si JOIN sales s ON s.sale_id = si.sale_id
+                  GROUP BY si.item_id
+               ) sold ON sold.item_id = i.item_id
+               LEFT JOIN (
+                 SELECT item_id, MAX(restocked_at) AS last_restock_at
+                   FROM inventory_restocks GROUP BY item_id
+               ) received ON received.item_id = i.item_id
+              WHERE i.item_type = 'product' AND i.is_active = 1
+                AND i.stock_quantity > 0
+                AND (sold.last_sale_at < :sold_cutoff
+                     OR (sold.last_sale_at IS NULL AND i.created_at <= :created_cutoff))
+              ORDER BY sold.last_sale_at IS NULL DESC,
+                       COALESCE(sold.last_sale_at, i.created_at) ASC,
+                       i.item_name ASC, i.item_id ASC"
+        );
+        $stmt->execute([':sold_cutoff' => $cutoff, ':created_cutoff' => $cutoff]);
+        $rows = $stmt->fetchAll();
+        foreach ($rows as &$row) {
+            $row['item_id'] = (int) $row['item_id'];
+            $row['stock_quantity'] = (int) $row['stock_quantity'];
+        }
+        unset($row);
+        return $rows;
+    }
+
+    /**
      * Distinct non-empty categories already in use — for a datalist / suggestion
      * list (Decision 52). No category table.
      *

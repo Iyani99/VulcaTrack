@@ -25,6 +25,7 @@ final class TestDb
         'inventory_restocks',
         'items',
         'tiremen',
+        'inventory_settings',
         'admins',
         'customers',
     ];
