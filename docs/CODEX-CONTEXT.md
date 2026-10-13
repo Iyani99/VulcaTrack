@@ -326,3 +326,26 @@ and reduced motion. Final focused Sales History, Reports, and Rescue tests
 passed; the complete `vulcatrack_test` suite passed **284 tests, 0 failures,
 5,145 assertions across 57 files**. The real/demo data fingerprint matched
 before and after the suite.
+
+**Inventory Promotions implementation completed locally on 2026-10-13:** Admin Inventory gains Promotions beside
+Items, Insights, and Settings. Slow-moving Products are candidates only; Admin
+explicitly creates an immutable date-based sale price or leaves them unchanged.
+Only active Products with stock and no open promotion may be selected. The
+Asia/Manila start/end calendar days are inclusive. An omitted start is stored
+as today's Asia/Manila date; an omitted end has no automatic expiry. A positive sale price must
+remain below the current regular Product price; an optional positive unit cap
+may not exceed stock at creation. The cap controls pricing, not physical stock;
+Restock and Adjust Stock do not change it. Scheduled/Active/Ended derive from
+dates and consumed units; cancellation is attributed and permanent. Open
+promotions block Product deactivation and regular-price edits at or below the
+sale price. An ended or cancelled promotion remains in history even when Sales
+change slow-moving classification. The separate `product_promotions` ledger
+stores creation terms, a regular-price audit snapshot, a guarded consumed-unit
+counter, and cancellation metadata; nullable `sale_items.promotion_id` links
+frozen charged lines. In-shop checkout locks Product then promotion and may
+split one cart quantity into promotional and regular Sale lines, with one stock
+deduction and one atomic Sale transaction. Rescue-linked Sales always use
+regular Product pricing and consume no promotional units. The new migration
+`2026-10-13-product-promotions.sql` is additive and was applied to real/demo
+`vulcatrack` after a verified backup. The follow-up
+`2026-10-13-product-promotions-open-ended.sql` makes `ends_on` nullable.

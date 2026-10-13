@@ -3,6 +3,7 @@
 namespace VulcaTrack\Service;
 
 use VulcaTrack\Repository\ItemRepository;
+use VulcaTrack\Support\PromotionPricing;
 
 /**
  * The temporary POS cart (Decision 57) — held in the admin's PHP session, never
@@ -209,21 +210,26 @@ final class PosCart
      *
      * @return array{rows: array<int,array<string,mixed>>, total_centavos: int, has_problems: bool}
      */
-    public function describe(ItemRepository $items): array
+    public function describe(ItemRepository $items, array $activePromotions = [], bool $rescue = false,
+        ?string $today = null): array
     {
         $rows = [];
         $total = 0;
         $hasProblems = false;
+        $today = $today ?? date('Y-m-d');
 
         foreach ($this->state['lines'] as $itemId => $quantity) {
             $item = $items->findById($itemId);
             $problem = null;
             $unit = 0;
+            $priceLines = [];
 
             if ($item === null) {
                 $problem = 'This item no longer exists. Remove it from the sale.';
             } else {
                 $unit = (int) $item['price_centavos'];
+                $priceLines = PromotionPricing::lines($item, $activePromotions[$itemId] ?? null,
+                    $quantity, $today, $rescue);
                 if ((int) $item['is_active'] !== 1) {
                     $problem = 'This item has been deactivated. Remove it from the sale.';
                 } elseif ($item['item_type'] === 'product' && (int) $item['stock_quantity'] < $quantity) {
@@ -231,7 +237,7 @@ final class PosCart
                 }
             }
 
-            $subtotal = $unit * $quantity; // bounded by the cart limits — see class doc
+            $subtotal = $priceLines === [] ? 0 : array_sum(array_column($priceLines, 'subtotal_centavos'));
             $total += $subtotal;
             $hasProblems = $hasProblems || $problem !== null;
 
@@ -242,6 +248,7 @@ final class PosCart
                 'item_type'         => $item['item_type'] ?? null,
                 'stock_quantity'    => $item['stock_quantity'] ?? null,
                 'unit_centavos'     => $unit,
+                'price_lines'       => $priceLines,
                 'subtotal_centavos' => $subtotal,
                 'problem'           => $problem,
             ];

@@ -10,6 +10,7 @@
 -- Structural revision: Inventory Foundation (2026-10-12) — inventory_restocks.
 -- Structural revision: Inventory Intelligence (2026-10-12) — inventory_settings.
 -- Structural revision: per-Product thresholds and manual stock adjustments.
+-- Structural revision: Product Promotions (2026-10-13), in-shop pricing only.
 --
 -- Source of truth : docs/ERD/schema.dbml               (structure)
 -- Rationale       : docs/VulcaTrack-Database-Notes_1.md (field-by-field)
@@ -19,7 +20,7 @@
 -- Character set    : utf8mb4 / utf8mb4_unicode_ci
 -- Storage engine   : InnoDB (required for foreign-key enforcement).
 --
--- This file builds the 11 application tables and nothing else. There is NO
+-- This file builds the 12 application tables and nothing else. There is NO
 -- payment table, NO customer transaction receipt table, NO shop_settings table, NO status-history /
 -- general Activity Log table, NO location-history / live-tracking table, and no Tireman
 -- login table yet. Later post-defense domains are approved but not in this batch.
@@ -46,7 +47,8 @@ USE `vulcatrack`;
 
 -- Drop in reverse dependency order so foreign keys never block the rebuild:
 -- sale_items -> sales -> service_requests (sales references service_requests
--- since Phase 7.3d-a) -> vehicles / inventory_adjustments / inventory_restocks -> items / tiremen /
+-- since Phase 7.3d-a) -> vehicles / inventory_adjustments / inventory_restocks /
+-- product_promotions -> items / tiremen /
 -- inventory_settings -> admins -> customers.
 DROP TABLE IF EXISTS `sale_items`;
 DROP TABLE IF EXISTS `sales`;
@@ -54,6 +56,7 @@ DROP TABLE IF EXISTS `service_requests`;
 DROP TABLE IF EXISTS `vehicles`;
 DROP TABLE IF EXISTS `inventory_adjustments`;
 DROP TABLE IF EXISTS `inventory_restocks`;
+DROP TABLE IF EXISTS `product_promotions`;
 DROP TABLE IF EXISTS `items`;
 DROP TABLE IF EXISTS `tiremen`;
 DROP TABLE IF EXISTS `inventory_settings`;
@@ -155,6 +158,40 @@ CREATE TABLE `items` (
   CONSTRAINT `chk_items_item_type` CHECK (`item_type` IN ('product','service')),
   CONSTRAINT `chk_items_slow_moving_override` CHECK (`slow_moving_days_override` IS NULL OR
     (`item_type` = 'product' AND `slow_moving_days_override` BETWEEN 1 AND 365))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Admin-created Product sale prices. Terms are immutable; cancellation is
+-- attributed. units_consumed is the checkout concurrency authority and each
+-- charged promotional unit is also linked from a frozen sale_items line.
+CREATE TABLE `product_promotions` (
+  `promotion_id` INT NOT NULL AUTO_INCREMENT,
+  `item_id` INT NOT NULL,
+  `sale_price` DECIMAL(10,2) NOT NULL,
+  `regular_price_snapshot` DECIMAL(10,2) NOT NULL,
+  `starts_on` DATE NOT NULL,
+  `ends_on` DATE NULL,
+  `unit_limit` INT NULL,
+  `units_consumed` INT NOT NULL DEFAULT 0,
+  `note` VARCHAR(500) NULL,
+  `created_by_admin_id` INT NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `cancelled_at` DATETIME NULL,
+  `cancelled_by_admin_id` INT NULL,
+  PRIMARY KEY (`promotion_id`),
+  UNIQUE KEY `uq_product_promotions_id_item` (`promotion_id`, `item_id`),
+  KEY `ix_product_promotions_item_dates` (`item_id`, `starts_on`, `ends_on`),
+  KEY `ix_product_promotions_created_admin` (`created_by_admin_id`),
+  KEY `ix_product_promotions_cancelled_admin` (`cancelled_by_admin_id`),
+  CONSTRAINT `chk_product_promotions_prices` CHECK (`sale_price` > 0 AND `sale_price` < `regular_price_snapshot`),
+  CONSTRAINT `chk_product_promotions_dates` CHECK (`starts_on` <= `ends_on`),
+  CONSTRAINT `chk_product_promotions_units` CHECK (`units_consumed` >= 0 AND
+    (`unit_limit` IS NULL OR (`unit_limit` > 0 AND `units_consumed` <= `unit_limit`))),
+  CONSTRAINT `chk_product_promotions_cancellation` CHECK (
+    (`cancelled_at` IS NULL AND `cancelled_by_admin_id` IS NULL) OR
+    (`cancelled_at` IS NOT NULL AND `cancelled_by_admin_id` IS NOT NULL)),
+  CONSTRAINT `fk_product_promotions_item` FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_product_promotions_created_admin` FOREIGN KEY (`created_by_admin_id`) REFERENCES `admins` (`admin_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_product_promotions_cancelled_admin` FOREIGN KEY (`cancelled_by_admin_id`) REFERENCES `admins` (`admin_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Future receipts only. Existing items.stock_quantity is opening stock with
@@ -353,22 +390,27 @@ CREATE TABLE `sale_items` (
   `sale_item_id` INT            NOT NULL AUTO_INCREMENT,
   `sale_id`      INT            NOT NULL,
   `item_id`      INT            NOT NULL,
+  `promotion_id` INT                NULL,
   `quantity`     INT            NOT NULL,
   `unit_price`   DECIMAL(10,2)  NOT NULL,
   `subtotal`     DECIMAL(10,2)  NOT NULL,
   PRIMARY KEY (`sale_item_id`),
   KEY `ix_sale_items_sale` (`sale_id`),
   KEY `ix_sale_items_item` (`item_id`),
+  KEY `ix_sale_items_promotion_item` (`promotion_id`, `item_id`),
   CONSTRAINT `fk_sale_items_sale`
     FOREIGN KEY (`sale_id`) REFERENCES `sales` (`sale_id`)
     ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_sale_items_item`
     FOREIGN KEY (`item_id`) REFERENCES `items` (`item_id`)
+    ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_sale_items_promotion_item`
+    FOREIGN KEY (`promotion_id`, `item_id`) REFERENCES `product_promotions` (`promotion_id`, `item_id`)
     ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO `inventory_settings` (`setting_id`, `slow_moving_days`) VALUES (1, 60);
 
 -- =============================================================================
--- End of schema. 11 application tables, including inventory adjustments.
+-- End of schema. 12 application tables, including Product Promotions.
 -- =============================================================================

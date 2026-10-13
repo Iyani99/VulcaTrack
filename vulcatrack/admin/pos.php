@@ -38,6 +38,7 @@
 use VulcaTrack\Auth\Csrf;
 use VulcaTrack\Repository\CustomerRepository;
 use VulcaTrack\Repository\ItemRepository;
+use VulcaTrack\Repository\ProductPromotionRepository;
 use VulcaTrack\Repository\SaleRepository;
 use VulcaTrack\Repository\ServiceRequestRepository;
 use VulcaTrack\Service\PosCart;
@@ -53,6 +54,7 @@ require __DIR__ . '/../includes/auth.php';
 $admin     = require_admin();
 $pdo       = vulcatrack_db();
 $items     = new ItemRepository($pdo);
+$promotions = new ProductPromotionRepository($pdo);
 $customers = new CustomerRepository($pdo);
 $sales     = new SaleRepository($pdo);
 $requests  = new ServiceRequestRepository($pdo);
@@ -384,7 +386,8 @@ if ($cart->customerId() !== null) {
     }
 }
 
-$view = $cart->describe($items);
+$activePromotions = $rescueId === null ? $promotions->activeByItem(date('Y-m-d')) : [];
+$view = $cart->describe($items, $activePromotions, $rescueId !== null);
 
 $customerQuery   = mb_substr(trim((string) ($_GET['cq'] ?? '')), 0, 100);
 $customerResults = mb_strlen($customerQuery) >= 2 ? $customers->search($customerQuery, 10) : [];
@@ -506,10 +509,12 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
       <?php
         $isProduct  = $row['item_type'] === 'product';
         $outOfStock = $isProduct && (int) $row['stock_quantity'] < 1;
+        $promotion = !$outOfStock && $isProduct ? ($activePromotions[(int) $row['item_id']] ?? null) : null;
       ?>
       <li class="pos-item<?= $outOfStock ? ' pos-item--out' : '' ?>">
         <div class="pos-item__tags">
           <span class="badge badge--<?= $isProduct ? 'product' : 'service' ?>"><?= $isProduct ? 'Product' : 'Service' ?></span>
+          <?php if ($promotion !== null): ?><span class="badge badge--sale">ON SALE!</span><?php endif; ?>
           <?php if ($isProduct): ?>
           <?php [$chip, $chipLabel] = pos_stock_chip($row, isset($lowStockIds[(int) $row['item_id']])); ?>
           <span class="stock stock--<?= $chip ?>"><?= e($chipLabel) ?></span>
@@ -519,7 +524,15 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
         <?php if ($row['category'] !== null && $row['category'] !== ''): ?>
           <p class="pos-item__cat"><?= e($row['category']) ?></p>
         <?php endif; ?>
-        <p class="pos-item__price"><?= pos_peso((int) $row['price_centavos']) ?></p>
+        <?php if ($promotion !== null): ?>
+        <p class="pos-item__price">
+            <span class="pos-item__regular">Regular <?= pos_peso((int) $row['price_centavos']) ?></span>
+            <strong class="pos-item__sale">Sale <?= pos_peso((int) $promotion['sale_price_centavos']) ?></strong>
+        </p>
+        <?php else: ?><p class="pos-item__price"><?= pos_peso((int) $row['price_centavos']) ?></p><?php endif; ?>
+        <?php if ($promotion !== null && $promotion['unit_limit'] !== null): ?>
+          <p class="pos-item__promo-note"><?= (int) ($promotion['unit_limit'] - $promotion['units_consumed']) ?> sale-priced <?= (int) ($promotion['unit_limit'] - $promotion['units_consumed']) === 1 ? 'unit' : 'units' ?> left</p>
+        <?php endif; ?>
         <?php if ($outOfStock): ?>
           <p class="pos-item__unavailable"><span class="badge badge--low">Out of stock</span></p>
         <?php else: ?>
@@ -620,8 +633,17 @@ require __DIR__ . '/../src/Views/partials/admin_top.php';
                 <?php if ($row['item_type'] !== null): ?>
                   <span class="badge badge--<?= $row['item_type'] === 'product' ? 'product' : 'service' ?>"><?= $row['item_type'] === 'product' ? 'Product' : 'Service' ?></span>
                 <?php endif; ?>
-                <span><?= pos_peso((int) $row['unit_centavos']) ?> each</span>
+                <?php if (count($row['price_lines']) === 1 && $row['price_lines'][0]['promotion_id'] === null): ?>
+                  <span><?= pos_peso((int) $row['unit_centavos']) ?> each</span>
+                <?php endif; ?>
               </span>
+              <?php if (count($row['price_lines']) > 1 || ($row['price_lines'][0]['promotion_id'] ?? null) !== null): ?>
+                <span class="pos-cart__breakdown">
+                  <?php foreach ($row['price_lines'] as $priceLine): ?>
+                    <span><?= (int) $priceLine['quantity'] ?> @ <?= pos_peso((int) $priceLine['unit_centavos']) ?> <?= e($priceLine['label']) ?></span>
+                  <?php endforeach; ?>
+                </span>
+              <?php endif; ?>
               <?php if ($row['problem'] !== null): ?><small class="error"><?= e($row['problem']) ?></small><?php endif; ?>
               <?php // owned by #pos-remove (form attribute), so it is never this form's Enter-key button ?>
               <button type="submit" class="linklike pos-cart__remove" form="pos-remove" name="item_id"

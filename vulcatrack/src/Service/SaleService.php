@@ -8,9 +8,11 @@ use Throwable;
 use VulcaTrack\Repository\AdminRepository;
 use VulcaTrack\Repository\CustomerRepository;
 use VulcaTrack\Repository\ItemRepository;
+use VulcaTrack\Repository\ProductPromotionRepository;
 use VulcaTrack\Repository\SaleRepository;
 use VulcaTrack\Repository\ServiceRequestRepository;
 use VulcaTrack\Support\Money;
+use VulcaTrack\Support\PromotionPricing;
 use VulcaTrack\Support\OtgStatus;
 
 /**
@@ -55,6 +57,7 @@ final class SaleService
     private CustomerRepository $customers;
     private AdminRepository $admins;
     private ServiceRequestRepository $requests;
+    private ProductPromotionRepository $promotions;
 
     /**
      * $sales / $items are injectable so tests can exercise mid-transaction
@@ -70,6 +73,7 @@ final class SaleService
         $this->customers = new CustomerRepository($pdo);
         $this->admins    = new AdminRepository($pdo);
         $this->requests  = new ServiceRequestRepository($pdo);
+        $this->promotions = new ProductPromotionRepository($pdo);
     }
 
     /**
@@ -132,7 +136,10 @@ final class SaleService
             }
 
             $lines = [];
+            $itemTypes = [];
             $totalCentavos = 0;
+            $saleDate = date('Y-m-d H:i:s');
+            $saleDay = substr($saleDate, 0, 10);
 
             foreach ($wanted as $itemId => $quantity) {
                 $item = $this->items->lockForUpdate((int) $itemId);
@@ -142,6 +149,7 @@ final class SaleService
                 if ((int) $item['is_active'] !== 1) {
                     throw new SaleException("\"{$item['item_name']}\" is not available for sale.");
                 }
+                $itemTypes[(int) $itemId] = (string) $item['item_type'];
 
                 $unitCentavos = (int) $item['price_centavos'];
 
@@ -154,14 +162,6 @@ final class SaleService
                         "The line total for \"{$item['item_name']}\" is larger than this system can record."
                     );
                 }
-                $subtotalCentavos = $unitCentavos * $quantity;
-
-                // Same idea for the running total: check with subtraction, not by
-                // adding first and inspecting the (possibly overflowed) result.
-                if ($subtotalCentavos > Money::MAX_CENTAVOS - $totalCentavos) {
-                    throw new SaleException('The sale total is larger than this system can record.');
-                }
-
                 if ($item['item_type'] === 'product') {
                     $onHand = (int) $item['stock_quantity'];
                     if ($onHand < $quantity) {
@@ -172,14 +172,25 @@ final class SaleService
                     }
                 }
 
-                $lines[] = [
-                    'item_id'           => (int) $itemId,
-                    'item_type'         => (string) $item['item_type'],
-                    'quantity'          => $quantity,
-                    'unit_centavos'     => $unitCentavos,
-                    'subtotal_centavos' => $subtotalCentavos,
-                ];
-                $totalCentavos += $subtotalCentavos;
+                // Item locks stay in ascending order. For an ordinary sale,
+                // lock the Product's promotion only after its item row.
+                $promotion = $rescueId === null && $item['item_type'] === 'product'
+                    ? $this->promotions->findOpenForItem((int) $itemId, $saleDay, true) : null;
+                foreach (PromotionPricing::lines($item, $promotion, $quantity, $saleDay, $rescueId !== null) as $tier) {
+                    $subtotalCentavos = $tier['subtotal_centavos'];
+                    if ($subtotalCentavos > Money::MAX_CENTAVOS - $totalCentavos) {
+                        throw new SaleException('The sale total is larger than this system can record.');
+                    }
+                    $lines[] = [
+                        'item_id' => (int) $itemId,
+                        'item_type' => (string) $item['item_type'],
+                        'quantity' => $tier['quantity'],
+                        'unit_centavos' => $tier['unit_centavos'],
+                        'subtotal_centavos' => $subtotalCentavos,
+                        'promotion_id' => $tier['promotion_id'],
+                    ];
+                    $totalCentavos += $subtotalCentavos;
+                }
             }
 
             if ($rescueId !== null) {
@@ -204,7 +215,6 @@ final class SaleService
                 );
             }
 
-            $saleDate = date('Y-m-d H:i:s');
             try {
                 $saleId = $this->sales->createSale($adminId, $customerId, $saleDate, $totalCentavos, $rescueId);
             } catch (PDOException $e) {
@@ -218,20 +228,23 @@ final class SaleService
             }
 
             foreach ($lines as $line) {
-                $this->sales->addSaleItem(
-                    $saleId,
-                    $line['item_id'],
-                    $line['quantity'],
-                    $line['unit_centavos'],
-                    $line['subtotal_centavos']
-                );
+                if ($line['promotion_id'] === null) {
+                    $this->sales->addSaleItem($saleId, $line['item_id'], $line['quantity'],
+                        $line['unit_centavos'], $line['subtotal_centavos']);
+                } else {
+                    $this->sales->addPromotionalSaleItem($saleId, $line['item_id'], $line['quantity'],
+                        $line['unit_centavos'], $line['subtotal_centavos'], $line['promotion_id']);
+                    if (!$this->promotions->consume($line['promotion_id'], $line['quantity'], $saleDay)) {
+                        throw new SaleException('Promotional availability changed; the sale was not recorded.');
+                    }
+                }
             }
 
-            foreach ($lines as $line) {
-                if ($line['item_type'] !== 'product') {
+            foreach ($wanted as $itemId => $quantity) {
+                if ($itemTypes[(int) $itemId] !== 'product') {
                     continue; // services never deduct stock (Decision 16)
                 }
-                if (!$this->items->decrementStock($line['item_id'], $line['quantity'])) {
+                if (!$this->items->decrementStock((int) $itemId, $quantity)) {
                     // The locked row said there was enough; if the guarded update
                     // still changed nothing, the sale is not safe to keep.
                     throw new SaleException('Stock changed during checkout; the sale was not recorded.');

@@ -11,14 +11,39 @@
 
 namespace VulcaTrack\Tests;
 
-test('the eleven approved application tables exist', function () {
+test('the twelve approved application tables exist', function () {
     $pdo = test_pdo();
     assert_not_null($pdo, 'database must be reachable for the schema tests');
 
     $tables = $pdo->query('SHOW TABLES')->fetchAll(\PDO::FETCH_COLUMN);
     sort($tables);
-    $expected = ['admins', 'customers', 'inventory_adjustments', 'inventory_restocks', 'inventory_settings', 'items', 'sale_items', 'sales', 'service_requests', 'tiremen', 'vehicles'];
-    assert_same($expected, $tables, 'the approved eleven-table schema must match');
+    $expected = ['admins', 'customers', 'inventory_adjustments', 'inventory_restocks', 'inventory_settings', 'items', 'product_promotions', 'sale_items', 'sales', 'service_requests', 'tiremen', 'vehicles'];
+    assert_same($expected, $tables, 'the approved twelve-table schema must match');
+});
+
+test('Product Promotions schema preserves frozen sale lines and constrained history', function () {
+    $pdo = test_pdo();
+    $columns = schema_columns($pdo, 'product_promotions');
+    assert_same(['promotion_id', 'item_id', 'sale_price', 'regular_price_snapshot',
+        'starts_on', 'ends_on', 'unit_limit', 'units_consumed', 'note',
+        'created_by_admin_id', 'created_at', 'cancelled_at', 'cancelled_by_admin_id'], array_keys($columns));
+    $checks = $pdo->query("SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_promotions' AND CONSTRAINT_TYPE = 'CHECK'")
+        ->fetchAll(\PDO::FETCH_COLUMN);
+    foreach (['prices', 'dates', 'units', 'cancellation'] as $check) {
+        assert_true(in_array('chk_product_promotions_' . $check, $checks, true));
+    }
+    assert_same('YES', $columns['unit_limit']['IS_NULLABLE']);
+    assert_same('NO', $columns['starts_on']['IS_NULLABLE'], 'an omitted start is stored as the effective local date');
+    assert_same('YES', $columns['ends_on']['IS_NULLABLE'], 'NULL means no automatic end date');
+    assert_same('NO', $columns['units_consumed']['IS_NULLABLE']);
+    $saleColumns = schema_columns($pdo, 'sale_items');
+    assert_same('YES', $saleColumns['promotion_id']['IS_NULLABLE'], 'old and regular lines keep a NULL link');
+    $fk = $pdo->query("SELECT COLUMN_NAME, REFERENCED_COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sale_items'
+          AND CONSTRAINT_NAME = 'fk_sale_items_promotion_item' ORDER BY ORDINAL_POSITION")->fetchAll();
+    assert_same(['promotion_id', 'item_id'], array_column($fk, 'COLUMN_NAME'));
+    assert_same(['promotion_id', 'item_id'], array_column($fk, 'REFERENCED_COLUMN_NAME'));
 });
 
 test('Product override and adjustment history have constrained, attributed schema', function () {

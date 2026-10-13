@@ -24,6 +24,7 @@ final class TestDb
         'vehicles',
         'inventory_restocks',
         'inventory_adjustments',
+        'product_promotions',
         'items',
         'tiremen',
         'inventory_settings',

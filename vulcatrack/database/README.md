@@ -1,16 +1,16 @@
 # database/
 
 **Phase 2 — schema built.** `schema.sql` in this folder is the executable v1
-database schema (11 application tables after manual stock adjustments). It is derived from, and must stay
+database schema (12 application tables with Product Promotions). It is derived from, and must stay
 consistent with, the design source of truth:
 
 - `C:\IPT102\docs\ERD\schema.dbml` — maintainable text schema (authority for structure)
 - `C:\IPT102\docs\VulcaTrack-Database-Notes_1.md` — field-by-field rationale
 - `C:\IPT102\docs\decisions\project-decisions.md` — authoritative decisions
 
-## Tables (11)
+## Tables (12)
 
-`customers`, `admins`, `tiremen`, `items`, `inventory_restocks`, `inventory_adjustments`, `vehicles`,
+`customers`, `admins`, `tiremen`, `items`, `product_promotions`, `inventory_restocks`, `inventory_adjustments`, `vehicles`,
 `sales`, `sale_items`, `service_requests`, `inventory_settings`.
 
 No payment table, no customer receipt table, no `shop_settings` table, no
@@ -57,6 +57,13 @@ applied and how to roll it back.
 | `migrations/2026-10-12-inventory-settings.sql` | Adds one `inventory_settings` row with a 1–365 day slow-moving threshold, initially 60, and nullable last-updating Admin attribution. Apply after the Inventory Foundation migrations. This does not alter Product or Sales data. |
 | `migrations/2026-10-12-product-slow-moving-override.sql` | Adds the nullable, Product-only 1–365 day override; NULL uses the existing shop default. Apply once after Inventory Intelligence. |
 | `migrations/2026-10-12-inventory-adjustments.sql` | Adds append-only manual Product stock corrections with direction, reason, note, before/after stock, Admin, and time. Apply once; no historical backfill. |
+| `migrations/2026-10-13-product-promotions.sql` | Adds Admin-selected Product promotion history and a nullable Sale-line promotion link. Existing Sales stay unchanged. Applied to local real/demo `vulcatrack` on 2026-10-13 after a verified backup. |
+| `migrations/2026-10-13-product-promotions-open-ended.sql` | Apply after the Promotions migration. Makes `product_promotions.ends_on` nullable so blank end dates have no automatic expiry; existing rows retain their dates. |
+
+The original Product Promotions migration has already been applied to the local
+real/demo database. Do not reapply it. Check `ends_on` nullability before applying
+the open-ended follow-up migration to another existing database. Automated tests
+rebuild only `vulcatrack_test`.
 
 ```
 C:\xampp\mysql\bin\mysql -u root vulcatrack < database\migrations\2026-09-28-sales-service-request.sql
@@ -72,8 +79,9 @@ on 2026-10-12 after a verified backup. Do not reapply it there. For another
 database, inspect its current schema and back it up before applying this one-off
 migration. Do not rerun `schema.sql` against an existing database.
 
-Running a migration a second time fails with a clear error (e.g. `Duplicate
-column name`) and changes nothing.
+Apply each migration only once. Many repeat runs fail with a clear error (e.g.
+`Duplicate column name`); the open-ended column change may succeed again but
+should still be recorded as applied.
 
 ## Profile picture files (`storage/avatars/`)
 

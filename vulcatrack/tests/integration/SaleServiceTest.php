@@ -28,11 +28,16 @@ use VulcaTrack\Auth\Password;
 use VulcaTrack\Repository\AdminRepository;
 use VulcaTrack\Repository\CustomerRepository;
 use VulcaTrack\Repository\ItemRepository;
+use VulcaTrack\Repository\ProductPromotionRepository;
 use VulcaTrack\Repository\SaleRepository;
 use VulcaTrack\Repository\ServiceRequestRepository;
 use VulcaTrack\Service\SaleException;
 use VulcaTrack\Service\SaleService;
+use VulcaTrack\Service\ProductPromotionService;
+use VulcaTrack\Service\RestockService;
+use VulcaTrack\Service\AdjustmentService;
 use VulcaTrack\Support\Money;
+use VulcaTrack\Support\PromotionLifecycle;
 
 /** Seeds throwaway rows for one test and tears them all down afterwards. */
 final class SalesFixture
@@ -198,10 +203,13 @@ final class SalesFixture
             $this->pdo->exec("DELETE FROM sale_items WHERE sale_id IN ({$in})");
             $this->pdo->exec("DELETE FROM sales WHERE sale_id IN ({$in})");
         }
+        $this->deleteByIds('product_promotions', 'item_id', $this->itemIds);
         // sales.service_request_id is ON DELETE RESTRICT: linked sales go first (above).
         $this->deleteByIds('service_requests', 'request_id', $this->requestIds);
         $this->deleteByIds('vehicles', 'vehicle_id', $this->vehicleIds);
         $this->deleteByIds('tiremen', 'tireman_id', $this->tiremanIds);
+        $this->deleteByIds('inventory_restocks', 'item_id', $this->itemIds);
+        $this->deleteByIds('inventory_adjustments', 'item_id', $this->itemIds);
         $this->deleteByIds('items', 'item_id', $this->itemIds);
         $this->deleteByIds('customers', 'customer_id', $this->customerIds);
         $this->deleteByIds('admins', 'admin_id', $this->adminIds);
@@ -1377,6 +1385,314 @@ test('a reject arriving while a Rescue sale is being recorded waits for it, then
         assert_same('accepted', $fx->rescueRow($rid)['status']);
         assert_true($otherRequests->complete($rid, $handler), 'a linked sale does not block completion');
         assert_same('completed', $fx->rescueRow($rid)['status']);
+        $other = null;
+    });
+});
+
+/** Make a never-sold Product older than the default 60-day observation window. */
+function promotion_make_slow(\PDO $pdo, int $itemId): void
+{
+    $pdo->prepare('UPDATE items SET created_at = ? WHERE item_id = ?')
+        ->execute([date('Y-m-d H:i:s', strtotime('-80 days')), $itemId]);
+}
+
+test('promotion creation validates slow-moving Product, sale price, dates, cap and one open promotion', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $admin = $fx->admin();
+        $product = $fx->product('Promo candidate', '1800.00', 40);
+        promotion_make_slow($pdo, $product);
+        $service = $fx->service('Not a Product', '1800.00');
+        $inactive = $fx->product('Inactive candidate', '1800.00', 4);
+        promotion_make_slow($pdo, $inactive);
+        $fx->deactivate($inactive);
+        $empty = $fx->product('Empty candidate', '1800.00', 0);
+        promotion_make_slow($pdo, $empty);
+        $recent = $fx->product('Recently created', '1800.00', 4);
+        $manager = new ProductPromotionService($pdo);
+        $today = date('Y-m-d');
+        $end = date('Y-m-d', strtotime('+2 days'));
+        foreach ([$service, $inactive, $empty, $recent] as $ineligible) {
+            assert_throws(fn () => $manager->create($ineligible, '1550.00', $today, $end, '', null, $admin),
+                \InvalidArgumentException::class);
+        }
+        foreach (['0', '-1.00', '1800.00', '1900.00'] as $badPrice) {
+            assert_throws(fn () => $manager->create($product, $badPrice, $today, $end, '', null, $admin),
+                \InvalidArgumentException::class);
+        }
+        assert_throws(fn () => $manager->create($product, '1550.00', '2026-02-30', $end, '', null, $admin),
+            \InvalidArgumentException::class);
+        assert_throws(fn () => $manager->create($product, '1550.00', $end, $today, '', null, $admin),
+            \InvalidArgumentException::class);
+        foreach (['0', '41'] as $badLimit) {
+            assert_throws(fn () => $manager->create($product, '1550.00', $today, $end, $badLimit, null, $admin),
+                \InvalidArgumentException::class);
+        }
+        $id = $manager->create($product, '1550.00', $today, $end, '10', 'Clearance check', $admin);
+        $row = (new ProductPromotionRepository($pdo))->findById($id);
+        assert_same(10, $row['unit_limit']);
+        assert_same(0, $row['units_consumed']);
+        assert_same('1800.00', $row['regular_price_snapshot']);
+        assert_same('Clearance check', $row['note']);
+        assert_throws(fn () => $manager->create($product, '1500.00', $today, $end, '', null, $admin),
+            \InvalidArgumentException::class, 'already has');
+        $manager->cancel($id, $admin);
+        assert_same('cancelled', PromotionLifecycle::status((new ProductPromotionRepository($pdo))->findById($id), $today));
+        assert_throws(fn () => $manager->cancel($id, $admin), \InvalidArgumentException::class);
+        $uncapped = $manager->create($product, '1500.00', $today, $end, '', null, $admin);
+        assert_null((new ProductPromotionRepository($pdo))->findById($uncapped)['unit_limit']);
+    });
+});
+
+test('optional promotion dates store the effective start and preserve inclusive or open-ended windows', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $admin = $fx->admin();
+        $manager = new ProductPromotionService($pdo);
+        $repo = new ProductPromotionRepository($pdo);
+        $today = date('Y-m-d');
+        $tomorrow = date('Y-m-d', strtotime('+1 day'));
+        $end = date('Y-m-d', strtotime('+2 days'));
+        $bothBlank = $fx->product('Both dates blank', '1800.00', 5);
+        $onlyEnd = $fx->product('Only end date', '1800.00', 5);
+        $onlyStart = $fx->product('Only start date', '1800.00', 5);
+        $bothProvided = $fx->product('Both dates provided', '1800.00', 5);
+        foreach ([$bothBlank, $onlyEnd, $onlyStart, $bothProvided] as $itemId) {
+            promotion_make_slow($pdo, $itemId);
+        }
+
+        $indefinite = $repo->findById($manager->create($bothBlank, '1500.00', '', '', '', null, $admin));
+        assert_same($today, $indefinite['starts_on']);
+        assert_null($indefinite['ends_on']);
+        assert_same('active', PromotionLifecycle::status($indefinite, $today));
+        assert_same('active', PromotionLifecycle::status($indefinite, $end));
+        assert_same($indefinite['promotion_id'], $repo->activeByItem($today)[$bothBlank]['promotion_id']);
+        assert_throws(fn () => $manager->create($bothBlank, '1400.00', '', '', '', null, $admin),
+            \InvalidArgumentException::class, 'already has');
+
+        $ends = $repo->findById($manager->create($onlyEnd, '1500.00', '', $end, '', null, $admin));
+        assert_same($today, $ends['starts_on']);
+        assert_same($end, $ends['ends_on']);
+        assert_same('active', PromotionLifecycle::status($ends, $end));
+        assert_same('ended', PromotionLifecycle::status($ends, date('Y-m-d', strtotime('+3 days'))));
+
+        $starts = $repo->findById($manager->create($onlyStart, '1500.00', $tomorrow, '', '', null, $admin));
+        assert_same($tomorrow, $starts['starts_on']);
+        assert_null($starts['ends_on']);
+        assert_same('scheduled', PromotionLifecycle::status($starts, $today));
+        assert_same('active', PromotionLifecycle::status($starts, $tomorrow));
+        assert_same('active', PromotionLifecycle::status($starts, date('Y-m-d', strtotime('+3 days'))));
+        assert_false(isset($repo->activeByItem($today)[$onlyStart]));
+        assert_same($starts['promotion_id'], $repo->activeByItem($tomorrow)[$onlyStart]['promotion_id']);
+        $manager->cancel($starts['promotion_id'], $admin);
+        assert_same('cancelled', PromotionLifecycle::status($repo->findById($starts['promotion_id']), $tomorrow));
+
+        $dated = $repo->findById($manager->create($bothProvided, '1500.00', $tomorrow, $end, '', null, $admin));
+        assert_same('scheduled', PromotionLifecycle::status($dated, $today));
+        assert_same('active', PromotionLifecycle::status($dated, $end));
+        assert_same('ended', PromotionLifecycle::status($dated, date('Y-m-d', strtotime('+3 days'))));
+        assert_throws(fn () => $manager->create($bothProvided, '1400.00', $end, $tomorrow, '', null, $admin),
+            \InvalidArgumentException::class);
+        assert_throws(fn () => $manager->create($bothProvided, '1400.00', '', date('Y-m-d', strtotime('-1 day')), '', null, $admin),
+            \InvalidArgumentException::class);
+    });
+});
+
+test('promotion checkout records a capped split with frozen money and one stock deduction', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $admin = $fx->admin();
+        $product = $fx->product('Promo split', '1800.00', 40);
+        promotion_make_slow($pdo, $product);
+        $manager = new ProductPromotionService($pdo);
+        $id = $manager->create($product, '1550.00', '', '',
+            '10', null, $admin);
+        $sales = new SaleService($pdo);
+        $first = $sales->checkout(['admin_id' => $admin,
+            'lines' => [['item_id' => $product, 'quantity' => 8]], 'expected_total_centavos' => 1240000]);
+        assert_same(1240000, $first['total_centavos']);
+        $second = $sales->checkout(['admin_id' => $admin,
+            'lines' => [['item_id' => $product, 'quantity' => 5]], 'expected_total_centavos' => 850000]);
+        assert_same(850000, $second['total_centavos']);
+        $lines = (new SaleRepository($pdo))->listSaleItems($second['sale_id']);
+        assert_same([2, 3], array_column($lines, 'quantity'));
+        assert_same([155000, 180000], array_column($lines, 'unit_price_centavos'));
+        assert_same([310000, 540000], array_column($lines, 'subtotal_centavos'));
+        assert_same([$id, null], array_column($lines, 'promotion_id'));
+        assert_same(27, $fx->stockOf($product));
+        $repo = new ProductPromotionRepository($pdo);
+        assert_same(10, $repo->findById($id)['units_consumed']);
+        assert_same('ended', PromotionLifecycle::status($repo->findById($id), date('Y-m-d')));
+        assert_same(10, $repo->recordedUnits($id), 'linked frozen Sale lines audit the counter');
+        $fx->setPrice($product, '2000.00');
+        assert_same([155000, 180000], array_column((new SaleRepository($pdo))->listSaleItems($second['sale_id']), 'unit_price_centavos'));
+        assert_same('8500.00', $fx->saleRow($second['sale_id'])['total_amount']);
+    });
+});
+
+test('scheduled, cancelled and expired promotions use regular pricing; uncapped pricing works beside another Product', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $admin = $fx->admin();
+        $product = $fx->product('Lifecycle Product', '1800.00', 12);
+        $expiredProduct = $fx->product('Expired Product', '1800.00', 5);
+        $activeProduct = $fx->product('Uncapped Product', '1800.00', 12);
+        $other = $fx->product('Ordinary Product', '250.00', 5);
+        promotion_make_slow($pdo, $product);
+        promotion_make_slow($pdo, $expiredProduct);
+        promotion_make_slow($pdo, $activeProduct);
+        $manager = new ProductPromotionService($pdo);
+        $repo = new ProductPromotionRepository($pdo);
+        $sales = new SaleService($pdo);
+        $today = date('Y-m-d');
+
+        $scheduled = $manager->create($product, '1550.00', date('Y-m-d', strtotime('+1 day')),
+            date('Y-m-d', strtotime('+3 days')), '', null, $admin);
+        assert_same('scheduled', PromotionLifecycle::status($repo->findById($scheduled), $today));
+        $regular = $sales->checkout(['admin_id' => $admin,
+            'lines' => [['item_id' => $product, 'quantity' => 1]], 'expected_total_centavos' => 180000]);
+        assert_null((new SaleRepository($pdo))->listSaleItems($regular['sale_id'])[0]['promotion_id']);
+        assert_same(0, $repo->findById($scheduled)['units_consumed']);
+
+        $manager->cancel($scheduled, $admin);
+        assert_same('cancelled', PromotionLifecycle::status($repo->findById($scheduled),
+            date('Y-m-d', strtotime('+2 days'))), 'cancellation never reactivates');
+        $cancelledSale = $sales->checkout(['admin_id' => $admin,
+            'lines' => [['item_id' => $product, 'quantity' => 1]], 'expected_total_centavos' => 180000]);
+        assert_null((new SaleRepository($pdo))->listSaleItems($cancelledSale['sale_id'])[0]['promotion_id']);
+
+        $expired = $manager->create($expiredProduct, '1500.00', $today,
+            date('Y-m-d', strtotime('+2 days')), '', null, $admin);
+        // Simulate the passage of the date period in the isolated test database.
+        $pdo->prepare('UPDATE product_promotions SET starts_on = ?, ends_on = ? WHERE promotion_id = ?')
+            ->execute([date('Y-m-d', strtotime('-4 days')),
+                date('Y-m-d', strtotime('-2 days')), $expired]);
+        assert_same('ended', PromotionLifecycle::status($repo->findById($expired), $today));
+        $expiredSale = $sales->checkout(['admin_id' => $admin,
+            'lines' => [['item_id' => $expiredProduct, 'quantity' => 1]], 'expected_total_centavos' => 180000]);
+        assert_null((new SaleRepository($pdo))->listSaleItems($expiredSale['sale_id'])[0]['promotion_id']);
+
+        $active = $manager->create($activeProduct, '1550.00', $today,
+            date('Y-m-d', strtotime('+2 days')), '', null, $admin);
+        $mixed = $sales->checkout(['admin_id' => $admin,
+            'lines' => [['item_id' => $other, 'quantity' => 1], ['item_id' => $activeProduct, 'quantity' => 2]],
+            'expected_total_centavos' => 335000]);
+        assert_same(335000, $mixed['total_centavos']);
+        $lines = (new SaleRepository($pdo))->listSaleItems($mixed['sale_id']);
+        assert_same([$active, null], array_column($lines, 'promotion_id'));
+        assert_same([2, 1], array_column($lines, 'quantity'));
+        assert_same([155000, 25000], array_column($lines, 'unit_price_centavos'));
+        assert_same(10, $fx->stockOf($activeProduct));
+        assert_same(4, $fx->stockOf($other));
+        assert_same(2, $repo->findById($active)['units_consumed']);
+        assert_same(2, $repo->recordedUnits($active));
+        assert_false(in_array($activeProduct, array_column((new ItemRepository($pdo))
+            ->slowMovingProducts(date('Y-m-d H:i:s')), 'item_id'), true));
+        assert_same($active, $repo->findOpenForItem($activeProduct, $today)['promotion_id'],
+            'an existing promotion outlives the slow-moving insight that allowed its creation');
+    });
+});
+
+test('promotion keeps Rescue at regular pricing and protects Product management', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $admin = $fx->admin();
+        $customer = $fx->customer();
+        $product = $fx->product('Promo managed', '1800.00', 40);
+        promotion_make_slow($pdo, $product);
+        $manager = new ProductPromotionService($pdo);
+        $id = $manager->create($product, '1550.00', date('Y-m-d'), date('Y-m-d', strtotime('+2 days')),
+            '10', null, $admin);
+        $fx->setPrice($product, '1900.00');
+        assert_throws(fn () => $fx->setPrice($product, '1550.00'), \InvalidArgumentException::class, 'Cancel');
+        assert_throws(fn () => $fx->deactivate($product), \InvalidArgumentException::class, 'Cancel');
+        (new RestockService($pdo))->record($product, 2, null, $admin);
+        (new AdjustmentService($pdo))->record($product, 'increase', 2, 'count_correction', null, $admin);
+        $promo = (new ProductPromotionRepository($pdo))->findById($id);
+        assert_same(10, $promo['unit_limit']);
+        assert_same(0, $promo['units_consumed']);
+        $request = $fx->rescue($customer, 'accepted', $admin);
+        $result = (new SaleService($pdo))->checkout(['admin_id' => $admin, 'customer_id' => $customer,
+            'service_request_id' => $request, 'lines' => [['item_id' => $product, 'quantity' => 1]],
+            'expected_total_centavos' => 190000]);
+        $lines = (new SaleRepository($pdo))->listSaleItems($result['sale_id']);
+        assert_same(190000, $lines[0]['unit_price_centavos']);
+        assert_null($lines[0]['promotion_id']);
+        assert_same(0, (new ProductPromotionRepository($pdo))->findById($id)['units_consumed']);
+        $manager->cancel($id, $admin);
+        $fx->deactivate($product);
+        (new ItemRepository($pdo))->setActive($product, true);
+        assert_same('cancelled', PromotionLifecycle::status((new ProductPromotionRepository($pdo))->findById($id), date('Y-m-d')));
+    });
+});
+
+test('promotion stale total and rollback preserve stock, counter and Sale history', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $admin = $fx->admin();
+        $product = $fx->product('Promo final unit', '1800.00', 5);
+        promotion_make_slow($pdo, $product);
+        $manager = new ProductPromotionService($pdo);
+        $id = $manager->create($product, '1550.00', date('Y-m-d'), date('Y-m-d', strtotime('+2 days')),
+            '1', null, $admin);
+        $failing = new FailingItemRepository($pdo);
+        $failing->throwOnDecrementCall = 1;
+        assert_throws(fn () => (new SaleService($pdo, null, $failing))->checkout([
+            'admin_id' => $admin, 'lines' => [['item_id' => $product, 'quantity' => 1]],
+            'expected_total_centavos' => 155000,
+        ]), \RuntimeException::class, 'injected');
+        $repo = new ProductPromotionRepository($pdo);
+        assert_same(5, $fx->stockOf($product));
+        assert_same(0, $repo->findById($id)['units_consumed']);
+        assert_same(0, $repo->recordedUnits($id));
+        assert_same(0, $fx->saleCount());
+        (new SaleService($pdo))->checkout(['admin_id' => $admin,
+            'lines' => [['item_id' => $product, 'quantity' => 1]], 'expected_total_centavos' => 155000]);
+        assert_throws(fn () => (new SaleService($pdo))->checkout(['admin_id' => $admin,
+            'lines' => [['item_id' => $product, 'quantity' => 1]], 'expected_total_centavos' => 155000]),
+            SaleException::class, 'sale total changed');
+        assert_same(1, $fx->saleCount());
+        assert_same(4, $fx->stockOf($product));
+        assert_same(1, $repo->findById($id)['units_consumed']);
+        $regular = (new SaleService($pdo))->checkout(['admin_id' => $admin,
+            'lines' => [['item_id' => $product, 'quantity' => 1]], 'expected_total_centavos' => 180000]);
+        assert_null((new SaleRepository($pdo))->listSaleItems($regular['sale_id'])[0]['promotion_id']);
+    });
+});
+
+test('promotion final unit stays exclusive while another checkout holds the Product and promotion locks', function () {
+    with_sales_fixture(function (\PDO $pdo, SalesFixture $fx) {
+        $admin = $fx->admin();
+        $product = $fx->product('Promo race', '1800.00', 3);
+        promotion_make_slow($pdo, $product);
+        $id = (new ProductPromotionService($pdo))->create($product, '1550.00',
+            date('Y-m-d'), date('Y-m-d', strtotime('+2 days')), '1', null, $admin);
+        $cfg = $GLOBALS['vulcatrack_config']['db'];
+        $dsn = "mysql:host={$cfg['host']};port={$cfg['port']};dbname={$cfg['name']};charset={$cfg['charset']}";
+        $other = new \PDO($dsn, $cfg['user'], $cfg['pass'], [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]);
+        $other->exec('SET SESSION innodb_lock_wait_timeout = 1');
+        $pdo->beginTransaction();
+        try {
+            (new ItemRepository($pdo))->lockForUpdate($product);
+            (new ProductPromotionRepository($pdo))->findOpenForItem($product, date('Y-m-d'), true);
+            $saleId = (new SaleRepository($pdo))->createSale($admin, null, date('Y-m-d H:i:s'), 155000);
+            (new SaleRepository($pdo))->addPromotionalSaleItem($saleId, $product, 1, 155000, 155000, $id);
+            assert_true((new ProductPromotionRepository($pdo))->consume($id, 1, date('Y-m-d')));
+            assert_true((new ItemRepository($pdo))->decrementStock($product, 1));
+            assert_throws(fn () => (new SaleService($other))->checkout([
+                'admin_id' => $admin, 'lines' => [['item_id' => $product, 'quantity' => 1]],
+                'expected_total_centavos' => 155000,
+            ]), \PDOException::class, 'Lock wait timeout');
+            $pdo->commit();
+        } finally {
+            if ($pdo->inTransaction()) { $pdo->rollBack(); }
+        }
+        assert_throws(fn () => (new SaleService($other))->checkout([
+            'admin_id' => $admin, 'lines' => [['item_id' => $product, 'quantity' => 1]],
+            'expected_total_centavos' => 155000,
+        ]), SaleException::class, 'sale total changed');
+        $regular = (new SaleService($other))->checkout([
+            'admin_id' => $admin, 'lines' => [['item_id' => $product, 'quantity' => 1]],
+            'expected_total_centavos' => 180000,
+        ]);
+        assert_null((new SaleRepository($pdo))->listSaleItems($regular['sale_id'])[0]['promotion_id']);
+        assert_same(1, (new ProductPromotionRepository($pdo))->findById($id)['units_consumed']);
+        assert_same(1, (new ProductPromotionRepository($pdo))->recordedUnits($id));
+        assert_same(1, $fx->stockOf($product));
         $other = null;
     });
 });

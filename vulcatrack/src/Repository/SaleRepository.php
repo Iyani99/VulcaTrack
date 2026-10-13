@@ -158,6 +158,18 @@ class SaleRepository
         return (int) $this->pdo->lastInsertId();
     }
 
+    /** A second frozen line for an in-shop Product's promotional allocation. */
+    public function addPromotionalSaleItem(int $saleId, int $itemId, int $quantity,
+        int $unitPriceCentavos, int $subtotalCentavos, int $promotionId): int
+    {
+        $stmt = $this->pdo->prepare('INSERT INTO sale_items
+            (sale_id, item_id, promotion_id, quantity, unit_price, subtotal)
+            VALUES (?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$saleId, $itemId, $promotionId, $quantity,
+            Money::format($unitPriceCentavos), Money::format($subtotalCentavos)]);
+        return (int) $this->pdo->lastInsertId();
+    }
+
     /**
      * Sale header for the printable HTML receipt (Decision 50): shop-independent
      * fields plus the recording admin's name and the linked customer's name
@@ -571,7 +583,7 @@ class SaleRepository
     public function listSaleItems(int $saleId): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT si.sale_item_id, si.item_id, si.quantity, si.unit_price, si.subtotal,
+            'SELECT si.sale_item_id, si.item_id, si.promotion_id, si.quantity, si.unit_price, si.subtotal,
                     i.item_name, i.item_type
              FROM sale_items si
              JOIN items i ON i.item_id = si.item_id

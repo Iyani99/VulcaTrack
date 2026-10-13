@@ -81,6 +81,10 @@ if ($sale === null) {
 }
 
 $lines = $sales->listSaleItems($saleId);
+$promotionalItems = [];
+foreach ($lines as $line) {
+    if ($line['promotion_id'] !== null) { $promotionalItems[(int) $line['item_id']] = true; }
+}
 
 $pageTitle = 'Transaction Summary #' . (int) $sale['sale_id'];
 $navActive = 'pos';
@@ -144,7 +148,7 @@ $when     = txn_datetime((string) $sale['sale_date']);
       <tbody>
       <?php foreach ($lines as $line): $kind = txn_kind($line['item_type'] ?? null); ?>
         <tr>
-          <td><span class="txn-item"><?= e($line['item_name']) ?></span><?php if ($kind !== ''): ?> <span class="txn-kind"><?= $kind ?></span><?php endif; ?></td>
+          <td><span class="txn-item"><?= e($line['item_name']) ?></span><?php if ($kind !== ''): ?> <span class="txn-kind"><?= $kind ?></span><?php endif; ?><?php if ($line['promotion_id'] !== null): ?> <span class="txn-price-label">Sale price</span><?php elseif (isset($promotionalItems[(int) $line['item_id']])): ?> <span class="txn-price-label">Regular price</span><?php endif; ?></td>
           <td class="num"><?= (int) $line['quantity'] ?></td>
           <td class="num"><?= txn_peso((int) $line['unit_price_centavos']) ?></td>
           <td class="num"><?= txn_peso((int) $line['subtotal_centavos']) ?></td>

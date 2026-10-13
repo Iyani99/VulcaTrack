@@ -2753,6 +2753,47 @@ body.admin .tireman-history time { font-size: .8rem; color: #666; }
 .notfound__back:is(:hover, :focus-visible) { background: #b9141b; color: #fff; }
 .notfound__back:focus-visible { outline: 2px solid #b9141b; outline-offset: 3px; }
 
+/* Inventory Promotions uses the existing Admin panels, tables, tabs and badges. */
+body.admin .promotion-panel { margin-bottom: 1.3rem; }
+body.admin .promotion-panel .table-scroll { margin: 0; }
+body.admin .promotion-panel .datatable { min-width: 0; }
+body.admin .promotion-panel td { vertical-align: middle; }
+body.admin .promotion-panel form { margin: 0; }
+body.admin .promotion-action { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; white-space: nowrap; }
+body.admin .promotion-form { margin: 0 0 1.3rem; border-top: 3px solid var(--adm-red); }
+body.admin .promotion-form h2 { margin: 0 0 .4rem; }
+body.admin .promotion-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1rem; }
+body.admin .promotion-form__grid label { display: grid; align-content: start; gap: .35rem; min-width: 0; font-weight: 700; }
+body.admin .promotion-form__hint { color: var(--adm-muted); font-size: .8rem; font-weight: 400; }
+body.admin .promotion-form__grid :is(input, textarea) { display: block; width: 100%; min-width: 0; box-sizing: border-box; }
+body.admin .promotion-form__wide { grid-column: 1 / -1; }
+body.admin .promotion-form__wide .btnlink { min-height: 2.75rem; }
+body.admin .badge--sale { background: var(--adm-red); color: #fff; border-color: var(--adm-red); }
+body.admin .badge--active { background: #176b3b; color: #fff; border-color: #176b3b; box-shadow: 0 0 0 3px rgba(23, 107, 59, .16), 0 0 10px rgba(23, 107, 59, .22); }
+body.admin .badge--scheduled { background: #ededed; color: var(--adm-ink); border-color: #c9c9c9; }
+body.admin .badge--ended { background: #fff; color: #555; border-color: #aaa; }
+body.admin .badge--cancelled { background: #fff; color: var(--adm-red-dark); border-color: var(--adm-red-dark); }
+body.admin .promotion-cancelled-by { display: block; margin-top: .2rem; color: var(--adm-muted); }
+body.admin .pos-item .pos-item__regular { display: block; color: #666; font-size: .78rem; font-weight: 500; text-decoration: line-through; }
+body.admin .pos-item .pos-item__sale { display: block; color: var(--adm-red-dark); font-size: 1.2rem; }
+body.admin .pos-item .pos-item__promo-note { margin: .15rem 0 0; font-size: .75rem; color: #555; }
+body.admin .pos-cart__breakdown { display: grid; gap: .15rem; margin: .25rem 0; font-size: .75rem; color: #555; }
+body.admin .txn-price-label { display: block; margin-top: .1rem; font-size: .7rem; font-weight: 700; color: var(--adm-red-dark); }
+@media (max-width: 40rem) {
+  body.admin .promotion-panel[aria-labelledby="promo-history"] .mobile-records td[data-record-primary],
+  body.admin .promotion-panel[aria-labelledby="promo-history"] .mobile-records td[data-record-status] { grid-column: 1 / -1; }
+  body.admin .promotion-panel[aria-labelledby="promo-history"] .mobile-records td[data-record-status] {
+    grid-row: 2; text-align: left;
+  }
+}
+@media (max-width: 30rem) {
+  body.admin .inventory-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.admin .promotion-form__grid { grid-template-columns: minmax(0, 1fr); }
+  body.admin .promotion-form__wide { grid-column: 1; }
+  body.admin .promotion-panel .datatable.mobile-records td[data-record-actions] { display: block; }
+  body.admin .promotion-action { width: 100%; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;

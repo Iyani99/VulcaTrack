@@ -30,6 +30,8 @@
 // 1..365 day Sales-inactivity threshold, initially 60 days.
 // Product threshold overrides and manual stock adjustments 2026-10-12:
 // Product overrides are optional; adjustments are future-only audited corrections.
+// Product Promotions 2026-10-13: Admin-selected, in-shop-only temporary Product
+// sale prices. Sale-line money remains frozen; promotion history is retained.
 // Current-model reminder — NOT YET modeled: online/gateway payment,
 // payment-transaction tables, GPS telemetry / route polylines, Tireman
 // authentication, scheduling / ratings / payroll, status-history / general Activity Log tables.
@@ -122,6 +124,31 @@ Table items {
   updated_at      datetime      [not null, default: `CURRENT_TIMESTAMP`]
 }
 
+Table product_promotions {
+  promotion_id int [pk, increment]
+  item_id int [not null, ref: > items.item_id, note: 'active Product at creation; one open promotion per Product enforced under an item row lock']
+  sale_price decimal(10,2) [not null, note: 'positive, below regular price snapshot; immutable after creation']
+  regular_price_snapshot decimal(10,2) [not null, note: 'audit reference only; POS uses current items.price for regular units']
+  starts_on date [not null, note: 'inclusive Asia/Manila calendar day']
+  ends_on date [null, note: 'inclusive Asia/Manila calendar day; NULL means no automatic expiry']
+  unit_limit int [null, note: 'optional pricing cap, not reserved physical stock']
+  units_consumed int [not null, default: 0, note: 'guarded checkout counter; linked sale_items are audit evidence']
+  note varchar(500) [null]
+  created_by_admin_id int [not null, ref: > admins.admin_id]
+  created_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+  cancelled_at datetime [null]
+  cancelled_by_admin_id int [null, ref: > admins.admin_id]
+
+  Indexes {
+    (promotion_id, item_id) [unique, name: 'uq_product_promotions_id_item']
+    (item_id, starts_on, ends_on) [name: 'ix_product_promotions_item_dates']
+    created_by_admin_id [name: 'ix_product_promotions_created_admin']
+    cancelled_by_admin_id [name: 'ix_product_promotions_cancelled_admin']
+  }
+
+  Note: 'Immutable terms. Scheduled/Active/Ended derive from dates and consumption; cancellation is stored. No scheduler.'
+}
+
 Table inventory_restocks {
   restock_id    int          [pk, increment]
   item_id       int          [not null, ref: > items.item_id]
@@ -180,12 +207,19 @@ Table sale_items {
   sale_item_id    int           [pk, increment]
   sale_id         int           [not null, ref: > sales.sale_id]
   item_id         int           [not null, ref: > items.item_id]
+  promotion_id    int           [null, note: 'NULL for regular and Rescue pricing; otherwise linked to the same Product promotion']
   quantity        int           [not null]
   unit_price      decimal(10,2) [not null, note: 'FROZEN at time of sale — independent of items.price (Decision 17)']
   subtotal        decimal(10,2) [not null, note: 'quantity * unit_price']
 
-  Note: 'A sale mixes product and service lines. Product lines decrease items.stock_quantity; service lines do not (Decision 16).'
+  Indexes {
+    (promotion_id, item_id) [name: 'ix_sale_items_promotion_item']
+  }
+
+  Note: 'A sale mixes product and service lines. A Product may have separate frozen promotional and regular lines. Composite FK (promotion_id,item_id) -> product_promotions(promotion_id,item_id). Product stock is deducted once for its combined quantity.'
 }
+
+Ref: sale_items.(promotion_id, item_id) > product_promotions.(promotion_id, item_id)
 
 // -----------------------------------------------------------------------------
 // On-the-Go (OTG) service requests

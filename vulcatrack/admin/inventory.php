@@ -47,8 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (Csrf::check($_POST['_csrf'] ?? null)
         && $target > 0 && in_array($action, ['activate', 'deactivate'], true)
         && $repo->findById($target) !== null) {
-        $repo->setActive($target, $action === 'activate');
-        $saved = $action . 'd';
+        try {
+            $repo->setActive($target, $action === 'activate');
+            $saved = $action . 'd';
+        } catch (\InvalidArgumentException $e) {
+            $saved = 'promotion_blocked';
+        }
     }
     header('Location: ' . vulcatrack_url('/admin/inventory.php?' . http_build_query($back + ['saved' => $saved])));
     exit;
@@ -61,6 +65,7 @@ switch ((string) ($_GET['saved'] ?? '')) {
     case 'activated':    $flash = ['notice', 'Item activated.']; break;
     case 'deactivated':  $flash = ['notice', 'Item deactivated.']; break;
     case 'error':        $flash = ['error', 'That action could not be completed. Please try again.']; break;
+    case 'promotion_blocked': $flash = ['error', 'Cancel the open promotion before deactivating this Product.']; break;
 }
 
 // --- read + normalise the GET filters --------------------------------------

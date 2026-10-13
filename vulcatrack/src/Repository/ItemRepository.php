@@ -4,6 +4,7 @@ namespace VulcaTrack\Repository;
 
 use InvalidArgumentException;
 use PDO;
+use Throwable;
 use VulcaTrack\Support\Money;
 
 /**
@@ -252,14 +253,42 @@ class ItemRepository
         ?array $expected = null,
         ?int $slowMovingDaysOverride = null
     ): bool {
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) { $this->pdo->beginTransaction(); }
+        try {
+            // Serialize price/type edits with promotion creation and checkout.
+            $result = $this->updateLocked($itemId, $name, $itemType, $category,
+                $priceCentavos, $stockQuantity, $reorderLevel, $expected, $slowMovingDaysOverride);
+            if ($ownsTransaction) { $this->pdo->commit(); }
+            return $result;
+        } catch (Throwable $e) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) { $this->pdo->rollBack(); }
+            throw $e;
+        }
+    }
+
+    private function updateLocked(int $itemId, string $name, string $itemType, ?string $category,
+        int $priceCentavos, ?int $stockQuantity, ?int $reorderLevel, ?array $expected,
+        ?int $slowMovingDaysOverride): bool
+    {
         [$stock, $reorder] = $this->normaliseStockFields($itemType, $stockQuantity, $reorderLevel);
         $override = $this->normaliseSlowMovingOverride($itemType, $slowMovingDaysOverride);
         $category = $this->nullIfBlank($category);
         $price    = Money::format($this->assertNonNegativePrice($priceCentavos));
 
-        $current = $this->findById($itemId);
+        $current = $this->lockForUpdate($itemId);
         if ($current === null) {
             return false;
+        }
+        if ($current['item_type'] === 'product') {
+            $openPromotion = (new ProductPromotionRepository($this->pdo))
+                ->findOpenForItem($itemId, date('Y-m-d'), true);
+            if ($openPromotion !== null && ($itemType !== 'product'
+                || $priceCentavos <= (int) $openPromotion['sale_price_centavos'])) {
+                throw new InvalidArgumentException(
+                    'Cancel the open promotion before changing Product type or setting regular price at or below its sale price.'
+                );
+            }
         }
         if ($itemType !== $current['item_type'] && $this->hasSales($itemId)) {
             throw new InvalidArgumentException('Item type cannot be changed after the item has recorded sales.');
@@ -317,7 +346,7 @@ class ItemRepository
         }
 
         // 0 rows: stale / locked (nothing written), or matched with nothing to change.
-        $now = $this->findById($itemId);
+        $now = $this->lockForUpdate($itemId);
 
         return $now !== null
             && ($expected === null || ($now['item_type'] === $expected['item_type']
@@ -343,13 +372,26 @@ class ItemRepository
     /** Activate (true) or soft-delete (false) an item. */
     public function setActive(int $itemId, bool $active): void
     {
-        $stmt = $this->pdo->prepare(
-            'UPDATE items SET is_active = :active, updated_at = CURRENT_TIMESTAMP WHERE item_id = :id'
-        );
-        $stmt->execute([
-            ':active' => $active ? 1 : 0,
-            ':id'     => $itemId,
-        ]);
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) { $this->pdo->beginTransaction(); }
+        try {
+            $item = $this->lockForUpdate($itemId);
+            if ($item !== null) {
+                if (!$active && $item['item_type'] === 'product'
+                    && (new ProductPromotionRepository($this->pdo))
+                        ->findOpenForItem($itemId, date('Y-m-d'), true) !== null) {
+                    throw new InvalidArgumentException('Cancel the open promotion before deactivating this Product.');
+                }
+                $stmt = $this->pdo->prepare(
+                    'UPDATE items SET is_active = :active, updated_at = CURRENT_TIMESTAMP WHERE item_id = :id'
+                );
+                $stmt->execute([':active' => $active ? 1 : 0, ':id' => $itemId]);
+            }
+            if ($ownsTransaction) { $this->pdo->commit(); }
+        } catch (Throwable $e) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) { $this->pdo->rollBack(); }
+            throw $e;
+        }
     }
 
     // --- Phase 5: POS checkout support -------------------------------------
